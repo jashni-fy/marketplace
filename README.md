@@ -1,147 +1,209 @@
 # Marketplace Application
 
-A marketplace application that connects service vendors (photographers, videographers, event managers, etc.) with customers seeking their services.
+A full-stack marketplace application built with Rails (backend) and React (frontend), containerized with Docker.
 
-## Architecture
+## Project Structure
 
-This application is built using Rails 7.x with a packs-rails architecture for domain separation. The system is organized into the following domains:
+```
+marketplace/
+├── backend/             # Rails backend code
+│   ├── app/
+│   ├── config/
+│   ├── db/
+│   ├── Gemfile
+│   └── ...
+├── frontend/            # Frontend code (React, etc.)
+│   ├── package.json
+│   ├── src/
+│   ├── public/
+│   └── ...
+├── docker-compose.yml   # Docker setup for both frontend and backend
+├── Makefile             # Common commands for both frontend and backend
+└── README.md            # Project documentation
+```
 
-- **User Management**: Handles authentication, user profiles, and user-related operations
-- **Service Catalog**: Manages service listings, categories, and vendor portfolios  
-- **Booking Management**: Handles bookings, scheduling, and customer-vendor interactions
+## Quick Start
 
-## Prerequisites
+### Prerequisites
 
-### Option 1: Docker (Recommended)
-- Docker
-- Docker Compose
+- Docker and Docker Compose
+- Make (optional, for convenience commands)
 
-### Option 2: Local Development
-- Ruby 3.2.4
-- Rails 7.1.x
-- PostgreSQL 15+
-- Redis
+### Setup and Run
 
-## Quick Start with Docker
-
-1. **Clone and setup**:
+1. **Clone and navigate to the project:**
    ```bash
    cd marketplace
-   ./scripts/dev-setup.sh
    ```
 
-2. **Or manually**:
+2. **Build and start all services:**
    ```bash
-   # Build and start services
-   docker-compose up -d
+   make setup
+   ```
    
-   # Setup database
-   docker-compose exec web rails db:create db:migrate
-   ```
-
-3. **Access the application**:
-   - Web app: http://localhost:3000
-   - Health check: http://localhost:3000/health
-   - Sidekiq UI: http://localhost:3000/sidekiq
-
-### Docker Commands
-
-Use the provided Makefile for common tasks:
-
-```bash
-make up          # Start all services
-make down        # Stop all services
-make logs        # View logs
-make shell       # Open shell in web container
-make console     # Open Rails console
-make test        # Run tests
-make setup       # Setup database
-```
-
-See [README.Docker.md](README.Docker.md) for detailed Docker instructions.
-
-## Local Development Setup
-
-1. Install dependencies:
+   Or manually:
    ```bash
-   bundle install
+   docker-compose build
+   docker-compose up -d
+   docker-compose exec backend bundle exec rails db:create db:migrate db:seed
    ```
 
-2. Start PostgreSQL and Redis services:
-   ```bash
-   # On macOS with Homebrew:
-   brew services start postgresql@15
-   brew services start redis
-   ```
-
-3. Create and setup the database:
-   ```bash
-   bin/rails db:create
-   bin/rails db:migrate
-   ```
-
-4. Start the Rails server:
-   ```bash
-   bin/rails server
-   ```
-
-5. Start Sidekiq for background jobs:
-   ```bash
-   bundle exec sidekiq
-   ```
-
-## Packs Structure
-
-```
-packs/
-├── user_management/
-│   ├── app/
-│   │   ├── controllers/
-│   │   ├── models/
-│   │   └── services/
-│   ├── spec/
-│   └── package.yml
-├── service_catalog/
-│   ├── app/
-│   │   ├── controllers/
-│   │   ├── models/
-│   │   └── services/
-│   ├── spec/
-│   └── package.yml
-└── booking_management/
-    ├── app/
-    │   ├── controllers/
-    │   ├── models/
-    │   └── services/
-    ├── spec/
-    └── package.yml
-```
-
-## Configuration
-
-- **Database**: PostgreSQL 15 for all environments, configured in `config/database.yml`
-- **Redis**: Configured for Sidekiq and caching in `config/redis.yml`
-- **CORS**: Enabled for API access in `config/initializers/cors.rb`
-- **Packs**: Domain separation configured with packwerk
-- **Docker**: Multi-environment setup with development and production configurations
-
-## Environment Variables
-
-Copy `.env.example` to `.env` and configure:
-
-```bash
-cp .env.example .env
-```
-
-Key variables:
-- `REDIS_URL`: Redis connection URL
-- `RAILS_ENV`: Environment (development/test/production)
-- `FRONTEND_URL`: Frontend URL for CORS configuration
+3. **Access the application:**
+   - Frontend: http://localhost (via nginx proxy)
+   - Backend API: http://localhost/api/v1
+   - Direct Frontend: http://localhost:5173
+   - Direct Backend: http://localhost:3000
+   - Sidekiq Web UI: http://localhost/sidekiq (development only)
 
 ## Development
 
-The application uses:
-- Sidekiq for background job processing
-- Redis for caching and session storage
-- JWT tokens for API authentication
-- CORS enabled for frontend integration
+### Available Make Commands
+
+```bash
+make help           # Show all available commands
+make build          # Build all Docker images
+make up             # Start all services
+make down           # Stop all services
+make logs           # Show logs for all services
+make shell-backend  # Open shell in backend container
+make shell-frontend # Open shell in frontend container
+make test-backend   # Run backend tests
+make test-frontend  # Run frontend tests
+make clean          # Clean up containers and volumes
+```
+
+### Backend Development
+
+The Rails backend includes:
+- **API-first architecture** with JSON responses
+- **Domain-driven design** using packs-rails
+- **Authentication** with JWT tokens
+- **Background jobs** with Sidekiq
+- **Admin interface** with ActiveAdmin
+- **Testing** with RSpec
+
+Key backend commands:
+```bash
+make shell-backend
+bundle exec rails console
+bundle exec rspec
+bundle exec rails db:migrate
+```
+
+### Frontend Development
+
+The React frontend includes:
+- **Modern React** with hooks and context
+- **Routing** with React Router
+- **HTTP client** with Axios
+- **Testing** with Vitest and Testing Library
+- **Build tool** with Vite
+
+Key frontend commands:
+```bash
+make shell-frontend
+npm run dev
+npm test
+npm run build
+```
+
+### Database Operations
+
+```bash
+make db-migrate     # Run migrations
+make db-seed        # Seed database
+make db-reset       # Reset database
+```
+
+## Services
+
+The application consists of these Docker services:
+
+- **db**: PostgreSQL database
+- **redis**: Redis for caching and background jobs
+- **backend**: Rails API server
+- **sidekiq**: Background job processor
+- **frontend**: React development server
+- **nginx**: Reverse proxy (routes requests to frontend/backend)
+
+## Environment Variables
+
+### Backend (.env)
+```
+RAILS_ENV=development
+DATABASE_URL=postgresql://marketplace:password@db:5432/marketplace_development
+REDIS_URL=redis://redis:6379/0
+```
+
+### Frontend (.env)
+```
+VITE_API_URL=http://localhost:3000/api/v1
+VITE_APP_NAME=Marketplace
+VITE_APP_VERSION=1.0.0
+```
+
+## Production Deployment
+
+For production deployment:
+
+1. **Build production images:**
+   ```bash
+   docker-compose -f docker-compose.prod.yml build
+   ```
+
+2. **Set production environment variables**
+
+3. **Deploy with production compose file:**
+   ```bash
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
+
+## Testing
+
+### Backend Tests
+```bash
+make test-backend
+# or
+docker-compose exec backend bundle exec rspec
+```
+
+### Frontend Tests
+```bash
+make test-frontend
+# or
+docker-compose exec frontend npm test
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Port conflicts**: Ensure ports 80, 3000, 5173, 5432, 6379 are available
+2. **Database connection**: Wait for database to be ready before starting backend
+3. **Node modules**: Delete `node_modules` and reinstall if frontend fails to start
+4. **Bundle issues**: Run `bundle install` in backend container if gems are missing
+
+### Logs
+```bash
+make logs                           # All services
+docker-compose logs backend         # Backend only
+docker-compose logs frontend        # Frontend only
+```
+
+### Reset Everything
+```bash
+make clean
+make setup
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.

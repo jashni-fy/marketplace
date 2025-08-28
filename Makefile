@@ -1,78 +1,111 @@
-.PHONY: build up down logs shell test setup clean
+# Marketplace Development Commands
 
-# Build the Docker images
+.PHONY: help build up down logs shell-backend shell-frontend test-backend test-frontend clean
+
+# Default target
+help:
+	@echo "Available commands:"
+	@echo ""
+	@echo "Development:"
+	@echo "  build          - Build all Docker images"
+	@echo "  up             - Start all services"
+	@echo "  down           - Stop all services"
+	@echo "  logs           - Show logs for all services"
+	@echo "  setup          - Initial setup (build and start)"
+	@echo ""
+	@echo "Production:"
+	@echo "  prod-build     - Build production images"
+	@echo "  prod-up        - Start production services"
+	@echo "  prod-down      - Stop production services"
+	@echo "  prod-logs      - Show production logs"
+	@echo ""
+	@echo "Development Tools:"
+	@echo "  shell-backend  - Open shell in backend container"
+	@echo "  shell-frontend - Open shell in frontend container"
+	@echo "  test-backend   - Run backend tests"
+	@echo "  test-frontend  - Run frontend tests"
+	@echo "  sidekiq-web    - Access Sidekiq web interface"
+	@echo ""
+	@echo "Database:"
+	@echo "  db-migrate     - Run database migrations"
+	@echo "  db-seed        - Seed database with sample data"
+	@echo "  db-reset       - Reset database (drop, create, migrate, seed)"
+	@echo ""
+	@echo "Maintenance:"
+	@echo "  clean          - Clean up containers and volumes"
+	@echo "  storage-clean  - Clean uploaded files"
+	@echo "  jobs-status    - Check background job status"
+	@echo "  health         - Check service health"
+
+# Build all images
 build:
 	docker-compose build
 
-# Start the application
+# Start all services
 up:
-	docker-compose up
-
-# Start the application in detached mode
-up-d:
 	docker-compose up -d
 
-# Stop the application
+# Stop all services
 down:
 	docker-compose down
 
-# View logs
+# Show logs
 logs:
 	docker-compose logs -f
 
-# Open a shell in the web container
-shell:
-	docker-compose exec web bash
+# Backend shell
+shell-backend:
+	docker-compose exec backend bash
 
-# Run tests
-test:
-	docker-compose exec web bundle exec rspec
+# Frontend shell
+shell-frontend:
+	docker-compose exec frontend sh
 
-# Setup the application (install gems, create/migrate database)
-setup:
-	docker-compose run --rm web bundle install
-	docker-compose run --rm web rails db:create db:migrate
+# Run backend tests
+test-backend:
+	docker-compose exec backend bundle exec rspec
 
-# Wait for database to be ready
-wait-for-db:
-	docker-compose exec db pg_isready -U marketplace -d marketplace_development
+# Run frontend tests
+test-frontend:
+	docker-compose exec frontend npm test
 
-# Clean up Docker resources
+# Clean up
 clean:
 	docker-compose down -v
 	docker system prune -f
 
-# Reset the database
+# Initial setup
+setup: build up
+	@echo "Waiting for services to start..."
+	@sleep 10
+	@echo "Running database setup..."
+	docker-compose exec backend bundle exec rails db:create db:migrate db:seed
+	@echo "Setup complete! Access the application at http://localhost"
+
+# Development helpers
+dev-backend:
+	docker-compose up -d db redis
+	cd backend && bundle install && rails server
+
+dev-frontend:
+	cd frontend && npm install && npm run dev
+
+# Database operations
+db-migrate:
+	docker-compose exec backend bundle exec rails db:migrate
+
+db-seed:
+	docker-compose exec backend bundle exec rails db:seed
+
 db-reset:
-	docker-compose exec web rails db:drop db:create db:migrate
+	docker-compose exec backend bundle exec rails db:drop db:create db:migrate db:seed
 
-# Access PostgreSQL console
-db-console:
-	docker-compose exec db psql -U marketplace -d marketplace_development
+# Install dependencies
+install-backend:
+	docker-compose exec backend bundle install
 
-# Run Rails console
-console:
-	docker-compose exec web rails console
-
-# Run Sidekiq console
-sidekiq-console:
-	docker-compose exec sidekiq bundle exec sidekiq-web
-
-# Install new gems
-bundle:
-	docker-compose exec web bundle install
-
-# Generate migration
-migration:
-	docker-compose exec web rails generate migration $(name)
-
-# Run migration
-migrate:
-	docker-compose exec web rails db:migrate
-
-# Rollback migration
-rollback:
-	docker-compose exec web rails db:rollback
+install-frontend:
+	docker-compose exec frontend npm install
 
 # Production commands
 prod-build:
@@ -86,3 +119,22 @@ prod-down:
 
 prod-logs:
 	docker-compose -f docker-compose.prod.yml logs -f
+
+# Sidekiq monitoring
+sidekiq-web:
+	@echo "Sidekiq web interface available at http://localhost/sidekiq (development only)"
+
+# Storage and uploads
+storage-clean:
+	docker-compose exec backend rm -rf storage/*
+	docker-compose exec backend mkdir -p storage
+
+# Image processing jobs
+jobs-status:
+	docker-compose exec backend bundle exec rails runner "puts Sidekiq::Stats.new.inspect"
+
+# Health checks
+health:
+	@echo "Checking service health..."
+	@curl -f http://localhost/up || echo "Backend health check failed"
+	@curl -f http://localhost/ || echo "Frontend health check failed"
