@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../lib/contexts/AuthContext';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 interface BookingFlowProps {
   params: {

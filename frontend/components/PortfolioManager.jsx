@@ -3,12 +3,14 @@ import { apiService } from '../lib/api';
 
 const PortfolioManager = () => {
   const [portfolioItems, setPortfolioItems] = useState([]);
-  const [services, setServices] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
-  const [selectedService, setSelectedService] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [dragActive, setDragActive] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
 
   useEffect(() => {
     loadPortfolioData();
@@ -18,33 +20,10 @@ const PortfolioManager = () => {
     try {
       setLoading(true);
       
-      // Load services for the current vendor
-      const servicesResponse = await apiService.services.getAll();
-      setServices(servicesResponse.data.services || []);
-
-      // Load portfolio items (when portfolio API is available)
-      // For now, we'll use service images as portfolio items
-      const allServices = servicesResponse.data.services || [];
-      const portfolioItems = [];
-      
-      allServices.forEach(service => {
-        if (service.service_images && service.service_images.length > 0) {
-          service.service_images.forEach(image => {
-            portfolioItems.push({
-              id: `service-${service.id}-image-${image.id}`,
-              service_id: service.id,
-              service_name: service.name,
-              image_url: image.medium_url || image.thumbnail_url,
-              title: image.title || service.name,
-              description: image.description || service.description,
-              is_primary: image.is_primary,
-              created_at: service.created_at
-            });
-          });
-        }
-      });
-
-      setPortfolioItems(portfolioItems);
+      // Load portfolio items using the new API
+      const response = await apiService.get('/api/v1/portfolio_items');
+      setPortfolioItems(response.data.portfolio_items || []);
+      setCategories(response.data.categories || []);
     } catch (err) {
       console.error('Error loading portfolio data:', err);
       setError('Failed to load portfolio data');
@@ -79,12 +58,7 @@ const PortfolioManager = () => {
     }
   };
 
-  const handleFiles = async (files) => {
-    if (!selectedService) {
-      setError('Please select a service before uploading images');
-      return;
-    }
-
+  const handleFiles = async (files, portfolioItemId = null) => {
     const validFiles = Array.from(files).filter(file => {
       const isValidType = file.type.startsWith('image/');
       const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB limit
@@ -106,8 +80,12 @@ const PortfolioManager = () => {
     setError(null);
 
     try {
-      for (const file of validFiles) {
-        await uploadImage(file);
+      if (portfolioItemId) {
+        // Upload to existing portfolio item
+        await uploadImagesToPortfolioItem(portfolioItemId, validFiles);
+      } else {
+        // Create new portfolio item with images
+        await createPortfolioItemWithImages(validFiles);
       }
       await loadPortfolioData(); // Refresh the portfolio
     } catch (err) {
@@ -118,40 +96,85 @@ const PortfolioManager = () => {
     }
   };
 
-  const uploadImage = async (file) => {
+  const uploadImagesToPortfolioItem = async (portfolioItemId, files) => {
     const formData = new FormData();
-    formData.append('image', file);
-    formData.append('service_id', selectedService);
-    formData.append('title', file.name.split('.')[0]);
-
-    // This would use the service images API
-    // For now, we'll simulate the upload
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({ success: true });
-      }, 1000);
+    files.forEach(file => {
+      formData.append('images[]', file);
     });
+
+    const response = await apiService.post(`/api/v1/portfolio_items/${portfolioItemId}/upload_images`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
   };
 
-  const handleDeleteImage = async (itemId) => {
-    if (!window.confirm('Are you sure you want to delete this image?')) {
+  const createPortfolioItemWithImages = async (files) => {
+    // First create the portfolio item
+    const portfolioData = {
+      title: files[0].name.split('.')[0],
+      description: '',
+      category: selectedCategory || 'general',
+      display_order: portfolioItems.length + 1,
+      is_featured: false
+    };
+
+    const createResponse = await apiService.post('/api/v1/portfolio_items', {
+      portfolio_item: portfolioData
+    });
+
+    const portfolioItem = createResponse.data.portfolio_item;
+
+    // Then upload images to it
+    await uploadImagesToPortfolioItem(portfolioItem.id, files);
+  };
+
+  const handleDeletePortfolioItem = async (itemId) => {
+    if (!window.confirm('Are you sure you want to delete this portfolio item?')) {
       return;
     }
 
     try {
-      // For now, just remove from local state
-      setPortfolioItems(prev => prev.filter(item => item.id !== itemId));
+      await apiService.delete(`/api/v1/portfolio_items/${itemId}`);
+      await loadPortfolioData();
     } catch (err) {
-      console.error('Error deleting image:', err);
-      setError('Failed to delete image');
+      console.error('Error deleting portfolio item:', err);
+      setError('Failed to delete portfolio item');
+    }
+  };
+
+  const handleToggleFeatured = async (itemId, currentStatus) => {
+    try {
+      await apiService.patch('/api/v1/portfolio_items/set_featured', {
+        item_ids: [itemId],
+        featured: !currentStatus
+      });
+      await loadPortfolioData();
+    } catch (err) {
+      console.error('Error updating featured status:', err);
+      setError('Failed to update featured status');
+    }
+  };
+
+  const handleCreatePortfolioItem = async (formData) => {
+    try {
+      await apiService.post('/api/v1/portfolio_items', {
+        portfolio_item: formData
+      });
+      setShowCreateForm(false);
+      await loadPortfolioData();
+    } catch (err) {
+      console.error('Error creating portfolio item:', err);
+      setError('Failed to create portfolio item');
     }
   };
 
   const groupedItems = portfolioItems.reduce((acc, item) => {
-    if (!acc[item.service_name]) {
-      acc[item.service_name] = [];
+    if (!acc[item.category]) {
+      acc[item.category] = [];
     }
-    acc[item.service_name].push(item);
+    acc[item.category].push(item);
     return acc;
   }, {});
 
@@ -193,23 +216,34 @@ const PortfolioManager = () => {
           <span>📤</span> Upload New Images
         </h3>
         
-        {/* Service Selection */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-slate-300 mb-2">
-            Select Service *
-          </label>
-          <select
-            value={selectedService}
-            onChange={(e) => setSelectedService(e.target.value)}
-            className="w-full md:w-1/3 px-3 py-2 bg-slate-700 border border-slate-600 text-slate-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="">Choose a service...</option>
-            {services.map(service => (
-              <option key={service.id} value={service.id}>
-                {service.name}
-              </option>
-            ))}
-          </select>
+        {/* Category Selection */}
+        <div className="mb-4 flex gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Category
+            </label>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Choose category...</option>
+              <option value="photography">Photography</option>
+              <option value="videography">Videography</option>
+              <option value="event_planning">Event Planning</option>
+              <option value="catering">Catering</option>
+              <option value="music">Music</option>
+              <option value="general">General</option>
+            </select>
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="btn-primary px-4 py-2 text-sm"
+            >
+              Create Portfolio Item
+            </button>
+          </div>
         </div>
 
         {/* Upload Area */}
@@ -245,12 +279,12 @@ const PortfolioManager = () => {
                 onChange={handleFileInput}
                 className="hidden"
                 id="file-upload"
-                disabled={!selectedService || uploading}
+                disabled={uploading}
               />
               <label
                 htmlFor="file-upload"
                 className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  selectedService && !uploading
+                  !uploading
                     ? 'btn-primary cursor-pointer'
                     : 'bg-slate-600 text-slate-400 cursor-not-allowed'
                 }`}
@@ -269,7 +303,7 @@ const PortfolioManager = () => {
             <span>🖼️</span> Your Portfolio
           </h3>
           <p className="text-sm text-slate-400 mt-1">
-            {portfolioItems.length} image{portfolioItems.length !== 1 ? 's' : ''} across {Object.keys(groupedItems).length} service{Object.keys(groupedItems).length !== 1 ? 's' : ''}
+            {portfolioItems.length} portfolio item{portfolioItems.length !== 1 ? 's' : ''} across {Object.keys(groupedItems).length} categor{Object.keys(groupedItems).length !== 1 ? 'ies' : 'y'}
           </p>
         </div>
 
@@ -283,59 +317,113 @@ const PortfolioManager = () => {
           </div>
         ) : (
           <div>
-            {Object.entries(groupedItems).map(([serviceName, items]) => (
-              <div key={serviceName} className="mb-8 last:mb-0">
+            {Object.entries(groupedItems).map(([categoryName, items]) => (
+              <div key={categoryName} className="mb-8 last:mb-0">
                 <h4 className="text-base font-semibold text-slate-50 mb-4 flex items-center gap-2">
                   <span>📸</span>
-                  {serviceName}
-                  <span className="text-sm text-slate-400 font-normal">({items.length} image{items.length !== 1 ? 's' : ''})</span>
+                  {categoryName.charAt(0).toUpperCase() + categoryName.slice(1).replace('_', ' ')}
+                  <span className="text-sm text-slate-400 font-normal">({items.length} item{items.length !== 1 ? 's' : ''})</span>
                 </h4>
                 
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {items.map((item) => (
-                    <div key={item.id} className="relative group">
-                      <div className="aspect-square bg-slate-700 rounded-lg overflow-hidden">
-                        <img
-                          src={item.image_url}
-                          alt={item.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                          onError={(e) => {
-                            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjMzM0MTU1Ii8+CjxwYXRoIGQ9Ik02MCA2MEgxNDBWMTQwSDYwVjYwWiIgZmlsbD0iIzQ3NTU2OSIvPgo8L3N2Zz4K';
-                          }}
-                        />
-                        {item.is_primary && (
-                          <div className="absolute top-2 left-2">
-                            <span className="bg-indigo-500 text-white text-xs px-2 py-1 rounded">
-                              Primary
-                            </span>
+                    <div key={item.id} className="bg-slate-700 rounded-lg overflow-hidden group">
+                      {/* Portfolio Item Header */}
+                      <div className="p-4 border-b border-slate-600">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h5 className="font-medium text-slate-50 truncate">{item.title}</h5>
+                            {item.description && (
+                              <p className="text-sm text-slate-400 mt-1 line-clamp-2">{item.description}</p>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      
-                      {/* Hover overlay */}
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity duration-200 rounded-lg flex items-center justify-center">
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                          <button
-                            onClick={() => handleDeleteImage(item.id)}
-                            className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
-                            title="Delete image"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                          <div className="flex items-center gap-2 ml-2">
+                            {item.is_featured && (
+                              <span className="bg-yellow-500 text-black text-xs px-2 py-1 rounded font-medium">
+                                Featured
+                              </span>
+                            )}
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                              <button
+                                onClick={() => handleToggleFeatured(item.id, item.is_featured)}
+                                className="bg-yellow-500 text-black p-1 rounded hover:bg-yellow-600 transition-colors"
+                                title={item.is_featured ? "Remove from featured" : "Mark as featured"}
+                              >
+                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => handleDeletePortfolioItem(item.id)}
+                                className="bg-red-500 text-white p-1 rounded hover:bg-red-600 transition-colors"
+                                title="Delete portfolio item"
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                       
-                      {/* Image info */}
-                      <div className="mt-2">
-                        <p className="text-sm font-medium text-slate-50 truncate" title={item.title}>
-                          {item.title}
-                        </p>
-                        {item.description && (
-                          <p className="text-xs text-slate-400 truncate" title={item.description}>
-                            {item.description}
-                          </p>
+                      {/* Images Grid */}
+                      <div className="p-4">
+                        {item.images && item.images.length > 0 ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            {item.images.slice(0, 4).map((image, index) => (
+                              <div key={image.id} className="aspect-square bg-slate-600 rounded overflow-hidden relative">
+                                <img
+                                  src={image.thumbnail_url || image.url}
+                                  alt={image.filename}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjMzM0MTU1Ii8+CjxwYXRoIGQ9Ik02MCA2MEgxNDBWMTQwSDYwVjYwWiIgZmlsbD0iIzQ3NTU2OSIvPgo8L3N2Zz4K';
+                                  }}
+                                />
+                                {index === 3 && item.images.length > 4 && (
+                                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                                    <span className="text-white font-medium">+{item.images.length - 4}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div 
+                            className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center cursor-pointer hover:border-slate-500 transition-colors"
+                            onClick={() => document.getElementById(`file-upload-${item.id}`).click()}
+                          >
+                            <div className="text-4xl mb-2">📷</div>
+                            <p className="text-sm text-slate-400">Click to add images</p>
+                            <input
+                              type="file"
+                              multiple
+                              accept="image/*"
+                              onChange={(e) => handleFiles(e.target.files, item.id)}
+                              className="hidden"
+                              id={`file-upload-${item.id}`}
+                            />
+                          </div>
+                        )}
+                        
+                        {item.images && item.images.length > 0 && (
+                          <div className="mt-3 text-center">
+                            <label
+                              htmlFor={`file-upload-${item.id}`}
+                              className="text-sm text-indigo-400 hover:text-indigo-300 cursor-pointer"
+                            >
+                              Add more images ({item.image_count} total)
+                            </label>
+                            <input
+                              type="file"
+                              multiple
+                              accept="image/*"
+                              onChange={(e) => handleFiles(e.target.files, item.id)}
+                              className="hidden"
+                              id={`file-upload-${item.id}`}
+                            />
+                          </div>
                         )}
                       </div>
                     </div>
@@ -343,6 +431,85 @@ const PortfolioManager = () => {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Create Portfolio Item Modal */}
+        {showCreateForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold text-slate-50 mb-4">Create Portfolio Item</h3>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                handleCreatePortfolioItem({
+                  title: formData.get('title'),
+                  description: formData.get('description'),
+                  category: formData.get('category'),
+                  display_order: portfolioItems.length + 1,
+                  is_featured: formData.get('is_featured') === 'on'
+                });
+              }}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Title *</label>
+                    <input
+                      type="text"
+                      name="title"
+                      required
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Description</label>
+                    <textarea
+                      name="description"
+                      rows="3"
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Category *</label>
+                    <select
+                      name="category"
+                      required
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-slate-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="photography">Photography</option>
+                      <option value="videography">Videography</option>
+                      <option value="event_planning">Event Planning</option>
+                      <option value="catering">Catering</option>
+                      <option value="music">Music</option>
+                      <option value="general">General</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="is_featured"
+                      id="is_featured"
+                      className="mr-2"
+                    />
+                    <label htmlFor="is_featured" className="text-sm text-slate-300">Mark as featured</label>
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateForm(false)}
+                    className="flex-1 px-4 py-2 bg-slate-600 text-slate-300 rounded-lg hover:bg-slate-500 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 btn-primary"
+                  >
+                    Create
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
       </div>

@@ -59,6 +59,23 @@ Rails.application.routes.draw do
           get :services
           get :availability
         end
+        
+        # Portfolio items nested under vendors for public viewing
+        resources :portfolio_items, only: [:index, :show], controller: 'portfolio_items'
+      end
+
+      # Portfolio items routes (service_catalog pack)
+      resources :portfolio_items do
+        member do
+          post :upload_images
+          delete 'remove_image/:image_id', action: :remove_image, as: :remove_image
+          post :duplicate
+        end
+        collection do
+          get :summary
+          post :reorder
+          patch :set_featured
+        end
       end
 
       # Booking routes (booking_management pack)

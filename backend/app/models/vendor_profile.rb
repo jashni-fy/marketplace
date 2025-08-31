@@ -34,9 +34,9 @@ class VendorProfile < ApplicationRecord
   
   # Service associations
   has_many :services, dependent: :destroy
+  has_many :portfolio_items, dependent: :destroy
   
   # Future associations (will be added in later tasks)
-  # has_many :portfolio_items, dependent: :destroy
   # has_many :availability_slots, dependent: :destroy
   # has_many :bookings, through: :services
   # has_many :reviews, through: :services
@@ -91,6 +91,18 @@ class VendorProfile < ApplicationRecord
   def rating_display
     return 'No ratings yet' if total_reviews.zero?
     "#{average_rating.round(1)} (#{total_reviews} #{'review'.pluralize(total_reviews)})"
+  end
+
+  def featured_portfolio_items
+    portfolio_items.featured.ordered.limit(6)
+  end
+
+  def portfolio_categories
+    portfolio_items.categories_for_vendor(self)
+  end
+
+  def has_portfolio?
+    portfolio_items.exists?
   end
 
   # Class methods

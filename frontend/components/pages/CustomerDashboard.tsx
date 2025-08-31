@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useAuth } from '../../lib/contexts/AuthContext';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 const CustomerDashboard = () => {
   const { user, logout } = useAuth();
