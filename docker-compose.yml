@@ -41,13 +41,11 @@ services:
       context: ./backend
       dockerfile: Dockerfile.dev
     ports:
-      - "3000:3000"
+      - "3001:3000"
     volumes:
       - ./backend:/rails
       - bundle_cache:/usr/local/bundle
       - storage_data:/rails/storage
-      - /rails/tmp
-      - /rails/log
     environment:
       - RAILS_ENV=development
       - DATABASE_URL=postgresql://marketplace:password@db:5432/marketplace_development
@@ -76,8 +74,6 @@ services:
       - ./backend:/rails
       - bundle_cache:/usr/local/bundle
       - storage_data:/rails/storage
-      - /rails/tmp
-      - /rails/log
     environment:
       - RAILS_ENV=development
       - DATABASE_URL=postgresql://marketplace:password@db:5432/marketplace_development
@@ -93,23 +89,23 @@ services:
     networks:
       - marketplace-network
 
-  # React Frontend
+  # Next.js Frontend
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
     ports:
-      - "5173:5173"
+      - "3001:3000"
     volumes:
       - ./frontend:/app
       - node_modules_cache:/app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:3000/api/v1
-      - VITE_APP_NAME=Marketplace
-      - VITE_APP_VERSION=1.0.0
+      - NEXT_PUBLIC_API_URL=http://backend:3000/api/v1
+      - NEXT_PUBLIC_APP_NAME=Marketplace
+      - NEXT_PUBLIC_APP_VERSION=1.0.0
+      - NODE_ENV=development
     depends_on:
       - backend
-    command: npm run dev -- --host 0.0.0.0
     stdin_open: true
     tty: true
     networks:

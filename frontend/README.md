@@ -1,15 +1,18 @@
 # Marketplace Frontend
 
-This is the React frontend application for the Marketplace platform that connects service vendors with customers.
+This is the Next.js frontend application for the Marketplace platform that connects service vendors with customers.
 
 ## Features
 
-- **React 18** with JavaScript
-- **React Router** for client-side routing
+- **Next.js 14** with App Router
+- **React 18** with Server Components
+- **TypeScript** support
 - **Context API** for state management
 - **Axios** for API communication
 - **Protected Routes** with role-based access control
-- **Responsive Design** with custom CSS utilities
+- **Responsive Design** with Tailwind CSS
+- **SEO Optimization** with built-in metadata support
+- **Performance Optimization** with automatic code splitting
 
 ## Getting Started
 
@@ -30,9 +33,9 @@ npm install
 cp .env.example .env
 ```
 
-3. Update the `.env` file with your backend API URL:
+3. Update the `.env.local` file with your backend API URL:
 ```
-REACT_APP_API_URL=http://localhost:3000/api/v1
+NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
 ### Development
@@ -42,7 +45,7 @@ Start the development server:
 npm run dev
 ```
 
-The application will be available at `http://localhost:5173`
+The application will be available at `http://localhost:3000`
 
 ### Build
 
@@ -51,40 +54,47 @@ Build for production:
 npm run build
 ```
 
-### Preview Production Build
+### Start Production Server
 
-Preview the production build:
+Start the production server:
 ```bash
-npm run preview
+npm run start
 ```
 
 ## Project Structure
 
 ```
-src/
-├── components/          # Reusable components
+app/                    # Next.js App Router pages
+├── layout.js          # Root layout component
+├── page.js            # Home page
+├── login/page.js      # Login page
+├── register/page.js   # Register page
+├── marketplace/page.js # Marketplace page
+├── services/page.js   # Services page
+├── vendors/[id]/page.js # Dynamic vendor profile
+├── customer/dashboard/page.js # Customer dashboard
+├── vendor/dashboard/page.js   # Vendor dashboard
+├── booking/[serviceId]/page.js # Booking flow
+├── dashboard/page.js  # Dashboard redirect
+├── unauthorized/page.js # Unauthorized page
+└── not-found.js       # 404 page
+
+src/                   # Shared application code
+├── components/        # Reusable components
 │   └── ProtectedRoute.jsx
-├── contexts/           # React Context providers
+├── contexts/         # React Context providers
 │   ├── AuthContext.jsx    # Authentication state management
 │   └── AppContext.jsx     # Global application state
-├── pages/              # Page components
+├── pages/            # Page components (used by app router)
 │   ├── Home.jsx
 │   ├── Login.jsx
 │   ├── Register.jsx
-│   ├── MarketplaceHome.jsx
-│   ├── ServiceSearch.jsx
-│   ├── VendorProfile.jsx
-│   ├── CustomerDashboard.jsx
-│   ├── VendorDashboard.jsx
-│   ├── BookingFlow.jsx
-│   ├── Unauthorized.jsx
-│   └── NotFound.jsx
-├── services/           # API service layer
+│   └── ...
+├── services/         # API service layer
 │   └── api.jsx
-├── App.jsx            # Main application component
-├── main.jsx           # Application entry point
-├── App.css            # Global styles
-└── index.css          # Base styles
+├── utils/           # Utility functions
+├── App.css          # Global styles
+└── index.css        # Base styles
 ```
 
 ## State Management

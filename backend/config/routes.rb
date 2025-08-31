@@ -27,6 +27,14 @@ Rails.application.routes.draw do
         end
       end
 
+      # Vendor profile routes (user_management pack)
+      resources :profiles, only: [:show, :create, :update, :destroy] do
+        collection do
+          get :me
+          get :service_categories
+        end
+      end
+
       # Service routes (service_catalog pack)
       resources :services do
         collection do

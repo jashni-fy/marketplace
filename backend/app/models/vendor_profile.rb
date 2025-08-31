@@ -1,3 +1,34 @@
+# == Schema Information
+#
+# Table name: vendor_profiles
+#
+#  id                 :bigint           not null, primary key
+#  average_rating     :decimal(3, 2)    default(0.0)
+#  business_license   :string
+#  business_name      :string           not null
+#  description        :text
+#  is_verified        :boolean          default(FALSE)
+#  location           :string
+#  phone              :string
+#  service_categories :text
+#  total_reviews      :integer          default(0)
+#  website            :string
+#  years_experience   :integer          default(0)
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  user_id            :bigint           not null
+#
+# Indexes
+#
+#  index_vendor_profiles_on_business_name  (business_name)
+#  index_vendor_profiles_on_is_verified    (is_verified)
+#  index_vendor_profiles_on_location       (location)
+#  index_vendor_profiles_on_user_id        (user_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (user_id => users.id)
+#
 class VendorProfile < ApplicationRecord
   belongs_to :user
   

@@ -1,3 +1,29 @@
+# == Schema Information
+#
+# Table name: customer_profiles
+#
+#  id             :bigint           not null, primary key
+#  budget_range   :string
+#  company_name   :string
+#  event_types    :text
+#  location       :string
+#  phone          :string
+#  preferences    :text
+#  total_bookings :integer          default(0)
+#  created_at     :datetime         not null
+#  updated_at     :datetime         not null
+#  user_id        :bigint           not null
+#
+# Indexes
+#
+#  index_customer_profiles_on_budget_range  (budget_range)
+#  index_customer_profiles_on_location      (location)
+#  index_customer_profiles_on_user_id       (user_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (user_id => users.id)
+#
 FactoryBot.define do
   factory :customer_profile do
     # Don't create a user here - let the User model handle profile creation

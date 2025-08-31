@@ -88,6 +88,9 @@ GEM
       mutex_m
       securerandom (>= 0.3)
       tzinfo (~> 2.0)
+    annotate (3.2.0)
+      activerecord (>= 3.2, < 8.0)
+      rake (>= 10.4, < 14.0)
     arbre (1.7.0)
       activesupport (>= 3.0.0)
       ruby2_keywords (>= 0.0.2)
@@ -363,6 +366,7 @@ GEM
       redis-client (>= 0.23.2)
     smart_properties (1.17.0)
     sorbet-runtime (0.6.12449)
+    spring (4.4.0)
     sprockets (4.2.2)
       concurrent-ruby (~> 1.0)
       logger
@@ -402,6 +406,7 @@ PLATFORMS
 
 DEPENDENCIES
   activeadmin
+  annotate
   bcrypt (~> 3.1.7)
   bootsnap
   database_cleaner-active_record
@@ -422,6 +427,7 @@ DEPENDENCIES
   sassc-rails
   shoulda-matchers
   sidekiq
+  spring
   tzinfo-data
 
 RUBY VERSION

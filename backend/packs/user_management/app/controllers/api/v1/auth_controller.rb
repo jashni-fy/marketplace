@@ -1,6 +1,8 @@
 class Api::V1::AuthController < ApplicationController
   # Skip authentication for these endpoints
   skip_before_action :authenticate_request, only: [:login, :register, :logout]
+  # Skip CSRF protection for API endpoints
+  skip_before_action :verify_authenticity_token
 
   def login
     # Handle missing parameters gracefully
@@ -31,7 +33,7 @@ class Api::V1::AuthController < ApplicationController
       end
     else
       render json: {
-        error: Message.invalid_credentials
+        error: 'Invalid email or password'
       }, status: :unauthorized
     end
   end

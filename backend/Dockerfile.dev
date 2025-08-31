@@ -24,6 +24,14 @@ RUN apt-get update -qq && \
     vim \
     && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
+# Create a non-root user
+RUN useradd rails --create-home --shell /bin/bash
+
+# Create necessary directories and set permissions
+RUN mkdir -p /usr/local/bundle tmp/pids log storage && \
+    touch log/development.log && \
+    chown -R rails:rails /usr/local/bundle /rails
+
 # Install application gems
 COPY Gemfile Gemfile.lock ./
 RUN bundle install
@@ -31,13 +39,7 @@ RUN bundle install
 # Copy application code
 COPY . .
 
-# Create a non-root user
-RUN useradd rails --create-home --shell /bin/bash && \
-    chown -R rails:rails /rails
 USER rails:rails
-
-# Create necessary directories
-RUN mkdir -p tmp/pids log storage
 
 # Expose port
 EXPOSE 3000
