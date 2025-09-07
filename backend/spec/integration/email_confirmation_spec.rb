@@ -4,7 +4,7 @@ RSpec.describe 'Email Confirmation Flow', type: :request do
   describe 'User registration and confirmation' do
     it 'creates unconfirmed user and allows confirmation' do
       # Register a new user
-      post '/api/v1/auth/register', params: {
+      post '/api/auth/register', params: {
         auth: {
           email: 'test@example.com',
           password: 'password123',
@@ -22,7 +22,7 @@ RSpec.describe 'Email Confirmation Flow', type: :request do
       expect(user.confirmed?).to be false
 
       # Try to login before confirmation - should fail
-      post '/api/v1/auth/login', params: {
+      post '/api/auth/login', params: {
         auth: {
           email: 'test@example.com',
           password: 'password123'
@@ -37,7 +37,7 @@ RSpec.describe 'Email Confirmation Flow', type: :request do
       user.update!(confirmed_at: Time.current)
 
       # Now login should work
-      post '/api/v1/auth/login', params: {
+      post '/api/auth/login', params: {
         auth: {
           email: 'test@example.com',
           password: 'password123'
@@ -52,7 +52,7 @@ RSpec.describe 'Email Confirmation Flow', type: :request do
 
     it 'creates appropriate profile based on user role' do
       # Test customer profile creation
-      post '/api/v1/auth/register', params: {
+      post '/api/auth/register', params: {
         auth: {
           email: 'customer@example.com',
           password: 'password123',
@@ -68,7 +68,7 @@ RSpec.describe 'Email Confirmation Flow', type: :request do
       expect(customer.vendor_profile).to be_nil
 
       # Test vendor profile creation
-      post '/api/v1/auth/register', params: {
+      post '/api/auth/register', params: {
         auth: {
           email: 'vendor@example.com',
           password: 'password123',

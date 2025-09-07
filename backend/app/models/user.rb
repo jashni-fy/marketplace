@@ -36,8 +36,10 @@ class User < ApplicationRecord
   # Associations
   has_one :vendor_profile, dependent: :destroy
   has_one :customer_profile, dependent: :destroy
+  has_many :customer_bookings, class_name: 'Booking', foreign_key: 'customer_id', dependent: :destroy
+  has_many :vendor_bookings, class_name: 'Booking', foreign_key: 'vendor_id', dependent: :destroy
+  has_many :booking_messages, foreign_key: 'sender_id', dependent: :destroy
   # TODO: Add these associations when models are created in future tasks
-  # has_many :bookings, dependent: :destroy
   # has_many :reviews, dependent: :destroy
 
   # Validations

@@ -2,8 +2,7 @@ class Service < ApplicationRecord
   # Associations
   belongs_to :vendor_profile
   belongs_to :service_category
-  # Future associations (will be added in later tasks)
-  # has_many :bookings, dependent: :destroy
+  has_many :bookings, dependent: :destroy
   has_many :service_images, dependent: :destroy
   has_many_attached :images
 
@@ -93,8 +92,7 @@ class Service < ApplicationRecord
   end
 
   def bookings_count
-    # bookings.count # Will be implemented when bookings are added
-    0
+    bookings.count
   end
 
   def has_images?

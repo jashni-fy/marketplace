@@ -50,6 +50,10 @@ FactoryBot.define do
       confirmed_at { nil }
     end
 
+    trait :confirmed do
+      confirmed_at { Time.current }
+    end
+
     trait :with_vendor_profile do
       role { :vendor }
       after(:create) do |user|

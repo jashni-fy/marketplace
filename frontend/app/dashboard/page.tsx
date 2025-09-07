@@ -122,7 +122,7 @@ export default function DashboardPage() {
               ) : (
                 <>
                   <a
-                    href="/marketplace"
+                    href="/frontend/components/pages/marketplace"
                     className="btn-primary px-6 py-4 rounded-lg font-medium transition-all duration-200 hover:scale-105 flex flex-col items-center justify-center text-center"
                   >
                     <svg className="w-5 h-5 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

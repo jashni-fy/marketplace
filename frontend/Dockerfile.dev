@@ -3,12 +3,21 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /app
 
+# Install dependencies for better caching
+RUN apk add --no-cache libc6-compat
+
+# Copy package files first (for better Docker layer caching)
+COPY package.json package-lock.json ./
+
 # Install dependencies
-COPY package*.json ./
-RUN npm ci
+RUN npm install && \
+    npm cache clean --force
 
 # Copy source code
 COPY . .
+
+# Add node_modules/.bin to PATH
+ENV PATH="/app/node_modules/.bin:$PATH"
 
 # Expose port
 EXPOSE 3000

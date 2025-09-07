@@ -9,6 +9,9 @@ FactoryBot.define do
 
     trait :featured do
       is_featured { true }
+      category { 'event_planning' }
+      title { 'Featured Event Planning' }
+      description { 'Premium event planning services' }
     end
 
     trait :photography do

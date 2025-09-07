@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_08_28_022938) do
+ActiveRecord::Schema[7.1].define(version: 2025_09_07_062356) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -54,6 +54,54 @@ ActiveRecord::Schema[7.1].define(version: 2025_08_28_022938) do
     t.index ["reset_password_token"], name: "index_admin_users_on_reset_password_token", unique: true
   end
 
+  create_table "availability_slots", force: :cascade do |t|
+    t.bigint "vendor_profile_id", null: false
+    t.date "date", null: false
+    t.time "start_time", null: false
+    t.time "end_time", null: false
+    t.boolean "is_available", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["date", "is_available"], name: "index_availability_slots_on_date_and_is_available"
+    t.index ["vendor_profile_id", "date"], name: "index_availability_slots_on_vendor_profile_id_and_date"
+    t.index ["vendor_profile_id"], name: "index_availability_slots_on_vendor_profile_id"
+  end
+
+  create_table "booking_messages", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.bigint "sender_id", null: false
+    t.text "message", null: false
+    t.datetime "sent_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id", "sent_at"], name: "index_booking_messages_on_booking_id_and_sent_at"
+    t.index ["booking_id"], name: "index_booking_messages_on_booking_id"
+    t.index ["sender_id"], name: "index_booking_messages_on_sender_id"
+  end
+
+  create_table "bookings", force: :cascade do |t|
+    t.bigint "customer_id", null: false
+    t.bigint "vendor_id", null: false
+    t.bigint "service_id", null: false
+    t.datetime "event_date", null: false
+    t.string "event_location", null: false
+    t.decimal "total_amount", precision: 10, scale: 2, null: false
+    t.integer "status", default: 0, null: false
+    t.text "requirements"
+    t.text "special_instructions"
+    t.datetime "event_end_date"
+    t.string "event_duration"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id", "status"], name: "index_bookings_on_customer_id_and_status"
+    t.index ["customer_id"], name: "index_bookings_on_customer_id"
+    t.index ["event_date"], name: "index_bookings_on_event_date"
+    t.index ["service_id", "status"], name: "index_bookings_on_service_id_and_status"
+    t.index ["service_id"], name: "index_bookings_on_service_id"
+    t.index ["vendor_id", "status"], name: "index_bookings_on_vendor_id_and_status"
+    t.index ["vendor_id"], name: "index_bookings_on_vendor_id"
+  end
+
   create_table "customer_profiles", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.datetime "created_at", null: false
@@ -68,6 +116,22 @@ ActiveRecord::Schema[7.1].define(version: 2025_08_28_022938) do
     t.index ["budget_range"], name: "index_customer_profiles_on_budget_range"
     t.index ["location"], name: "index_customer_profiles_on_location"
     t.index ["user_id"], name: "index_customer_profiles_on_user_id"
+  end
+
+  create_table "portfolio_items", force: :cascade do |t|
+    t.bigint "vendor_profile_id", null: false
+    t.string "title", null: false
+    t.text "description"
+    t.string "category", null: false
+    t.integer "display_order", default: 0, null: false
+    t.boolean "is_featured", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["category"], name: "index_portfolio_items_on_category"
+    t.index ["vendor_profile_id", "category"], name: "index_portfolio_items_on_vendor_and_category"
+    t.index ["vendor_profile_id", "display_order"], name: "index_portfolio_items_on_vendor_and_order"
+    t.index ["vendor_profile_id", "is_featured"], name: "index_portfolio_items_on_vendor_and_featured"
+    t.index ["vendor_profile_id"], name: "index_portfolio_items_on_vendor_profile_id"
   end
 
   create_table "service_categories", force: :cascade do |t|
@@ -146,15 +210,25 @@ ActiveRecord::Schema[7.1].define(version: 2025_08_28_022938) do
     t.boolean "is_verified", default: false
     t.decimal "average_rating", precision: 3, scale: 2, default: "0.0"
     t.integer "total_reviews", default: 0
+    t.decimal "latitude", precision: 10, scale: 6
+    t.decimal "longitude", precision: 10, scale: 6
     t.index ["business_name"], name: "index_vendor_profiles_on_business_name"
     t.index ["is_verified"], name: "index_vendor_profiles_on_is_verified"
+    t.index ["latitude", "longitude"], name: "index_vendor_profiles_on_coordinates"
     t.index ["location"], name: "index_vendor_profiles_on_location"
     t.index ["user_id"], name: "index_vendor_profiles_on_user_id"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "availability_slots", "vendor_profiles"
+  add_foreign_key "booking_messages", "bookings"
+  add_foreign_key "booking_messages", "users", column: "sender_id"
+  add_foreign_key "bookings", "services"
+  add_foreign_key "bookings", "users", column: "customer_id"
+  add_foreign_key "bookings", "users", column: "vendor_id"
   add_foreign_key "customer_profiles", "users"
+  add_foreign_key "portfolio_items", "vendor_profiles"
   add_foreign_key "service_images", "services"
   add_foreign_key "services", "service_categories"
   add_foreign_key "services", "vendor_profiles"

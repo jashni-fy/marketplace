@@ -35,7 +35,7 @@ const NotFound = () => {
           
           <div className="flex flex-wrap justify-center gap-3 text-xs">
             <Link 
-              href="/marketplace" 
+              href="/frontend/components/pages/marketplace"
               className="text-blue-400 hover:text-blue-300 transition-colors px-2 py-1 rounded hover:bg-slate-800"
             >
               Browse

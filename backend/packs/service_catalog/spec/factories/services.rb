@@ -7,8 +7,18 @@ FactoryBot.define do
     pricing_type { :hourly }
     status { :active }
     
-    # Create vendor_profile through user callback
-    vendor_profile { create(:user, :vendor).vendor_profile }
+    # Create vendor_profile through association
+    transient do
+      vendor_user { nil }
+    end
+    
+    vendor_profile do
+      if vendor_user
+        vendor_user.vendor_profile
+      else
+        association :vendor_profile
+      end
+    end
 
     trait :draft do
       status { :draft }

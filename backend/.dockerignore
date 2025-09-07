@@ -1,0 +1,80 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# Development files
+.env.development
+.env.local
+.env.test
+
+# Logs
+log/*
+*.log
+tmp/pids/*
+tmp/cache/*
+tmp/sockets/*
+tmp/storage/*
+
+# Test files
+spec/
+test/
+coverage/
+
+# Node modules (if any)
+node_modules/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker files
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Development tools
+.byebug_history
+.pry_history
+
+# Storage (development uploads)
+storage/
+
+# Packwerk cache
+.packwerk_cache/
+
+# Bundle cache
+vendor/bundle/
+.bundle/
+
+# Bootsnap cache
+tmp/bootsnap*
+
+# Assets (will be compiled in container)
+public/assets/
+public/packs/
+public/packs-test/
+
+# Yarn
+yarn-error.log
+.yarn-integrity
+
+# RSpec
+.rspec_status
+
+# Spring
+spring/
+.spring/
+
+# Credentials (should use environment variables)
+config/credentials/
+config/master.key

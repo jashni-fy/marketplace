@@ -1,5 +1,3 @@
-# syntax = docker/dockerfile:1
-
 # Make sure RUBY_VERSION matches the Ruby version in .ruby-version and Gemfile
 ARG RUBY_VERSION=3.2.4
 FROM registry.docker.com/library/ruby:$RUBY_VERSION-slim
@@ -32,17 +30,24 @@ RUN mkdir -p /usr/local/bundle tmp/pids log storage && \
     touch log/development.log && \
     chown -R rails:rails /usr/local/bundle /rails
 
+# Copy dependency files first (for better Docker layer caching)
+COPY --chown=rails:rails Gemfile Gemfile.lock ./
+
+# Switch to rails user for bundle install
+USER rails:rails
+
 # Install application gems
-COPY Gemfile Gemfile.lock ./
-RUN bundle install
+RUN bundle install && \
+    bundle clean --force
 
 # Copy application code
-COPY . .
+COPY --chown=rails:rails . .
 
-USER rails:rails
+# Precompile bootsnap code for faster boot times
+RUN bundle exec bootsnap precompile --gemfile
 
 # Expose port
 EXPOSE 3000
 
 # Start the server by default
-CMD ["./bin/rails", "server", "-b", "0.0.0.0"]
+CMD ["bash", "-c", "chown -R rails:rails /usr/local/bundle && bundle install && ./bin/rails db:prepare && ./bin/rails server -b 0.0.0.0"]

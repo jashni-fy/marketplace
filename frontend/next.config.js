@@ -3,19 +3,11 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   
-  // API configuration
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: process.env.NEXT_PUBLIC_API_URL + '/api/:path*',
-      },
-    ];
-  },
+  // API configuration removed - using direct calls to backend
 
   // Environment variables
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
   },
 
   // Image optimization

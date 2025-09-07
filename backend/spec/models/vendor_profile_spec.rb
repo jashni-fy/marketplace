@@ -8,7 +8,9 @@
 #  business_name      :string           not null
 #  description        :text
 #  is_verified        :boolean          default(FALSE)
+#  latitude           :decimal(10, 6)
 #  location           :string
+#  longitude          :decimal(10, 6)
 #  phone              :string
 #  service_categories :text
 #  total_reviews      :integer          default(0)
@@ -21,6 +23,7 @@
 # Indexes
 #
 #  index_vendor_profiles_on_business_name  (business_name)
+#  index_vendor_profiles_on_coordinates    (latitude,longitude)
 #  index_vendor_profiles_on_is_verified    (is_verified)
 #  index_vendor_profiles_on_location       (location)
 #  index_vendor_profiles_on_user_id        (user_id)

@@ -38,6 +38,9 @@ gem "jwt"
 # Pagination
 gem "kaminari"
 
+# GraphQL for advanced search capabilities
+gem "graphql"
+
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 
@@ -74,3 +77,4 @@ group :test do
   gem 'database_cleaner-active_record'
 end
 
+gem "graphiql-rails", group: :development

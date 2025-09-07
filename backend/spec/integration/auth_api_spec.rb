@@ -4,9 +4,9 @@ RSpec.describe 'Authentication API', type: :request do
   let(:user) { create(:user, confirmed_at: Time.current) }
   let(:unconfirmed_user) { create(:user, confirmed_at: nil) }
 
-  describe 'POST /api/v1/auth/login' do
+  describe 'POST /api/auth/login' do
     it 'successfully logs in a confirmed user' do
-      post '/api/v1/auth/login', params: {
+      post '/api/auth/login', params: {
         auth: {
           email: user.email,
           password: user.password
@@ -22,7 +22,7 @@ RSpec.describe 'Authentication API', type: :request do
     end
 
     it 'rejects unconfirmed user login' do
-      post '/api/v1/auth/login', params: {
+      post '/api/auth/login', params: {
         auth: {
           email: unconfirmed_user.email,
           password: unconfirmed_user.password
@@ -36,7 +36,7 @@ RSpec.describe 'Authentication API', type: :request do
     end
 
     it 'rejects invalid credentials' do
-      post '/api/v1/auth/login', params: {
+      post '/api/auth/login', params: {
         auth: {
           email: user.email,
           password: 'wrongpassword'
@@ -50,10 +50,10 @@ RSpec.describe 'Authentication API', type: :request do
     end
   end
 
-  describe 'POST /api/v1/auth/register' do
+  describe 'POST /api/auth/register' do
     it 'successfully registers a new user' do
       expect {
-        post '/api/v1/auth/register', params: {
+        post '/api/auth/register', params: {
           auth: {
             email: 'newuser@example.com',
             password: 'password123',
@@ -74,7 +74,7 @@ RSpec.describe 'Authentication API', type: :request do
     end
 
     it 'rejects registration with invalid data' do
-      post '/api/v1/auth/register', params: {
+      post '/api/auth/register', params: {
         auth: {
           email: 'invalid-email',
           password: '123',
@@ -94,9 +94,9 @@ RSpec.describe 'Authentication API', type: :request do
     end
   end
 
-  describe 'DELETE /api/v1/auth/logout' do
+  describe 'DELETE /api/auth/logout' do
     it 'successfully logs out' do
-      delete '/api/v1/auth/logout', as: :json
+      delete '/api/auth/logout', as: :json
 
       expect(response).to have_http_status(:ok)
       
@@ -118,7 +118,7 @@ RSpec.describe 'Authentication API', type: :request do
       token = JSON.parse(response.body)['token']
 
       # Use the token to access a protected endpoint (we'll use a simple endpoint)
-      get '/api/v1/users/profile', headers: {
+      get '/api/users/show', headers: {
         'Authorization' => "Bearer #{token}"
       }, as: :json
 

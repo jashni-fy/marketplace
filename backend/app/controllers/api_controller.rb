@@ -1,13 +1,23 @@
 class ApiController < ActionController::API
   include ExceptionHandler
-
-  # called before every action on controllers
-  before_action :authenticate_request
-  attr_reader :current_user
-
-  private
-
-  def authenticate_request
+  
+  # API controllers can selectively require authentication
+  def authenticate_user!
     @current_user = (AuthorizeApiRequest.new(request.headers).call)[:user]
+    render json: { message: 'Missing token' }, status: :unauthorized unless @current_user
+  end
+
+  def current_user
+    @current_user
+  end
+
+  protected
+
+  def render_error(message, status = :unprocessable_entity)
+    render json: { error: message }, status: status
+  end
+
+  def render_success(message, data = {}, status = :ok)
+    render json: { message: message }.merge(data), status: status
   end
 end
