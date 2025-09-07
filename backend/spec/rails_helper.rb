@@ -95,6 +95,10 @@ Shoulda::Matchers.configure do |config|
 end
 # Configure Devise for testing
 RSpec.configure do |config|
+  # Include Devise test helpers
+  config.include Devise::Test::ControllerHelpers, type: :controller
+  config.include Devise::Test::IntegrationHelpers, type: :request
+  
   config.before(:each) do
     # Skip confirmation emails in tests
     allow_any_instance_of(User).to receive(:send_confirmation_instructions)

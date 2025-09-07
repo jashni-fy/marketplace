@@ -42,10 +42,23 @@ RSpec.describe Booking, type: :model do
   end
 
   describe 'scopes' do
-    let!(:upcoming_booking) { create(:booking, customer: customer, vendor: vendor, service: service, event_date: 1.week.from_now) }
-    let!(:past_booking) { create(:booking, customer: customer, vendor: vendor, service: service, event_date: 1.week.ago) }
-    let!(:pending_booking) { create(:booking, customer: customer, vendor: vendor, service: service, status: :pending) }
-    let!(:accepted_booking) { create(:booking, customer: customer, vendor: vendor, service: service, status: :accepted) }
+    let!(:upcoming_availability) do
+      create(:availability_slot,
+        vendor_profile: vendor.vendor_profile,
+        date: 1.week.from_now.to_date,
+        start_time: '09:00',
+        end_time: '17:00',
+        is_available: true
+      )
+    end
+    let!(:upcoming_booking) { create(:booking, customer: customer, vendor: vendor, service: service, event_date: 1.week.from_now.change(hour: 10)) }
+    let!(:past_booking) do
+      booking = build(:booking, customer: customer, vendor: vendor, service: service, event_date: 1.week.ago, event_location: 'Test Location', total_amount: 100)
+      booking.save(validate: false)
+      booking
+    end
+    let!(:pending_booking) { create(:booking, customer: customer, vendor: vendor, service: service, status: :pending, event_date: 1.week.from_now.change(hour: 14)) }
+    let!(:accepted_booking) { create(:booking, customer: customer, vendor: vendor, service: service, status: :accepted, event_date: 1.week.from_now.change(hour: 15)) }
 
     describe '.upcoming' do
       it 'returns bookings with future event dates' do
@@ -75,7 +88,16 @@ RSpec.describe Booking, type: :model do
   end
 
   describe 'instance methods' do
-    let(:booking) { create(:booking, customer: customer, vendor: vendor, service: service) }
+    let!(:availability_slot) do
+      create(:availability_slot,
+        vendor_profile: vendor.vendor_profile,
+        date: 1.week.from_now.to_date,
+        start_time: '09:00',
+        end_time: '17:00',
+        is_available: true
+      )
+    end
+    let(:booking) { create(:booking, customer: customer, vendor: vendor, service: service, event_date: 1.week.from_now.change(hour: 10)) }
 
     describe '#duration_hours' do
       context 'when event_end_date is present' do

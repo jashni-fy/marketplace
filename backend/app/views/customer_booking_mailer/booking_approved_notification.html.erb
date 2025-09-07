@@ -1,0 +1,21 @@
+<h2>Booking Confirmed!</h2>
+
+<p>Hello <%= @customer.user.full_name %>,</p>
+
+<p>Great news! Your booking with <strong><%= @vendor.business_name %></strong> has been confirmed.</p>
+
+<h3>Booking Details:</h3>
+<ul>
+  <li><strong>Service:</strong> <%= @service.name %></li>
+  <li><strong>Date & Time:</strong> <%= format_booking_time(@booking) %></li>
+  <li><strong>Duration:</strong> <%= time_duration(@booking.event_date, @booking.event_end_date || @booking.event_date + 2.hours) %></li>
+  <li><strong>Vendor:</strong> <%= @vendor.business_name %></li>
+  <li><strong>Contact:</strong> <%= @vendor.user.email %></li>
+</ul>
+
+<p>We'll send you a reminder 24 hours before your appointment.</p>
+
+<p>If you need to make any changes, please contact the vendor directly or log in to your dashboard.</p>
+
+<p>Best regards,<br>
+The Marketplace Team</p>

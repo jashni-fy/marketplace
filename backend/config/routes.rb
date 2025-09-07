@@ -93,6 +93,10 @@ Rails.application.routes.draw do
         get :messages
         post :send_message
       end
+      collection do
+        post :check_availability
+        post :suggest_alternatives
+      end
     end
 
     # Availability slots routes (booking_management pack)

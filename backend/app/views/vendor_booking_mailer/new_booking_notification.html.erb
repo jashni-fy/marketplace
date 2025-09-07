@@ -1,0 +1,25 @@
+<h2>New Booking Request</h2>
+
+<p>Hello <%= @vendor.business_name %>,</p>
+
+<p>You have received a new booking request from <strong><%= @customer.user.full_name %></strong>.</p>
+
+<h3>Booking Details:</h3>
+<ul>
+  <li><strong>Service:</strong> <%= @service.name %></li>
+  <li><strong>Date & Time:</strong> <%= format_booking_time(@booking) %></li>
+  <li><strong>Duration:</strong> <%= time_duration(@booking.event_date, @booking.event_end_date || @booking.event_date + 2.hours) %></li>
+  <li><strong>Customer:</strong> <%= @customer.user.full_name %></li>
+  <li><strong>Email:</strong> <%= @customer.user.email %></li>
+  <% if @booking.requirements.present? %>
+  <li><strong>Requirements:</strong> <%= @booking.requirements %></li>
+  <% end %>
+  <% if @booking.special_instructions.present? %>
+  <li><strong>Special Instructions:</strong> <%= @booking.special_instructions %></li>
+  <% end %>
+</ul>
+
+<p>Please log in to your dashboard to approve or decline this booking request.</p>
+
+<p>Best regards,<br>
+The Marketplace Team</p>

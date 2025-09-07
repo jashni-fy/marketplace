@@ -23,16 +23,20 @@ class BookingsController < ApiController
   end
 
   def create
-    @booking = Booking.new(booking_params)
-    @booking.customer = current_user
-    @booking.vendor = @booking.service.vendor_profile.user
-    @booking.status = :pending
+    booking_service = BookingCreationService.new(
+      booking_params.merge(customer: current_user)
+    )
 
-    if @booking.save
-      # TODO: Send notification to vendor
-      render json: { booking: booking_json(@booking) }, status: :created
+    if booking_service.call
+      render json: { 
+        booking: booking_json(booking_service.booking),
+        message: 'Booking created successfully'
+      }, status: :created
     else
-      render json: { errors: @booking.errors.full_messages }, status: :unprocessable_entity
+      render json: { 
+        errors: booking_service.errors.full_messages,
+        error: 'Failed to create booking'
+      }, status: :unprocessable_entity
     end
   end
 
@@ -115,6 +119,48 @@ class BookingsController < ApiController
     else
       render json: { errors: @message.errors.full_messages }, status: :unprocessable_entity
     end
+  end
+
+  def check_availability
+    service = Service.find(params[:service_id])
+    vendor_profile = service.vendor_profile
+
+    availability_checker = AvailabilityCheckerService.new(
+      vendor_profile: vendor_profile,
+      date: Date.parse(params[:date]),
+      start_time: params[:start_time],
+      end_time: params[:end_time]
+    )
+
+    if availability_checker.available?
+      render json: { 
+        available: true,
+        message: 'Time slot is available'
+      }
+    else
+      render json: { 
+        available: false,
+        message: 'Time slot is not available',
+        suggested_times: availability_checker.suggested_times
+      }
+    end
+  rescue Date::Error, ArgumentError => e
+    render json: { error: 'Invalid date or time format' }, status: :bad_request
+  end
+
+  def suggest_alternatives
+    conflict_resolver = ConflictResolutionService.new(
+      vendor: User.find(params[:vendor_id]),
+      event_date: DateTime.parse("#{params[:date]} #{params[:start_time]}"),
+      event_end_date: DateTime.parse("#{params[:date]} #{params[:end_time]}")
+    )
+
+    render json: {
+      has_conflict: conflict_resolver.has_conflict?,
+      alternative_times: conflict_resolver.suggest_alternative_times
+    }
+  rescue Date::Error, ArgumentError => e
+    render json: { error: 'Invalid date or time format' }, status: :bad_request
   end
 
   private

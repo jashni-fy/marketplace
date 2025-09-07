@@ -43,14 +43,16 @@ class AvailabilitySlot < ApplicationRecord
   end
 
   def has_booking_conflict?
-    Booking.joins(:vendor)
-           .joins('JOIN vendor_profiles ON vendor_profiles.user_id = users.id')
+    Booking.joins(vendor: :vendor_profile)
            .where(vendor_profiles: { id: vendor_profile_id })
            .where(status: [:pending, :accepted])
-           .where('DATE(event_date) = ?', date)
+           .where('DATE(bookings.event_date) = ?', date)
            .where(
-             '(TIME(event_date) < ? AND TIME(COALESCE(event_end_date, event_date + INTERVAL \'2 hours\')) > ?)',
-             end_time, start_time
+             '(EXTRACT(HOUR FROM bookings.event_date) * 60 + EXTRACT(MINUTE FROM bookings.event_date) < ? AND ' \
+             'EXTRACT(HOUR FROM COALESCE(bookings.event_end_date, bookings.event_date + INTERVAL \'2 hours\')) * 60 + ' \
+             'EXTRACT(MINUTE FROM COALESCE(bookings.event_end_date, bookings.event_date + INTERVAL \'2 hours\')) > ?)',
+             end_time.hour * 60 + end_time.min,
+             start_time.hour * 60 + start_time.min
            ).exists?
   end
 
@@ -59,7 +61,13 @@ class AvailabilitySlot < ApplicationRecord
   def end_time_after_start_time
     return unless start_time && end_time
 
-    if end_time <= start_time
+    start_minutes = start_time.hour * 60 + start_time.min
+    end_minutes = end_time.hour * 60 + end_time.min
+    
+    # If end_minutes < start_minutes, it's an overnight slot (allowed)
+    # If end_minutes == start_minutes, it's invalid (zero duration)
+    # If end_minutes > start_minutes, it's a same-day slot (allowed)
+    if end_minutes == start_minutes
       errors.add(:end_time, 'must be after start time')
     end
   end

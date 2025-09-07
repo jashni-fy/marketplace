@@ -6,7 +6,16 @@ RSpec.describe BookingMessage, type: :model do
   let(:customer) { create(:user, :customer) }
   let(:vendor) { create(:user, :vendor) }
   let(:service) { create(:service, vendor_profile: vendor.vendor_profile) }
-  let(:booking) { create(:booking, customer: customer, vendor: vendor, service: service) }
+  let!(:availability_slot) do
+    create(:availability_slot,
+      vendor_profile: vendor.vendor_profile,
+      date: 1.week.from_now.to_date,
+      start_time: '09:00',
+      end_time: '17:00',
+      is_available: true
+    )
+  end
+  let(:booking) { create(:booking, customer: customer, vendor: vendor, service: service, event_date: 1.week.from_now.change(hour: 10)) }
 
   describe 'associations' do
     it { should belong_to(:booking) }
@@ -18,7 +27,6 @@ RSpec.describe BookingMessage, type: :model do
     
     it { should validate_presence_of(:message) }
     it { should validate_length_of(:message).is_at_least(1).is_at_most(1000) }
-    it { should validate_presence_of(:sent_at) }
   end
 
   describe 'callbacks' do

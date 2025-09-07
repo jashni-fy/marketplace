@@ -41,6 +41,10 @@ class Booking < ApplicationRecord
     (pending? || accepted?) && event_date > 24.hours.from_now
   end
 
+  def can_be_modified?
+    pending? && event_date > 24.hours.from_now
+  end
+
   def vendor_profile
     vendor&.vendor_profile
   end
