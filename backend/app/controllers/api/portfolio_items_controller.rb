@@ -1,4 +1,4 @@
-class Api::V1::PortfolioItemsController < ApiController
+class Api::PortfolioItemsController < ApiController
   # Authentication is handled by ApiController
   before_action :authenticate_user!, except: [:index, :show]
   before_action :set_vendor_profile, only: [:index, :create]

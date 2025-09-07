@@ -108,7 +108,7 @@ RSpec.describe 'Authentication API', type: :request do
   describe 'JWT token usage' do
     it 'allows access to protected endpoints with valid token' do
       # Login to get a token
-      post '/api/v1/auth/login', params: {
+      post '/api/auth/login', params: {
         auth: {
           email: user.email,
           password: user.password

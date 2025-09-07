@@ -30,7 +30,7 @@ This document provides instructions for running the Marketplace application usin
 
 The application will be available at:
 - Web application: http://localhost (via nginx)
-- Backend API: http://localhost/api/v1
+- Backend API: http://localhost/api
 - Sidekiq Web UI: http://localhost/sidekiq (development only)
 - Direct backend access: http://localhost:3000
 - Direct frontend access: http://localhost:5173

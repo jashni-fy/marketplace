@@ -1,4 +1,4 @@
-class Api::V1::ProfilesController < ApiController
+class Api::ProfilesController < ApiController
   before_action :authenticate_user!, except: [:service_categories]
   before_action :set_profile, only: [:show, :update, :destroy]
   before_action :ensure_vendor_role, only: [:me, :create, :update, :destroy]

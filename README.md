@@ -50,7 +50,7 @@ marketplace/
 
 3. **Access the application:**
    - Frontend: http://localhost (via nginx proxy)
-   - Backend API: http://localhost/api/v1
+   - Backend API: http://localhost/api
    - Direct Frontend: http://localhost:5173
    - Direct Backend: http://localhost:3000
    - Sidekiq Web UI: http://localhost/sidekiq (development only)
@@ -137,7 +137,7 @@ REDIS_URL=redis://redis:6379/0
 
 ### Frontend (.env)
 ```
-VITE_API_URL=http://localhost:3000/api/v1
+VITE_API_URL=http://localhost:3000/api
 VITE_APP_NAME=Marketplace
 VITE_APP_VERSION=1.0.0
 ```

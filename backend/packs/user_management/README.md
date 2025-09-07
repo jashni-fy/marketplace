@@ -6,7 +6,7 @@ This pack handles user authentication and vendor profile management for the mark
 
 ### Endpoints
 
-#### GET /api/v1/profiles/service_categories
+#### GET /api/profiles/service_categories
 Returns a list of active service categories available for vendor profiles.
 
 **Authentication:** Not required
@@ -24,7 +24,7 @@ Returns a list of active service categories available for vendor profiles.
 }
 ```
 
-#### GET /api/v1/profiles/me
+#### GET /api/profiles/me
 Returns the current authenticated vendor's profile.
 
 **Authentication:** Required (Vendor role)
@@ -50,13 +50,13 @@ Returns the current authenticated vendor's profile.
 }
 ```
 
-#### GET /api/v1/profiles/:id
+#### GET /api/profiles/:id
 Returns a specific vendor profile by ID.
 
 **Authentication:** Required
 **Response:** Same as `/me` endpoint
 
-#### POST /api/v1/profiles
+#### POST /api/profiles
 Creates a new vendor profile for the authenticated user.
 
 **Authentication:** Required (Vendor role)
@@ -75,13 +75,13 @@ Creates a new vendor profile for the authenticated user.
 }
 ```
 
-#### PUT /api/v1/profiles/:id
+#### PUT /api/profiles/:id
 Updates an existing vendor profile.
 
 **Authentication:** Required (Profile owner only)
 **Request Body:** Same as POST endpoint
 
-#### DELETE /api/v1/profiles/:id
+#### DELETE /api/profiles/:id
 Deletes a vendor profile.
 
 **Authentication:** Required (Profile owner only)
@@ -164,7 +164,7 @@ Deletes a vendor profile.
 
 Run the test suite with:
 ```bash
-bundle exec rspec packs/user_management/spec/controllers/api/v1/profiles_controller_spec.rb
+bundle exec rspec packs/user_management/spec/controllers/api/profiles_controller_spec.rb
 bundle exec rspec spec/integration/vendor_profile_management_spec.rb
 ```
 

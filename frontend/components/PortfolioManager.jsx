@@ -21,7 +21,7 @@ const PortfolioManager = () => {
       setLoading(true);
       
       // Load portfolio items using the new API
-      const response = await apiService.get('/api/v1/portfolio_items');
+      const response = await apiService.get('/api/portfolio_items');
       setPortfolioItems(response.data.portfolio_items || []);
       setCategories(response.data.categories || []);
     } catch (err) {
@@ -102,7 +102,7 @@ const PortfolioManager = () => {
       formData.append('images[]', file);
     });
 
-    const response = await apiService.post(`/api/v1/portfolio_items/${portfolioItemId}/upload_images`, formData, {
+    const response = await apiService.post(`/api/portfolio_items/${portfolioItemId}/upload_images`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -120,7 +120,7 @@ const PortfolioManager = () => {
       is_featured: false
     };
 
-    const createResponse = await apiService.post('/api/v1/portfolio_items', {
+    const createResponse = await apiService.post('/api/portfolio_items', {
       portfolio_item: portfolioData
     });
 
@@ -136,7 +136,7 @@ const PortfolioManager = () => {
     }
 
     try {
-      await apiService.delete(`/api/v1/portfolio_items/${itemId}`);
+      await apiService.delete(`/api/portfolio_items/${itemId}`);
       await loadPortfolioData();
     } catch (err) {
       console.error('Error deleting portfolio item:', err);
@@ -146,7 +146,7 @@ const PortfolioManager = () => {
 
   const handleToggleFeatured = async (itemId, currentStatus) => {
     try {
-      await apiService.patch('/api/v1/portfolio_items/set_featured', {
+      await apiService.patch('/api/portfolio_items/set_featured', {
         item_ids: [itemId],
         featured: !currentStatus
       });
@@ -159,7 +159,7 @@ const PortfolioManager = () => {
 
   const handleCreatePortfolioItem = async (formData) => {
     try {
-      await apiService.post('/api/v1/portfolio_items', {
+      await apiService.post('/api/portfolio_items', {
         portfolio_item: formData
       });
       setShowCreateForm(false);

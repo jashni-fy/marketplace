@@ -163,6 +163,6 @@ This is the foundation setup. Future tasks will implement:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `REACT_APP_API_URL` | Backend API URL | `http://localhost:3000/api/v1` |
+| `REACT_APP_API_URL` | Backend API URL | `http://localhost:3000/api` |
 | `REACT_APP_NAME` | Application name | `Marketplace` |
 | `REACT_APP_VERSION` | Application version | `1.0.0` |
