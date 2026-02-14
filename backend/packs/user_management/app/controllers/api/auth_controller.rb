@@ -23,7 +23,7 @@ class Api::AuthController < ApiController
   end
 
   def register
-    user = User.new(auth_params); user.confirm if Rails.env.development?
+    user = User.new(auth_params)
     
     if user.save
       render json: {

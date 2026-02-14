@@ -47,6 +47,8 @@ class User < ApplicationRecord
   # == Validations ==
   # NOTE: Ensure DB-level constraints for email and role presence/uniqueness
   before_validation :downcase_email
+  before_validation :auto_confirm_user, on: :create
+
   validates :email, presence: true, uniqueness: { case_sensitive: false }
   validates :role, presence: true
   validates :password, length: { minimum: 8 }, if: :password_required?
@@ -125,6 +127,10 @@ class User < ApplicationRecord
   end
 
   # Ensures email is always downcased for validation and storage
+  def auto_confirm_user
+    self.confirmed_at ||= Time.current
+  end
+
   def downcase_email
     self.email = email.downcase if email.present?
   end
