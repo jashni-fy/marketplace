@@ -1,5 +1,4 @@
-class HealthController < ApiController
-  skip_before_action :authenticate_request
+class HealthController < ActionController::API
 
   def show
     render json: {
