@@ -25,15 +25,17 @@
 #  index_users_on_reset_password_token  (reset_password_token) UNIQUE
 #
 class User < ApplicationRecord
+  # == Devise Modules ==
   # Include default devise modules. Others available are:
   # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable, :confirmable
 
+  # == Enums ==
   # Role enum - customer: 0, vendor: 1, admin: 2
-  enum role: { customer: 0, vendor: 1, admin: 2 }
+  enum role: { customer: 0, vendor: 1, admin: 2 }, _suffix: true
 
-  # Associations
+  # == Associations ==
   has_one :vendor_profile, dependent: :destroy
   has_one :customer_profile, dependent: :destroy
   has_many :customer_bookings, class_name: 'Booking', foreign_key: 'customer_id', dependent: :destroy
@@ -42,62 +44,93 @@ class User < ApplicationRecord
   # TODO: Add these associations when models are created in future tasks
   # has_many :reviews, dependent: :destroy
 
-  # Validations
+  # == Validations ==
+  # NOTE: Ensure DB-level constraints for email and role presence/uniqueness
+  before_validation :downcase_email
   validates :email, presence: true, uniqueness: { case_sensitive: false }
   validates :role, presence: true
   validates :password, length: { minimum: 8 }, if: :password_required?
   validates :first_name, presence: true, length: { maximum: 50 }
   validates :last_name, presence: true, length: { maximum: 50 }
 
-  # Callbacks
+  # == Callbacks ==
   after_create :create_profile
-  before_save :downcase_email
 
-  # Scopes
-  scope :customers, -> { where(role: :customer) }
-  scope :vendors, -> { where(role: :vendor) }
-  scope :admins, -> { where(role: :admin) }
+  # == Scopes ==
+  scope :customers, -> { where(role: roles[:customer]) }
+  scope :vendors, -> { where(role: roles[:vendor]) }
+  scope :admins, -> { where(role: roles[:admin]) }
   scope :confirmed, -> { where.not(confirmed_at: nil) }
+  scope :unconfirmed, -> { where(confirmed_at: nil) }
 
-  # Instance methods
+  # == Ransackable Attributes ==
+  # Explicitly allowlist safe searchable fields for Ransack/ActiveAdmin
+  def self.ransackable_attributes(auth_object = nil)
+    %w[id email first_name last_name role confirmed_at created_at updated_at]
+  end
+
+  # == Ransackable Associations ==
+  # Explicitly allowlist safe associations for Ransack/ActiveAdmin
+  def self.ransackable_associations(auth_object = nil)
+    %w[vendor_profile customer_profile customer_bookings vendor_bookings booking_messages]
+  end
+
+  # == Instance Methods ==
   def customer?
-    role == 'customer'
+    role == "customer"
   end
 
   def vendor?
-    role == 'vendor'
+    role == "vendor"
   end
 
   def admin?
-    role == 'admin'
+    role == "admin"
   end
 
   def confirmed?
     confirmed_at.present?
   end
 
+  # Returns the user's full name, memoized for performance if called frequently
   def full_name
-    "#{first_name} #{last_name}".strip
+    @full_name ||= "#{first_name} #{last_name}".strip
+  end
+
+  # Returns a display name for UI or logs
+  def display_name
+    full_name.presence || email
+  end
+
+  # Safe representation for logs/debugging
+  def to_log
+    "User(id: #{id}, email: #{email}, role: #{role})"
   end
 
   private
 
+  # Creates associated profile after user creation
   def create_profile
     case role
     when 'vendor'
-      create_vendor_profile!(business_name: "#{full_name}'s Business", location: 'Not specified') unless vendor_profile.present?
+      vendor_profile || create_vendor_profile!(business_name: "#{full_name}'s Business", location: 'Not specified')
     when 'customer'
-      create_customer_profile! unless customer_profile.present?
+      customer_profile || create_customer_profile!
+    else
+      # No profile to create for other roles (e.g., admin)
+      nil
     end
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error "Failed to create profile for user #{id}: #{e.message}"
   end
 
+  # Ensures email is always downcased for validation and storage
   def downcase_email
     self.email = email.downcase if email.present?
   end
 
+  # Determines if password is required for validation
   def password_required?
-    !persisted? || !password.nil? || !password_confirmation.nil?
+    !persisted? || password.present? || password_confirmation.present?
   end
 end

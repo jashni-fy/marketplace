@@ -14,7 +14,7 @@ ActiveAdmin.register User do
       status_tag user.role.humanize, class: user.role
     end
     column :confirmed do |user|
-      status_tag(user.confirmed? ? 'Yes' : 'No', user.confirmed? ? :ok : :error)
+      status_tag(user.confirmed? ? 'Yes' : 'No')
     end
     column :created_at
     actions

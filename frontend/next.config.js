@@ -23,6 +23,14 @@ const nextConfig = {
 
   // App directory is now stable in Next.js 14
   // No experimental flags needed
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://127.0.0.1:3001/api/:path*',
+      },
+    ]
+  },
 };
 
 module.exports = nextConfig;

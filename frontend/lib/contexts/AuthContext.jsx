@@ -124,7 +124,9 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
     try {
-      const response = await apiService.auth.login(credentials);
+      // Wrap credentials in auth key if not already wrapped
+      const payload = credentials.auth ? credentials : { auth: credentials };
+      const response = await apiService.auth.login(payload);
       const { user, token, refresh_token } = response.data;
 
       tokenService.setToken(token);
@@ -140,7 +142,7 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true };
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Login failed';
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Login failed';
       dispatch({
         type: AUTH_ACTIONS.LOGIN_FAILURE,
         payload: errorMessage,
@@ -153,10 +155,12 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     dispatch({ type: AUTH_ACTIONS.REGISTER_START });
     try {
-      const response = await apiService.auth.register(userData);
+      // Wrap userData in auth key if not already wrapped
+      const payload = userData.auth ? userData : { auth: userData };
+      const response = await apiService.auth.register(payload);
       const { user, token, refresh_token, message } = response.data;
 
-      // If token is provided (user is auto-confirmed), log them in
+      // If token is provided, log them in
       if (token) {
         tokenService.setToken(token);
         tokenService.setUser(user);
@@ -169,16 +173,16 @@ export const AuthProvider = ({ children }) => {
           payload: { user, token },
         });
       } else {
-        // Registration successful but needs email confirmation
+        // Registration successful
         dispatch({
           type: AUTH_ACTIONS.REGISTER_SUCCESS,
-          payload: { user: null, token: null },
+          payload: { user: user || null, token: null },
         });
       }
 
-      return { success: true, message: message || 'Registration successful' };
+      return { success: true, message: message || 'Registration successful', user };
     } catch (error) {
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Registration failed';
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.response?.data?.details?.join(', ') || 'Registration failed';
       dispatch({
         type: AUTH_ACTIONS.REGISTER_FAILURE,
         payload: errorMessage,

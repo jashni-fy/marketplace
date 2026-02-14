@@ -7,7 +7,7 @@
 
 Rails.application.config.middleware.insert_before 0, Rack::Cors do
   allow do
-    origins Rails.env.development? ? "http://localhost:3000" : ENV.fetch("FRONTEND_URL", "")
+    origins 'https://jashnify.in', 'http://localhost:3000'
 
     resource "*",
       headers: :any,

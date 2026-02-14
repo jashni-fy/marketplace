@@ -17,7 +17,7 @@ ActiveAdmin.register VendorProfile do
   end
 
   # Filters
-  filter :user, collection: -> { User.vendors.map { |u| [u.full_name, u.id] } }
+  filter :user
   filter :business_name
   filter :business_email
   filter :business_phone
@@ -52,9 +52,4 @@ ActiveAdmin.register VendorProfile do
     end
     f.actions
   end
-
-  # Scopes
-  scope :all
-  scope :with_business_name, -> { where.not(business_name: [nil, '']) }
-  scope :with_business_email, -> { where.not(business_email: [nil, '']) }
 end

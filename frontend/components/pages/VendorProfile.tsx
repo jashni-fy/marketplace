@@ -88,23 +88,23 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
   const loadVendorData = async () => {
     try {
       setLoading(true);
-      
+
       // Load vendor profile
       const vendorResponse = await apiService.vendors.getById(params.id);
       setVendor(vendorResponse.data.vendor);
-      
+
       // Load services
       const servicesResponse = await apiService.vendors.getServices(params.id);
       setServices(servicesResponse.data.services);
-      
+
       // Load portfolio
       const portfolioResponse = await apiService.vendors.getPortfolio(params.id);
       setPortfolio(portfolioResponse.data.portfolio_items);
-      
+
       // Load reviews
       const reviewsResponse = await apiService.vendors.getReviews(params.id);
       setReviews(reviewsResponse.data.reviews);
-      
+
     } catch (err) {
       console.error('Error loading vendor data:', err);
       setError('Failed to load vendor profile');
@@ -136,23 +136,23 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
   }
 
   const renderStars = (rating: number) => {
-    const stars = [];
+    const stars: JSX.Element[] = [];
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 !== 0;
-    
+
     for (let i = 0; i < fullStars; i++) {
       stars.push(<span key={i} className="text-yellow-400">★</span>);
     }
-    
+
     if (hasHalfStar) {
       stars.push(<span key="half" className="text-yellow-400">☆</span>);
     }
-    
+
     const emptyStars = 5 - Math.ceil(rating);
     for (let i = 0; i < emptyStars; i++) {
       stars.push(<span key={`empty-${i}`} className="text-gray-300">★</span>);
     }
-    
+
     return stars;
   };
 
@@ -171,7 +171,7 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
                   </span>
                 )}
               </div>
-              
+
               <div className="flex items-center mb-4">
                 <div className="flex items-center mr-4">
                   {renderStars(parseFloat(vendor.average_rating))}
@@ -182,9 +182,9 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
                 <span className="text-gray-500">•</span>
                 <span className="ml-2 text-gray-600">{vendor.years_experience} years experience</span>
               </div>
-              
+
               <p className="text-gray-600 mb-4">{vendor.description}</p>
-              
+
               <div className="flex flex-wrap gap-2 mb-4">
                 {vendor.service_categories.map((category, index) => (
                   <span key={index} className="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded">
@@ -192,7 +192,7 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
                   </span>
                 ))}
               </div>
-              
+
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-sm text-gray-500">
                 <span>📍 {vendor.location}</span>
                 {vendor.phone && <span>📞 {vendor.phone}</span>}
@@ -203,7 +203,7 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
                 )}
               </div>
             </div>
-            
+
             <div className="mt-6 md:mt-0 md:ml-8">
               <button className="w-full md:w-auto bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-medium">
                 Contact Vendor
@@ -220,8 +220,8 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
               {vendor.featured_portfolio.map((item) => (
                 <div key={item.id} className="aspect-square rounded-lg overflow-hidden">
                   {item.primary_image_url ? (
-                    <img 
-                      src={item.primary_image_url} 
+                    <img
+                      src={item.primary_image_url}
                       alt={item.title}
                       className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
                     />
@@ -242,31 +242,28 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
             <nav className="flex space-x-8 px-8">
               <button
                 onClick={() => setActiveTab('services')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'services'
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'services'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 Services ({services.length})
               </button>
               <button
                 onClick={() => setActiveTab('portfolio')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'portfolio'
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'portfolio'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 Portfolio ({portfolio.length})
               </button>
               <button
                 onClick={() => setActiveTab('reviews')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'reviews'
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'reviews'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 Reviews ({vendor.total_reviews})
               </button>
@@ -282,8 +279,8 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
                     {services.map((service) => (
                       <div key={service.id} className="border border-gray-200 p-6 rounded-lg hover:shadow-md transition-shadow">
                         {service.primary_image_url && (
-                          <img 
-                            src={service.primary_image_url} 
+                          <img
+                            src={service.primary_image_url}
                             alt={service.name}
                             className="w-full h-48 object-cover rounded-lg mb-4"
                           />
@@ -320,8 +317,8 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
                     {portfolio.map((item) => (
                       <div key={item.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
                         {item.primary_image_url ? (
-                          <img 
-                            src={item.primary_image_url} 
+                          <img
+                            src={item.primary_image_url}
                             alt={item.title}
                             className="w-full h-64 object-cover"
                           />

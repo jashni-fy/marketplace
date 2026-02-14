@@ -1,46 +1,60 @@
 module Resolvers
   class ServiceSearchResolver < Resolvers::BaseResolver
-    type Types::ServiceSearchResultType, null: false
-    
+    type [Types::ServiceSearchResultType], null: false
+
     argument :query, String, required: false, description: "Search query string"
     argument :filters, Types::ServiceFiltersInput, required: false, description: "Service filters"
     argument :location, Types::LocationInput, required: false, description: "Location-based filtering"
     argument :pagination, Types::PaginationInput, required: false, description: "Pagination options"
     
+    # == Constants ==
+    MAX_PER_PAGE = 100
+    DEFAULT_PER_PAGE = 20
+    DEFAULT_SORT_BY = 'created_at'
+    DEFAULT_SORT_ORDER = 'desc'
+    SLOW_QUERY_THRESHOLD = 2.0 # seconds
+
+    # == Main Resolver ==
+    # Resolves a service search with query, filters, location, and pagination.
+    # Returns a hash with services, pagination, facets, and search time.
     def resolve(query: nil, filters: {}, location: {}, pagination: {})
       start_time = Time.current
-      
-      # Validate pagination
+
+      # Validate and sanitize pagination
       pagination = validate_pagination(pagination)
-      
-      # Build the base query
+
+      # Build the base query with eager loading to avoid N+1
       services = build_base_query(query)
-      
-      # Apply filters
+        .includes(:vendor_profile, :service_category, :service_images)
+
+      # Apply filters and location
       services = apply_filters(services, filters)
       services = apply_location_filter(services, location)
-      
+
       # Apply sorting
       services = apply_sorting(services, pagination)
-      
+
       # Get total count before pagination
       total_count = services.count
-      
+
       # Apply pagination
       services = apply_pagination(services, pagination)
-      
+
       # Calculate pagination metadata
       total_pages = (total_count.to_f / pagination[:per_page]).ceil
       current_page = pagination[:page]
-      
+
       # Generate facets
       facets = generate_facets(query, filters, location)
-      
+
       # Calculate search time
       search_time = Time.current - start_time
-      
+      if search_time > SLOW_QUERY_THRESHOLD
+        Rails.logger.warn("ServiceSearchResolver: Slow search (#{search_time.round(2)}s) for query: #{query.inspect}, filters: #{filters.inspect}, location: #{location.inspect}")
+      end
+
       {
-        services: services.includes(:vendor_profile, :service_category, :service_images),
+        services: services,
         total_count: total_count,
         current_page: current_page,
         per_page: pagination[:per_page],
@@ -49,28 +63,29 @@ module Resolvers
         search_time: search_time
       }
     end
-    
+
     private
-    
+
+    # Validates and normalizes pagination input.
     def validate_pagination(pagination)
-      {
-        page: [pagination[:page] || 1, 1].max,
-        per_page: [[pagination[:per_page] || 20, 100].min, 1].max,
-        sort_by: pagination[:sort_by] || 'created_at',
-        sort_order: %w[asc desc].include?(pagination[:sort_order]) ? pagination[:sort_order] : 'desc'
-      }
+      page = [pagination.dig(:page).to_i, 1].max
+      per_page = [[pagination.dig(:per_page).to_i, MAX_PER_PAGE].min, 1].max
+      sort_by = pagination.dig(:sort_by) || DEFAULT_SORT_BY
+      sort_order = %w[asc desc].include?(pagination.dig(:sort_order)) ? pagination.dig(:sort_order) : DEFAULT_SORT_ORDER
+      { page: page, per_page: per_page, sort_by: sort_by, sort_order: sort_order }
     end
-    
+
+    # Builds the base query for services, applying search if present.
     def build_base_query(query)
-      services = Service.active.joins(:vendor_profile, :service_category)
-      
+      services = Service.active
       if query.present?
-        services = services.where(
-          'services.name ILIKE ? OR services.description ILIKE ? OR vendor_profiles.business_name ILIKE ?',
-          "%#{query}%", "%#{query}%", "%#{query}%"
+        services = services.joins(:vendor_profile, :service_category).where(
+          'services.name ILIKE :q OR services.description ILIKE :q OR vendor_profiles.business_name ILIKE :q',
+          q: "%#{query}%"
         )
+      else
+        services = services.joins(:vendor_profile, :service_category)
       end
-      
       services
     end
     
@@ -296,3 +311,4 @@ module Resolvers
     end
   end
 end
+

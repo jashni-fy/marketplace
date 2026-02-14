@@ -1,9 +1,14 @@
-import { Inter } from 'next/font/google';
-import { AuthProvider } from '../lib/contexts/AuthContext';
-import { AppProvider } from '../lib/contexts/AppContext';
+import { Plus_Jakarta_Sans } from 'next/font/google';
+import { AuthProvider } from '@/lib/contexts/AuthContext';
+import { AppProvider } from '@/lib/contexts/AppContext';
+import { Toaster } from '@/components/ui/sonner';
 import '../styles/globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-plus-jakarta',
+});
 
 export const metadata = {
   title: 'Marketplace - Find Perfect Service Providers',
@@ -17,15 +22,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} theme-dark bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-50 min-h-screen`}>
+    <html lang="en">
+      <body className={`${plusJakartaSans.className} antialiased min-h-screen`}>
         <AuthProvider>
           <AppProvider>
-            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-              {children}
-            </div>
+            {children}
           </AppProvider>
         </AuthProvider>
+        <Toaster />
       </body>
     </html>
   );

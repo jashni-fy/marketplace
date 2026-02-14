@@ -1,11 +1,29 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../lib/contexts/AuthContext';
-import { apiService } from '../../lib/api';
+// @ts-ignore
+import { useAuth } from '@/lib/contexts/AuthContext';
+import { apiService } from '@/lib/api';
 import ServiceManagement from '../ServiceManagement';
 import PortfolioManager from '../PortfolioManager';
 import BookingCalendar from '../BookingCalendar';
+import Header from '@/components/Header';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { 
+  LayoutDashboard, 
+  Briefcase, 
+  Image as ImageIcon, 
+  Calendar as CalendarIcon, 
+  TrendingUp, 
+  CheckCircle2, 
+  Clock, 
+  DollarSign,
+  Plus
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Service {
   id: string;
@@ -38,7 +56,7 @@ interface DashboardData {
 }
 
 const VendorDashboard = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [dashboardData, setDashboardData] = useState<DashboardData>({
     services: [],
@@ -64,16 +82,10 @@ const VendorDashboard = () => {
       setLoading(true);
       setError(null);
 
-      // Load services for the current vendor
       const servicesResponse = await apiService.services.getAll();
       const services = servicesResponse.data.services || [];
-
-      // Load bookings (when booking API is available)
-      // const bookingsResponse = await apiService.bookings.getAll();
-      // const bookings = bookingsResponse.data.bookings || [];
       const bookings: Booking[] = []; // Placeholder until booking API is implemented
 
-      // Calculate metrics
       const metrics: DashboardMetrics = {
         totalServices: services.length,
         activeServices: services.filter((s: Service) => s.status === 'active').length,
@@ -85,11 +97,7 @@ const VendorDashboard = () => {
           .reduce((sum, b) => sum + (b.total_amount || 0), 0)
       };
 
-      setDashboardData({
-        services,
-        bookings,
-        metrics
-      });
+      setDashboardData({ services, bookings, metrics });
     } catch (err) {
       console.error('Error loading dashboard data:', err);
       setError('Failed to load dashboard data. Please try again.');
@@ -103,174 +111,192 @@ const VendorDashboard = () => {
   };
 
   const renderOverview = () => (
-    <div className="space-y-6">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="space-y-10"
+    >
       {/* Metrics Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow-md text-center">
-          <div className="text-3xl mb-2">🏢</div>
-          <p className="text-2xl font-bold text-gray-900">{dashboardData.metrics.totalServices}</p>
-          <p className="text-xs text-gray-600">Services</p>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow-md text-center">
-          <div className="text-3xl mb-2">✅</div>
-          <p className="text-2xl font-bold text-gray-900">{dashboardData.metrics.activeServices}</p>
-          <p className="text-xs text-gray-600">Active</p>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow-md text-center">
-          <div className="text-3xl mb-2">📅</div>
-          <p className="text-2xl font-bold text-gray-900">{dashboardData.metrics.totalBookings}</p>
-          <p className="text-xs text-gray-600">Bookings</p>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow-md text-center">
-          <div className="text-3xl mb-2">💰</div>
-          <p className="text-2xl font-bold text-gray-900">${dashboardData.metrics.totalRevenue.toFixed(0)}</p>
-          <p className="text-xs text-gray-600">Revenue</p>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[
+          { label: 'Total Services', value: dashboardData.metrics.totalServices, icon: Briefcase, color: 'text-blue-500' },
+          { label: 'Active Status', value: dashboardData.metrics.activeServices, icon: CheckCircle2, color: 'text-green-500' },
+          { label: 'Total Bookings', value: dashboardData.metrics.totalBookings, icon: CalendarIcon, color: 'text-purple-500' },
+          { label: 'Total Revenue', value: `₹${dashboardData.metrics.totalRevenue}`, icon: DollarSign, color: 'text-emerald-500' },
+        ].map((item, index) => (
+          <Card key={index} className="border-border shadow-sm overflow-hidden group hover:border-foreground transition-colors">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground font-light mb-1">{item.label}</p>
+                  <p className="text-3xl font-light tracking-tight">{item.value}</p>
+                </div>
+                <div className={`p-3 rounded-2xl bg-secondary group-hover:bg-foreground group-hover:text-white transition-colors`}>
+                  <item.icon className="size-5" strokeWidth={1.5} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow-md">
-          <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
-            <span>🛠️</span> Services
-          </h3>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        {/* Recent Services */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-2xl font-light tracking-tight">Recent Services</h3>
+            <Button variant="ghost" size="sm" onClick={() => setActiveTab('services')} className="font-light rounded-full">
+              View All
+            </Button>
+          </div>
+          
           {dashboardData.services.length > 0 ? (
-            <div className="space-y-2">
-              {dashboardData.services.slice(0, 3).map((service) => (
-                <div key={service.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
-                  <div>
-                    <p className="font-medium truncate">{service.name}</p>
-                    <p className="text-xs text-gray-600">{service.formatted_price}</p>
-                  </div>
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    service.status === 'active' ? 'bg-green-100 text-green-800' :
-                    service.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {service.status}
-                  </span>
-                </div>
+            <div className="grid gap-4">
+              {dashboardData.services.slice(0, 4).map((service) => (
+                <Card key={service.id} className="border-border hover:shadow-md transition-shadow">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="size-12 rounded-xl bg-secondary flex items-center justify-center">
+                        <Briefcase className="size-5 text-muted-foreground" strokeWidth={1.5} />
+                      </div>
+                      <div>
+                        <p className="font-normal text-lg">{service.name}</p>
+                        <p className="text-sm text-muted-foreground font-light">{service.formatted_price}</p>
+                      </div>
+                    </div>
+                    <Badge variant={service.status === 'active' ? 'secondary' : 'outline'} className="rounded-full font-normal">
+                      {service.status}
+                    </Badge>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           ) : (
-            <div className="text-center py-4">
-              <div className="text-4xl mb-2">📝</div>
-              <p className="text-gray-600 text-xs">Create your first service!</p>
-            </div>
+            <Card className="border-dashed border-2 bg-transparent">
+              <CardContent className="p-12 text-center">
+                <p className="text-muted-foreground font-light mb-4">No services created yet</p>
+                <Button onClick={() => setActiveTab('services')} className="rounded-full font-normal">
+                  <Plus className="mr-2 size-4" /> Create Service
+                </Button>
+              </CardContent>
+            </Card>
           )}
         </div>
 
-        <div className="bg-white p-4 rounded-lg shadow-md">
-          <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
-            <span>⏳</span> Pending
-          </h3>
-          {dashboardData.metrics.pendingBookings > 0 ? (
-            <div className="space-y-2">
-              {dashboardData.bookings
-                .filter(b => b.status === 'pending')
-                .slice(0, 3)
-                .map((booking) => (
-                  <div key={booking.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
-                    <div>
-                      <p className="font-medium truncate">{booking.service_name}</p>
-                      <p className="text-xs text-gray-600">{booking.event_date}</p>
-                    </div>
-                    <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
-                      Pending
-                    </span>
-                  </div>
-                ))}
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <div className="text-4xl mb-2">📋</div>
-              <p className="text-gray-600 text-xs">No pending bookings</p>
-            </div>
-          )}
+        {/* Activity Feed / Pending */}
+        <div className="space-y-6">
+          <h3 className="text-2xl font-light tracking-tight">Recent Activity</h3>
+          <Card className="border-border shadow-sm">
+            <CardContent className="p-6">
+              {dashboardData.metrics.pendingBookings > 0 ? (
+                <div className="space-y-6">
+                  {dashboardData.bookings
+                    .filter(b => b.status === 'pending')
+                    .slice(0, 5)
+                    .map((booking) => (
+                      <div key={booking.id} className="flex gap-4">
+                        <div className="size-2 mt-2 rounded-full bg-orange-500 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-normal">New booking request for {booking.service_name}</p>
+                          <p className="text-xs text-muted-foreground font-light">{booking.event_date}</p>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <div className="text-center py-10">
+                  <Clock className="size-8 mx-auto mb-3 text-muted-foreground opacity-20" strokeWidth={1} />
+                  <p className="text-sm text-muted-foreground font-light">No recent notifications</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 
-  if (loading) {
-    return (
-      <div className="vendor-dashboard">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="vendor-dashboard">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold">Dashboard</h1>
-            <p className="text-gray-600 text-sm">Hi {user?.first_name}!</p>
+    <div className="min-h-screen bg-background pb-20">
+      <Header />
+      
+      <div className="container mx-auto px-6 py-12">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6"
+        >
+          <div>
+            <h1 className="text-4xl md:text-5xl font-extralight tracking-tight mb-2">Dashboard</h1>
+            <p className="text-xl text-muted-foreground font-light">Welcome back, {user?.first_name || 'Partner'}</p>
           </div>
-          <button
-            onClick={logout}
-            className="btn-danger px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center justify-center gap-1"
-          >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            Logout
-          </button>
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-            {error}
-          </div>
-        )}
-
-        {/* Navigation Tabs */}
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="-mb-px flex space-x-8">
+          
+          <div className="flex bg-secondary p-1 rounded-full overflow-hidden">
             {[
-              { id: 'overview', name: 'Overview', icon: '📊' },
-              { id: 'services', name: 'Services', icon: '🛠️' },
-              { id: 'portfolio', name: 'Portfolio', icon: '🖼️' },
-              { id: 'calendar', name: 'Calendar', icon: '📅' }
+              { id: 'overview', name: 'Overview', icon: LayoutDashboard },
+              { id: 'services', name: 'Services', icon: Briefcase },
+              { id: 'portfolio', name: 'Portfolio', icon: ImageIcon },
+              { id: 'calendar', name: 'Calendar', icon: CalendarIcon }
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center justify-center gap-2 ${
+                className={`px-6 py-2 rounded-full text-sm font-normal transition-all flex items-center gap-2 ${
                   activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'bg-foreground text-white shadow-lg'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                <span>{tab.icon}</span>
-                {tab.name}
+                <tab.icon className="size-4" strokeWidth={1.5} />
+                <span className={activeTab === tab.id ? 'block' : 'hidden lg:block'}>{tab.name}</span>
               </button>
             ))}
-          </nav>
-        </div>
+          </div>
+        </motion.div>
 
-        {/* Tab Content */}
-        <div className="tab-content">
-          {activeTab === 'overview' && renderOverview()}
-          {activeTab === 'services' && (
-            <ServiceManagement 
-              services={dashboardData.services}
-              onServiceUpdate={handleServiceUpdate}
-            />
+        {error && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8">
+            <Card className="border-destructive/50 bg-destructive/5">
+              <CardContent className="p-4 text-destructive text-sm font-light flex items-center gap-2">
+                <Clock className="size-4" /> {error}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        <AnimatePresence mode="wait">
+          {loading ? (
+            <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-2xl" />)}
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                <Skeleton className="lg:col-span-2 h-[400px] w-full rounded-2xl" />
+                <Skeleton className="h-[400px] w-full rounded-2xl" />
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.3 }}
+            >
+              {activeTab === 'overview' && renderOverview()}
+              {activeTab === 'services' && (
+                <ServiceManagement 
+                  services={dashboardData.services}
+                  onServiceUpdate={handleServiceUpdate}
+                />
+              )}
+              {activeTab === 'portfolio' && <PortfolioManager />}
+              {activeTab === 'calendar' && <BookingCalendar bookings={dashboardData.bookings} />}
+            </motion.div>
           )}
-          {activeTab === 'portfolio' && <PortfolioManager />}
-          {activeTab === 'calendar' && <BookingCalendar bookings={dashboardData.bookings} />}
-        </div>
+        </AnimatePresence>
       </div>
     </div>
   );

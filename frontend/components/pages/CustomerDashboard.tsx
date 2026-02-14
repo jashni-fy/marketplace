@@ -1,104 +1,182 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+// @ts-ignore
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { apiService } from '@/lib/api';
+import Header from '@/components/Header';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Calendar as CalendarIcon, 
+  Heart, 
+  ShoppingBag, 
+  Clock, 
+  Star, 
+  MapPin, 
+  ArrowRight,
+  User,
+  Settings
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 
 const CustomerDashboard = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [bookings, setBookings] = useState([]);
+  
+  useEffect(() => {
+    // Simulate loading data
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const stats = [
+    { label: 'Upcoming', value: '0', icon: CalendarIcon },
+    { label: 'Favorites', value: '0', icon: Heart },
+    { label: 'Total Spent', value: '₹0', icon: ShoppingBag },
+  ];
+
+  const renderOverview = () => (
+    <div className="space-y-12">
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {stats.map((stat, i) => (
+          <Card key={i} className="border-border shadow-sm group hover:border-foreground transition-colors">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground font-light mb-1">{stat.label}</p>
+                  <p className="text-3xl font-light tracking-tight">{stat.value}</p>
+                </div>
+                <div className="p-3 rounded-2xl bg-secondary group-hover:bg-foreground group-hover:text-white transition-colors">
+                  <stat.icon className="size-5" strokeWidth={1.5} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+        {/* Main Feed */}
+        <div className="lg:col-span-2 space-y-8">
+          <div className="flex items-center justify-between">
+            <h3 className="text-2xl font-light tracking-tight">Recent Activity</h3>
+          </div>
+
+          <Card className="border-dashed border-2 bg-transparent">
+            <CardContent className="p-16 text-center">
+              <div className="size-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-6">
+                <ShoppingBag className="size-8 text-muted-foreground opacity-40" strokeWidth={1} />
+              </div>
+              <h4 className="text-xl font-light mb-2">No bookings yet</h4>
+              <p className="text-muted-foreground font-light mb-8 max-w-xs mx-auto">
+                Find the perfect photographer for your next special occasion.
+              </p>
+              <Link href="/marketplace">
+                <Button className="rounded-full px-8 font-normal text-white">
+                  Explore Marketplace
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-8">
+          <h3 className="text-2xl font-light tracking-tight">Profile</h3>
+          <Card className="border-border shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="size-12 rounded-full bg-secondary flex items-center justify-center">
+                  <User className="size-6 text-muted-foreground" strokeWidth={1.5} />
+                </div>
+                <div>
+                  <p className="font-normal">{user?.first_name} {user?.last_name}</p>
+                  <p className="text-xs text-muted-foreground font-light capitalize">{user?.role}</p>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Button variant="ghost" className="w-full justify-start font-light rounded-xl hover:bg-secondary">
+                  <Settings className="mr-2 size-4" strokeWidth={1.5} />
+                  Account Settings
+                </Button>
+                <Button variant="ghost" className="w-full justify-start font-light rounded-xl hover:bg-secondary">
+                  <Heart className="mr-2 size-4" strokeWidth={1.5} />
+                  My Favorites
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border bg-foreground text-white overflow-hidden relative">
+            <CardContent className="p-6 relative z-10">
+              <h4 className="text-xl font-light mb-2">Want to earn?</h4>
+              <p className="text-white/70 text-sm font-light mb-6">
+                Switch to a photographer account and start showcasing your portfolio.
+              </p>
+              <Button variant="outline" className="w-full rounded-full border-white/20 hover:bg-white hover:text-black transition-colors font-normal">
+                Become a Partner
+              </Button>
+            </CardContent>
+            <div className="absolute top-0 right-0 size-24 bg-white/5 rounded-full -mr-12 -mt-12" />
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-slate-50 mb-1">Dashboard</h1>
-            <p className="text-slate-400 text-sm">Hi {user?.first_name}! 👋</p>
-          </div>
-          <button
-            onClick={logout}
-            className="btn-danger px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center justify-center gap-1"
-          >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            Logout
-          </button>
-        </div>
+    <div className="min-h-screen bg-background pb-20">
+      <Header />
+      
+      <div className="container mx-auto px-6 py-12">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-12"
+        >
+          <h1 className="text-4xl md:text-5xl font-extralight tracking-tight mb-2">Dashboard</h1>
+          <p className="text-xl text-muted-foreground font-light">Hello, {user?.first_name || 'Guest'}</p>
+        </motion.div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="card bg-slate-800 border-slate-700 text-center p-4">
-            <div className="text-4xl mb-2">📅</div>
-            <h3 className="text-2xl font-bold text-slate-50 mb-1">0</h3>
-            <p className="text-slate-400 text-xs">Bookings</p>
-          </div>
-          <div className="card bg-slate-800 border-slate-700 text-center p-4">
-            <div className="text-4xl mb-2">⭐</div>
-            <h3 className="text-2xl font-bold text-slate-50 mb-1">0</h3>
-            <p className="text-slate-400 text-xs">Favorites</p>
-          </div>
-          <div className="card bg-slate-800 border-slate-700 text-center p-4">
-            <div className="text-4xl mb-2">💰</div>
-            <h3 className="text-2xl font-bold text-slate-50 mb-1">$0</h3>
-            <p className="text-slate-400 text-xs">Spent</p>
-          </div>
-        </div>
-
-        {/* Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="card bg-slate-800 border-slate-700 hover:border-blue-500 transition-all duration-300 group text-center p-6">
-            <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-500/30 transition-colors">
-              <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <h3 className="text-base font-semibold text-slate-50 mb-2">My Bookings</h3>
-            <p className="text-slate-400 mb-4 text-xs">Manage bookings</p>
-            <button className="btn-primary w-full rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 py-2">
-              View
-            </button>
-          </div>
-
-          <div className="card bg-slate-800 border-slate-700 hover:border-emerald-500 transition-all duration-300 group text-center p-6">
-            <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-emerald-500/30 transition-colors">
-              <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <h3 className="text-base font-semibold text-slate-50 mb-2">Browse Services</h3>
-            <p className="text-slate-400 mb-4 text-xs">Find providers</p>
-            <button className="btn-success w-full rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 py-2">
-              Browse
-            </button>
-          </div>
-
-          <div className="card bg-slate-800 border-slate-700 hover:border-purple-500 transition-all duration-300 group text-center p-6">
-            <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-purple-500/30 transition-colors">
-              <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            <h3 className="text-base font-semibold text-slate-50 mb-2">Profile</h3>
-            <p className="text-slate-400 mb-4 text-xs">Edit settings</p>
-            <button className="btn-secondary w-full rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 py-2">
-              Edit
-            </button>
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="mt-8">
-          <h2 className="text-lg font-bold text-slate-50 mb-4">Activity</h2>
-          <div className="card bg-slate-800 border-slate-700 text-center p-8">
-            <div className="text-8xl mb-4">📋</div>
-            <h3 className="text-base font-semibold text-slate-50 mb-2">No Activity</h3>
-            <p className="text-slate-400 mb-4 text-xs">Start exploring!</p>
-            <button className="btn-primary px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105">
-              Explore
-            </button>
-          </div>
-        </div>
+        <AnimatePresence mode="wait">
+          {loading ? (
+            <motion.div 
+              key="loading" 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              className="space-y-10"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-2xl" />)}
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                <Skeleton className="lg:col-span-2 h-[400px] w-full rounded-2xl" />
+                <Skeleton className="h-[400px] w-full rounded-2xl" />
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="content"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              {renderOverview()}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

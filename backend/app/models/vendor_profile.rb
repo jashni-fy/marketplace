@@ -48,7 +48,7 @@ class VendorProfile < ApplicationRecord
   validates :business_name, presence: true, length: { minimum: 2, maximum: 100 }
   validates :description, length: { minimum: 50, maximum: 2000 }, allow_blank: true
   validates :location, presence: true, length: { maximum: 255 }
-  validates :phone, format: { with: /\A[\+]?[\d\s\-\(\)]{7,15}\z/ }, allow_blank: true
+  validates :phone, format: { with: /\A[+]?[-\d\s()]{7,15}\z/ }, allow_blank: true
   validate :website_format, if: -> { website.present? }
   validates :years_experience, numericality: { greater_than_or_equal_to: 0, less_than: 100 }
   validates :average_rating, numericality: { greater_than_or_equal_to: 0.0, less_than_or_equal_to: 5.0 }
@@ -126,24 +126,43 @@ class VendorProfile < ApplicationRecord
     [latitude.to_f, longitude.to_f]
   end
 
-  def distance_to(lat, lng)
+  # Calculates the distance from this vendor to the given latitude and longitude.
+  # Params:
+  # +lat+:: Latitude of the target point (Float)
+  # +lng+:: Longitude of the target point (Float)
+  # +unit+:: :meters (default) or :kilometers
+  # Returns distance as Float (meters or kilometers), or nil if coordinates are missing/invalid.
+  def distance_to(lat, lng, unit: :meters)
     return nil unless has_coordinates?
-    
-    # Haversine formula for calculating distance between two points
+    return nil unless lat.is_a?(Numeric) && lng.is_a?(Numeric)
+    return nil unless lat.between?(-90, 90) && lng.between?(-180, 180)
+
+    lat1 = latitude.to_f
+    lon1 = longitude.to_f
+    lat2 = lat.to_f
+    lon2 = lng.to_f
+
+    return 0.0 if lat1 == lat2 && lon1 == lon2
+
     rad_per_deg = Math::PI / 180
-    rkm = 6371 # Earth radius in kilometers
-    rm = rkm * 1000 # Earth radius in meters
-
-    dlat_rad = (lat - latitude) * rad_per_deg
-    dlon_rad = (lng - longitude) * rad_per_deg
-
-    lat1_rad = latitude * rad_per_deg
-    lat2_rad = lat * rad_per_deg
+    rkm = 6371.0 # Earth radius in kilometers
+    dlat_rad = (lat2 - lat1) * rad_per_deg
+    dlon_rad = (lon2 - lon1) * rad_per_deg
+    lat1_rad = lat1 * rad_per_deg
+    lat2_rad = lat2 * rad_per_deg
 
     a = Math.sin(dlat_rad / 2)**2 + Math.cos(lat1_rad) * Math.cos(lat2_rad) * Math.sin(dlon_rad / 2)**2
     c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    distance_km = rkm * c
 
-    rm * c # Distance in meters
+    case unit
+    when :meters
+      (distance_km * 1000).round(2)
+    when :kilometers
+      distance_km.round(4)
+    else
+      distance_km * 1000 # default to meters if unknown unit
+    end
   end
 
   # Class methods
@@ -154,6 +173,20 @@ class VendorProfile < ApplicationRecord
       'business_name ILIKE ? OR location ILIKE ? OR description ILIKE ?',
       "%#{query}%", "%#{query}%", "%#{query}%"
     )
+  end
+
+  # == Ransackable Associations ==
+  # Explicitly allowlist safe associations for Ransack/ActiveAdmin
+  def self.ransackable_associations(auth_object = nil)
+    %w[user services portfolio_items availability_slots bookings]
+  end
+
+  # == Ransackable Attributes ==
+  # Explicitly allowlist safe searchable fields for Ransack/ActiveAdmin
+  def self.ransackable_attributes(auth_object = nil)
+    %w[
+      id business_name description location phone website service_categories business_license years_experience is_verified average_rating total_reviews latitude longitude created_at updated_at user_id
+    ]
   end
 
   # Callbacks
@@ -171,19 +204,14 @@ class VendorProfile < ApplicationRecord
 
   def website_format
     return if website.blank?
-    
-    # Normalize first
     normalize_website
-    
-    # Then validate
     begin
       uri = URI.parse(website)
       unless uri.is_a?(URI::HTTP) || uri.is_a?(URI::HTTPS)
         errors.add(:website, 'is not a valid URL')
       end
-      
       # Additional validation for domain format
-      unless website.match?(/\A(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?\z/i)
+      unless website.match?(/\A(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?\z/i)
         errors.add(:website, 'is not a valid URL')
       end
     rescue URI::InvalidURIError
