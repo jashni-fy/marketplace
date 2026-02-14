@@ -44,7 +44,8 @@ export default function Register() {
         toast.success(result.message || 'Account created successfully!');
         router.push('/marketplace');
       } else {
-        toast.error(result.error || 'Registration failed');
+        const errorMsg = typeof result.error === 'string' ? result.error : 'Registration failed';
+        toast.error(errorMsg);
       }
     } catch (error) {
       toast.error('Registration failed. Please try again.');

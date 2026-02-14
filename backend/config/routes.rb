@@ -1,4 +1,6 @@
 Rails.application.routes.draw do
+  root to: "rails/health#show"
+
   post "/graphql", to: "graphql#execute"
   if Rails.env.development?
     begin

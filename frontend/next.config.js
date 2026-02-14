@@ -3,11 +3,10 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   
-  // API configuration removed - using direct calls to backend
-
   // Environment variables
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+    // We don't provide a default here to let Vercel/Process env take precedence
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },
 
   // Image optimization
@@ -19,17 +18,6 @@ const nextConfig = {
         hostname: 'images.unsplash.com',
       },
     ],
-  },
-
-  // App directory is now stable in Next.js 14
-  // No experimental flags needed
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'http://127.0.0.1:3001/api/:path*',
-      },
-    ]
   },
 };
 

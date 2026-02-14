@@ -1,9 +1,11 @@
 import axios from 'axios';
 import { tokenService } from './tokenService';
 
-// All requests go through Nginx proxy -> /api
+// Get API URL from environment variable
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_URL.endsWith('/api') ? API_URL : `${API_URL}/api`,
   headers: {
     'Content-Type': 'application/json',
   },

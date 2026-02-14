@@ -28,7 +28,8 @@ export default function Login() {
         toast.success('Welcome back!');
         router.push('/marketplace');
       } else {
-        toast.error(result.error || 'Login failed. Please check your credentials.');
+        const errorMsg = typeof result.error === 'string' ? result.error : 'Login failed. Please check your credentials.';
+        toast.error(errorMsg);
       }
     } catch (error) {
       toast.error('An unexpected error occurred. Please try again.');
