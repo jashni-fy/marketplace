@@ -66,6 +66,23 @@ export const apiService = {
     create: (data) => api.post('/profiles', data),
     update: (id, data) => api.put(`/profiles/${id}`, data),
     delete: (id) => api.delete(`/profiles/${id}`),
+    requestVerification: () => api.post('/profiles/request_verification'),
+  },
+
+  // Analytics
+  analytics: {
+    dashboard: () => api.get('/analytics/dashboard'),
+  },
+
+  // Reviews
+  reviews: {
+    getAll: (params) => api.get('/reviews', { params }),
+    getById: (id) => api.get(`/reviews/${id}`),
+    create: (data) => api.post('/reviews', data),
+    update: (id, data) => api.put(`/reviews/${id}`, data),
+    delete: (id) => api.delete(`/reviews/${id}`),
+    getByService: (serviceId) => api.get(`/services/${serviceId}/reviews`),
+    getByVendor: (vendorId) => api.get(`/vendors/${vendorId}/reviews`),
   },
 
   // Services

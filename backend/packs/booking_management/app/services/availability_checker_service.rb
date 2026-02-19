@@ -3,6 +3,7 @@
 class AvailabilityCheckerService
   include ActiveModel::Model
   include ActiveModel::Attributes
+  include Callable
 
   attr_accessor :vendor_profile
   attribute :date, :date
@@ -17,6 +18,14 @@ class AvailabilityCheckerService
   def initialize(attributes = {})
     super
     @errors = ActiveModel::Errors.new(self)
+  end
+
+  def call
+    { 
+      available: available?, 
+      errors: errors.full_messages,
+      suggested_times: suggested_times
+    }
   end
 
   def available?

@@ -6,6 +6,9 @@ module Types
     field :base_price, Float, null: true
     field :pricing_type, String, null: false
     field :status, String, null: false
+    field :average_rating, Float, null: false
+    field :total_reviews, Integer, null: false
+    field :rating_distribution, Types::RatingDistributionType, null: false
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
     
@@ -13,7 +16,8 @@ module Types
     field :vendor_profile, Types::VendorProfileType, null: false, complexity: 5
     field :service_category, Types::ServiceCategoryType, null: false, complexity: 2
     field :service_images, [Types::ServiceImageType], null: false, complexity: 3
-    
+    field :reviews, [Types::ReviewType], null: false, complexity: 5
+
     # Computed fields
     field :formatted_base_price, String, null: false
     field :can_be_booked, Boolean, null: false

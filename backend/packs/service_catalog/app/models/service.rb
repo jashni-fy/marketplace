@@ -4,6 +4,7 @@ class Service < ApplicationRecord
   belongs_to :service_category
   has_many :bookings, dependent: :destroy
   has_many :service_images, dependent: :destroy
+  has_many :reviews, dependent: :destroy
   has_many_attached :images
 
   # Enums
@@ -122,6 +123,25 @@ class Service < ApplicationRecord
   def short_description(limit = 100)
     return description if description.length <= limit
     "#{description.truncate(limit)}..."
+  end
+
+  def update_rating_stats!
+    stats = reviews.published.pluck('COUNT(id)', 'AVG(rating)').first
+    count = stats[0].to_i
+    avg = stats[1].to_f.round(2)
+    
+    update_columns(average_rating: avg, total_reviews: count)
+  end
+
+  def rating_distribution
+    dist = reviews.published.group(:rating).count
+    {
+      5 => dist[5] || 0,
+      4 => dist[4] || 0,
+      3 => dist[3] || 0,
+      2 => dist[2] || 0,
+      1 => dist[1] || 0
+    }
   end
 
   # Class methods

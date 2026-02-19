@@ -3,22 +3,9 @@
 class BookingCreationService
   include ActiveModel::Model
   include ActiveModel::Attributes
+  include Callable
 
   attr_accessor :customer
-  attribute :service_id, :integer
-  attribute :event_date, :datetime
-  attribute :event_end_date, :datetime
-  attribute :event_location, :string
-  attribute :total_amount, :decimal
-  attribute :requirements, :string
-  attribute :special_instructions, :string
-  attribute :event_duration, :string
-
-  validates :customer, presence: true
-  validates :service_id, presence: true
-  validates :event_date, presence: true
-  validates :event_location, presence: true
-  validates :total_amount, presence: true, numericality: { greater_than: 0 }
 
   def initialize(attributes = {})
     super
@@ -26,7 +13,7 @@ class BookingCreationService
   end
 
   def call
-    return false unless valid?
+    return { success: false, errors: errors.full_messages } unless valid?
 
     ActiveRecord::Base.transaction do
       create_booking
@@ -35,18 +22,20 @@ class BookingCreationService
       
       if @booking.save
         # Send notification to vendor about new booking
-        NotificationJob.perform_later('booking_created', @vendor.id, { 'booking_id' => @booking.id })
-        true
+        if defined?(NotificationJob)
+          NotificationJob.perform_later('booking_created', @vendor.id, { 'booking_id' => @booking.id })
+        end
+        { success: true, booking: @booking }
       else
         @booking.errors.full_messages.each do |message|
           @errors.add(:base, message)
         end
-        false
+        { success: false, errors: errors.full_messages }
       end
     end
   rescue ActiveRecord::RecordInvalid => e
     @errors.add(:base, e.message)
-    false
+    { success: false, errors: errors.full_messages }
   end
 
   def booking

@@ -9,6 +9,10 @@ module Types
     field :years_experience, Integer, null: false
     field :average_rating, Float, null: false
     field :total_reviews, Integer, null: false
+    field :verification_status, String, null: false
+    field :verified_at, GraphQL::Types::ISO8601DateTime, null: true
+    field :rating_distribution, Types::RatingDistributionType, null: false
+    field :rating_breakdown, Types::RatingBreakdownType, null: false
     field :is_verified, Boolean, null: false
     field :service_categories, String, null: true
     field :latitude, Float, null: true
@@ -19,7 +23,8 @@ module Types
     # Associations
     field :services, [Types::ServiceType], null: false, complexity: 10
     field :portfolio_items, [Types::PortfolioItemType], null: false, complexity: 5
-    
+    field :reviews, [Types::ReviewType], null: false, complexity: 5
+
     # Computed fields
     field :verified, Boolean, null: false
     field :has_description, Boolean, null: false

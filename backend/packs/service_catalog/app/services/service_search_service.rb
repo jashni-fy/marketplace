@@ -1,6 +1,7 @@
 class ServiceSearchService
   include ActiveModel::Model
   include ActiveModel::Attributes
+  include Callable
 
   # Search parameters
   attribute :query, :string

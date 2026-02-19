@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_09_07_062356) do
+ActiveRecord::Schema[7.1].define(version: 2026_02_18_151500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -134,6 +134,30 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_07_062356) do
     t.index ["vendor_profile_id"], name: "index_portfolio_items_on_vendor_profile_id"
   end
 
+  create_table "reviews", force: :cascade do |t|
+    t.bigint "booking_id", null: false
+    t.bigint "customer_id", null: false
+    t.bigint "vendor_profile_id", null: false
+    t.bigint "service_id", null: false
+    t.integer "rating", null: false
+    t.integer "quality_rating"
+    t.integer "communication_rating"
+    t.integer "value_rating"
+    t.integer "punctuality_rating"
+    t.text "comment"
+    t.integer "status", default: 0
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_reviews_on_booking_id", unique: true
+    t.index ["customer_id"], name: "index_reviews_on_customer_id"
+    t.index ["rating"], name: "index_reviews_on_rating"
+    t.index ["service_id", "status"], name: "index_reviews_on_service_id_and_status"
+    t.index ["service_id"], name: "index_reviews_on_service_id"
+    t.index ["status"], name: "index_reviews_on_status"
+    t.index ["vendor_profile_id", "status"], name: "index_reviews_on_vendor_profile_id_and_status"
+    t.index ["vendor_profile_id"], name: "index_reviews_on_vendor_profile_id"
+  end
+
   create_table "service_categories", force: :cascade do |t|
     t.string "name"
     t.text "description"
@@ -168,6 +192,9 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_07_062356) do
     t.integer "status", default: 0
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "average_rating", precision: 3, scale: 2, default: "0.0"
+    t.integer "total_reviews", default: 0
+    t.index ["average_rating"], name: "index_services_on_average_rating"
     t.index ["service_category_id", "status"], name: "index_services_on_service_category_id_and_status"
     t.index ["service_category_id"], name: "index_services_on_service_category_id"
     t.index ["status"], name: "index_services_on_status"
@@ -212,11 +239,15 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_07_062356) do
     t.integer "total_reviews", default: 0
     t.decimal "latitude", precision: 10, scale: 6
     t.decimal "longitude", precision: 10, scale: 6
+    t.integer "verification_status", default: 0
+    t.datetime "verified_at"
+    t.text "rejection_reason"
     t.index ["business_name"], name: "index_vendor_profiles_on_business_name"
     t.index ["is_verified"], name: "index_vendor_profiles_on_is_verified"
     t.index ["latitude", "longitude"], name: "index_vendor_profiles_on_coordinates"
     t.index ["location"], name: "index_vendor_profiles_on_location"
     t.index ["user_id"], name: "index_vendor_profiles_on_user_id"
+    t.index ["verification_status"], name: "index_vendor_profiles_on_verification_status"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
@@ -229,6 +260,10 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_07_062356) do
   add_foreign_key "bookings", "users", column: "vendor_id"
   add_foreign_key "customer_profiles", "users"
   add_foreign_key "portfolio_items", "vendor_profiles"
+  add_foreign_key "reviews", "bookings"
+  add_foreign_key "reviews", "services"
+  add_foreign_key "reviews", "users", column: "customer_id"
+  add_foreign_key "reviews", "vendor_profiles"
   add_foreign_key "service_images", "services"
   add_foreign_key "services", "service_categories"
   add_foreign_key "services", "vendor_profiles"

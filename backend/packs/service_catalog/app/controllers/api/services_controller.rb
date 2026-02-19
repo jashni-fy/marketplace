@@ -14,7 +14,7 @@ class Api::ServicesController < ApiController
       sort_direction: params[:sort_direction] || 'desc'
     }
 
-    result = ServiceSearchService.new(search_params).call
+    result = ServiceSearchService.call(search_params)
     
     render json: {
       services: result[:services].map { |service| service_response(service) },
@@ -42,7 +42,7 @@ class Api::ServicesController < ApiController
       sort_direction: params[:sort_direction] || 'desc'
     }
 
-    result = ServiceSearchService.new(search_params).call
+    result = ServiceSearchService.call(search_params)
     
     render json: {
       services: result[:services].map { |service| service_response(service) },

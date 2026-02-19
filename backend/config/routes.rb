@@ -40,8 +40,12 @@ Rails.application.routes.draw do
       collection do
         get :me
         get :service_categories
+        post :request_verification
       end
     end
+
+    # Analytics routes
+    get 'analytics/dashboard', to: 'analytics#dashboard'
 
     # Service routes (service_catalog pack)
     resources :services do
@@ -49,6 +53,10 @@ Rails.application.routes.draw do
         get :search
       end
       
+      member do
+        get :reviews, to: 'reviews#service_reviews'
+      end
+
       # Service images nested routes
       resources :images, controller: 'service_images', except: [:new, :edit] do
         member do
@@ -67,12 +75,16 @@ Rails.application.routes.draw do
         get :services
         get :availability
         get :portfolio
-        get :reviews
+        get :reviews, to: 'reviews#vendor_reviews'
       end
       
       # Portfolio items nested under vendors for public viewing
       resources :portfolio_items, only: [:index, :show], controller: 'portfolio_items'
     end
+
+    # Review routes (reviews pack)
+    resources :reviews, only: [:index, :show, :create, :update, :destroy]
+
 
     # Portfolio items routes (service_catalog pack)
     resources :portfolio_items do

@@ -1,4 +1,6 @@
 class BookingResponseService
+  include Callable
+
   def initialize(booking, vendor, response_type, message = nil)
     @booking = booking
     @vendor = vendor

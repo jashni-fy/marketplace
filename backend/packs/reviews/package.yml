@@ -1,0 +1,6 @@
+enforce_privacy: false
+enforce_dependencies: false
+dependencies:
+  - packs/booking_management
+  - packs/service_catalog
+  - packs/user_management

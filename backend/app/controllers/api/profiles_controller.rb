@@ -58,6 +58,15 @@ class Api::ProfilesController < ApiController
     head :no_content
   end
 
+  def request_verification
+    @profile = current_user.vendor_profile
+    if @profile.request_verification!
+      render json: { message: 'Verification request submitted successfully', status: @profile.verification_status }
+    else
+      render json: { error: 'Failed to submit verification request' }, status: :unprocessable_entity
+    end
+  end
+
   def service_categories
     categories = ServiceCategory.where(active: true)
     render json: { 

@@ -182,7 +182,11 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true, message: message || 'Registration successful', user };
     } catch (error) {
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.response?.data?.details?.join(', ') || 'Registration failed';
+      console.error('Registration API Error:', error.response?.data);
+      const errorMessage = error.response?.data?.error || 
+                          error.response?.data?.message || 
+                          (Array.isArray(error.response?.data?.details) ? error.response?.data?.details.join(', ') : null) || 
+                          'Registration failed';
       dispatch({
         type: AUTH_ACTIONS.REGISTER_FAILURE,
         payload: errorMessage,

@@ -134,36 +134,34 @@ module Resolvers
       
       # Geospatial filtering with latitude/longitude and radius
       if location[:latitude].present? && location[:longitude].present? && location[:radius].present?
+        lat = location[:latitude].to_f
+        lng = location[:longitude].to_f
+        radius_km = location[:radius].to_f
+
+        # Validate coordinates
+        unless lat.between?(-90, 90) && lng.between?(-180, 180)
+          raise GraphQL::ExecutionError, "Invalid coordinates: latitude must be between -90 and 90, longitude between -180 and 180"
+        end
+
         services = services.joins(:vendor_profile)
-          .where('vendor_profiles.latitude IS NOT NULL AND vendor_profiles.longitude IS NOT NULL')
-        
-        # Use Haversine formula for distance calculation (simpler than PostGIS)
-        # This is a basic implementation - for production, consider using PostGIS
-        lat = location[:latitude]
-        lng = location[:longitude]
-        radius_km = location[:radius]
-        
-        services = services.where(
-          "6371 * acos(cos(radians(?)) * cos(radians(vendor_profiles.latitude)) * cos(radians(vendor_profiles.longitude) - radians(?)) + sin(radians(?)) * sin(radians(vendor_profiles.latitude))) <= ?",
-          lat, lng, lat, radius_km
-        )
+          .merge(VendorProfile.within_radius(lat, lng, radius_km))
       end
       
       # Text-based location filtering
       if location[:city].present?
-        services = services.where('vendor_profiles.location ILIKE ?', "%#{location[:city]}%")
+        services = services.joins(:vendor_profile).where('vendor_profiles.location ILIKE ?', "%#{location[:city]}%")
       end
       
       if location[:state].present?
-        services = services.where('vendor_profiles.location ILIKE ?', "%#{location[:state]}%")
+        services = services.joins(:vendor_profile).where('vendor_profiles.location ILIKE ?', "%#{location[:state]}%")
       end
       
       if location[:country].present?
-        services = services.where('vendor_profiles.location ILIKE ?', "%#{location[:country]}%")
+        services = services.joins(:vendor_profile).where('vendor_profiles.location ILIKE ?', "%#{location[:country]}%")
       end
       
       if location[:address].present?
-        services = services.where('vendor_profiles.location ILIKE ?', "%#{location[:address]}%")
+        services = services.joins(:vendor_profile).where('vendor_profiles.location ILIKE ?', "%#{location[:address]}%")
       end
       
       services
@@ -204,11 +202,8 @@ module Resolvers
     end
     
     def generate_category_facets(services, filters)
-      # Exclude category filter for facet generation
-      facet_services = services
-      if filters[:price_min].present? || filters[:price_max].present?
-        facet_services = apply_price_filter(facet_services, filters)
-      end
+      # Apply all filters except categories
+      facet_services = apply_filters(services, filters.except(:categories))
       
       facet_services
         .joins(:service_category)
@@ -233,11 +228,8 @@ module Resolvers
         { min: 5000, max: Float::INFINITY, label: 'Over $5,000' }
       ]
       
-      # Exclude price filters for facet generation
-      facet_services = services
-      if filters[:categories].present?
-        facet_services = facet_services.where(service_category_id: filters[:categories])
-      end
+      # Apply all filters except price
+      facet_services = apply_filters(services, filters.except(:price_min, :price_max))
       
       price_ranges.map do |range|
         count = facet_services
@@ -254,7 +246,10 @@ module Resolvers
     end
     
     def generate_location_facets(services, filters)
-      services
+      # Apply all filters (locations are already in services via apply_location_filter)
+      facet_services = apply_filters(services, filters)
+
+      facet_services
         .joins(:vendor_profile)
         .group('vendor_profiles.location')
         .count
@@ -269,8 +264,11 @@ module Resolvers
     end
     
     def generate_pricing_type_facets(services, filters)
+      # Apply all filters except pricing_type
+      facet_services = apply_filters(services, filters.except(:pricing_type))
+
       Service.pricing_types.map do |pricing_type, _|
-        count = services.where(pricing_type: pricing_type).count
+        count = facet_services.where(pricing_type: pricing_type).count
         
         {
           pricing_type: pricing_type,
@@ -289,8 +287,11 @@ module Resolvers
         { min: 0.0, max: 3.0, label: 'Under 3.0 stars' }
       ]
       
+      # Apply all filters except vendor_rating
+      facet_services = apply_filters(services, filters.except(:vendor_rating))
+      
       rating_ranges.map do |range|
-        count = services
+        count = facet_services
           .joins(:vendor_profile)
           .where('vendor_profiles.average_rating >= ? AND vendor_profiles.average_rating < ?', range[:min], range[:max])
           .count

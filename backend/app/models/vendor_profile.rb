@@ -2,31 +2,35 @@
 #
 # Table name: vendor_profiles
 #
-#  id                 :bigint           not null, primary key
-#  average_rating     :decimal(3, 2)    default(0.0)
-#  business_license   :string
-#  business_name      :string           not null
-#  description        :text
-#  is_verified        :boolean          default(FALSE)
-#  latitude           :decimal(10, 6)
-#  location           :string
-#  longitude          :decimal(10, 6)
-#  phone              :string
-#  service_categories :text
-#  total_reviews      :integer          default(0)
-#  website            :string
-#  years_experience   :integer          default(0)
-#  created_at         :datetime         not null
-#  updated_at         :datetime         not null
-#  user_id            :bigint           not null
+#  id                  :bigint           not null, primary key
+#  average_rating      :decimal(3, 2)    default(0.0)
+#  business_license    :string
+#  business_name       :string           not null
+#  description         :text
+#  is_verified         :boolean          default(FALSE)
+#  latitude            :decimal(10, 6)
+#  location            :string
+#  longitude           :decimal(10, 6)
+#  phone               :string
+#  rejection_reason    :text
+#  service_categories  :text
+#  total_reviews       :integer          default(0)
+#  verification_status :integer          default("unverified")
+#  verified_at         :datetime
+#  website             :string
+#  years_experience    :integer          default(0)
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  user_id             :bigint           not null
 #
 # Indexes
 #
-#  index_vendor_profiles_on_business_name  (business_name)
-#  index_vendor_profiles_on_coordinates    (latitude,longitude)
-#  index_vendor_profiles_on_is_verified    (is_verified)
-#  index_vendor_profiles_on_location       (location)
-#  index_vendor_profiles_on_user_id        (user_id)
+#  index_vendor_profiles_on_business_name        (business_name)
+#  index_vendor_profiles_on_coordinates          (latitude,longitude)
+#  index_vendor_profiles_on_is_verified          (is_verified)
+#  index_vendor_profiles_on_location             (location)
+#  index_vendor_profiles_on_user_id              (user_id)
+#  index_vendor_profiles_on_verification_status  (verification_status)
 #
 # Foreign Keys
 #
@@ -40,8 +44,15 @@ class VendorProfile < ApplicationRecord
   has_many :portfolio_items, dependent: :destroy
   has_many :availability_slots, dependent: :destroy
   has_many :bookings, through: :user, source: :vendor_bookings
-  # Future associations (will be added in later tasks)
-  # has_many :reviews, through: :services
+  has_many :reviews, dependent: :destroy
+
+  # Enums
+  enum verification_status: {
+    unverified: 0,
+    pending_verification: 1,
+    verified: 2,
+    rejected: 3
+  }
 
   # Validations
   validates :user_id, presence: true, uniqueness: true
@@ -73,7 +84,19 @@ class VendorProfile < ApplicationRecord
 
   # Instance methods
   def verified?
-    is_verified
+    is_verified || verified_verification_status?
+  end
+
+  def request_verification!
+    update(verification_status: :pending_verification)
+  end
+
+  def approve_verification!
+    update(verification_status: :verified, is_verified: true, verified_at: Time.current, rejection_reason: nil)
+  end
+
+  def reject_verification!(reason)
+    update(verification_status: :rejected, is_verified: false, rejection_reason: reason)
   end
 
   def has_description?
@@ -98,6 +121,59 @@ class VendorProfile < ApplicationRecord
 
   def display_name
     business_name.presence || user.full_name
+  end
+
+  def update_rating_stats!
+    stats = reviews.published.pluck(
+      'COUNT(id)', 
+      'AVG(rating)',
+      'AVG(quality_rating)',
+      'AVG(communication_rating)',
+      'AVG(value_rating)',
+      'AVG(punctuality_rating)'
+    ).first
+    
+    count = stats[0].to_i
+    avg = stats[1].to_f.round(2)
+    
+    update_columns(average_rating: avg, total_reviews: count)
+    
+    # Return detailed stats for immediate use if needed
+    {
+      count: count,
+      average: avg,
+      quality: stats[2].to_f.round(2),
+      communication: stats[3].to_f.round(2),
+      value: stats[4].to_f.round(2),
+      punctuality: stats[5].to_f.round(2)
+    }
+  end
+
+  def rating_distribution
+    dist = reviews.published.group(:rating).count
+    {
+      5 => dist[5] || 0,
+      4 => dist[4] || 0,
+      3 => dist[3] || 0,
+      2 => dist[2] || 0,
+      1 => dist[1] || 0
+    }
+  end
+
+  def rating_breakdown
+    stats = reviews.published.pluck(
+      'AVG(quality_rating)',
+      'AVG(communication_rating)',
+      'AVG(value_rating)',
+      'AVG(punctuality_rating)'
+    ).first
+    
+    {
+      quality: stats[0].to_f.round(2),
+      communication: stats[1].to_f.round(2),
+      value: stats[2].to_f.round(2),
+      punctuality: stats[3].to_f.round(2)
+    }
   end
 
   def rating_display

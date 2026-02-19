@@ -1,4 +1,6 @@
 class AuthorizeApiRequest
+  include Callable
+
   def initialize(headers = {})
     @headers = headers
   end

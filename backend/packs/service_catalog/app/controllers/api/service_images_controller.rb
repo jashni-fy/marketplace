@@ -1,33 +1,35 @@
-class ServiceImagesController < ApiController
-  before_action :authenticate_request
-  before_action :ensure_vendor_user
+class Api::ServiceImagesController < ApiController
+  before_action :authenticate_user!
+  before_action :ensure_vendor
   before_action :set_service
   before_action :ensure_service_owner
   before_action :set_service_image, only: [:show, :update, :destroy, :set_primary]
 
-  # GET /services/:service_id/images
+  # GET /api/services/:service_id/images
   def index
-    @service_images = @service.service_images.ordered.includes(image_attachment: :blob)
+    @service_images = @service.service_images.ordered
     
     render json: {
       service_images: @service_images.map { |image| service_image_response(image) }
     }
   end
 
-  # GET /services/:service_id/images/:id
+  # GET /api/services/:service_id/images/:id
   def show
     render json: {
       service_image: detailed_service_image_response(@service_image)
     }
   end
 
-  # POST /services/:service_id/images
+  # POST /api/services/:service_id/images
   def create
     @service_image = @service.service_images.build(service_image_params)
     
     if @service_image.save
-      # Process image in background
-      ImageProcessingJob.perform_later(@service_image.id) if @service_image.image.attached?
+      # Process image in background if job exists
+      if defined?(ImageProcessingJob)
+        ImageProcessingJob.perform_later(@service_image.id) if @service_image.image.attached?
+      end
       
       render json: {
         message: 'Image uploaded successfully',
@@ -41,7 +43,7 @@ class ServiceImagesController < ApiController
     end
   end
 
-  # PUT/PATCH /services/:service_id/images/:id
+  # PUT/PATCH /api/services/:service_id/images/:id
   def update
     if @service_image.update(service_image_update_params)
       render json: {
@@ -56,7 +58,7 @@ class ServiceImagesController < ApiController
     end
   end
 
-  # DELETE /services/:service_id/images/:id
+  # DELETE /api/services/:service_id/images/:id
   def destroy
     @service_image.destroy
     render json: {
@@ -64,7 +66,7 @@ class ServiceImagesController < ApiController
     }
   end
 
-  # POST /services/:service_id/images/:id/set_primary
+  # POST /api/services/:service_id/images/:id/set_primary
   def set_primary
     ServiceImage.set_primary_for_service(@service.id, @service_image.id)
     
@@ -74,7 +76,7 @@ class ServiceImagesController < ApiController
     }
   end
 
-  # POST /services/:service_id/images/reorder
+  # POST /api/services/:service_id/images/reorder
   def reorder
     image_ids = params[:image_ids]
     
@@ -104,7 +106,7 @@ class ServiceImagesController < ApiController
     }
   end
 
-  # POST /services/:service_id/images/bulk_upload
+  # POST /api/services/:service_id/images/bulk_upload
   def bulk_upload
     images = params[:images]
     
@@ -129,8 +131,10 @@ class ServiceImagesController < ApiController
       
       if service_image.save
         uploaded_images << service_image
-        # Process image in background
-        ImageProcessingJob.perform_later(service_image.id) if service_image.image.attached?
+        # Process image in background if job exists
+        if defined?(ImageProcessingJob)
+          ImageProcessingJob.perform_later(service_image.id) if service_image.image.attached?
+        end
       else
         errors << {
           index: index,
@@ -156,9 +160,7 @@ class ServiceImagesController < ApiController
   private
 
   def set_service
-    return render_vendor_profile_missing unless current_user.vendor_profile
-    
-    @service = current_user.vendor_profile.services.find(params[:service_id])
+    @service = Service.find(params[:service_id])
   rescue ActiveRecord::RecordNotFound
     render json: {
       error: 'Service not found'
@@ -173,8 +175,8 @@ class ServiceImagesController < ApiController
     }, status: :not_found
   end
 
-  def ensure_vendor_user
-    unless current_user&.vendor?
+  def ensure_vendor
+    unless current_user&.role == 'vendor'
       render json: {
         error: 'Only vendors can manage service images'
       }, status: :forbidden
@@ -182,17 +184,11 @@ class ServiceImagesController < ApiController
   end
 
   def ensure_service_owner
-    unless @service&.vendor_profile == current_user.vendor_profile
+    unless @service&.vendor_profile&.user == current_user
       render json: {
         error: 'You can only manage images for your own services'
       }, status: :forbidden
     end
-  end
-
-  def render_vendor_profile_missing
-    render json: {
-      error: 'Vendor profile not found'
-    }, status: :not_found
   end
 
   def service_image_params

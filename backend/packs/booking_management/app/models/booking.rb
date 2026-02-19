@@ -5,6 +5,7 @@ class Booking < ApplicationRecord
   belongs_to :vendor, class_name: 'User'
   belongs_to :service
   has_many :booking_messages, dependent: :destroy
+  has_one :review, dependent: :destroy
 
   enum status: {
     pending: 0,

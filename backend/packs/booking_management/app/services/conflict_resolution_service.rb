@@ -3,6 +3,7 @@
 class ConflictResolutionService
   include ActiveModel::Model
   include ActiveModel::Attributes
+  include Callable
 
   attr_accessor :vendor
   attribute :event_date, :datetime
@@ -16,6 +17,10 @@ class ConflictResolutionService
     super
     @errors = ActiveModel::Errors.new(self)
     @event_end_date = event_end_date || event_date + 2.hours if event_date
+  end
+
+  def call
+    { has_conflict: has_conflict?, conflicting_bookings: conflicting_bookings, suggested_times: suggest_alternative_times }
   end
 
   def has_conflict?

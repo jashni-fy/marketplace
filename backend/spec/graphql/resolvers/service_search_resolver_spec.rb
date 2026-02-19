@@ -200,6 +200,19 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
         expect(service['name']).to eq('Wedding Photography')
         expect(service['vendorLocation']).to include('New York')
       end
+
+      it 'validates coordinates' do
+        invalid_variables = {
+          location: {
+            latitude: 200, # Invalid
+            longitude: -74.0060,
+            radius: 50
+          }
+        }
+        result = schema.execute(query, variables: invalid_variables, context: context)
+        expect(result['errors']).to be_present
+        expect(result['errors'][0]['message']).to include('Invalid coordinates')
+      end
     end
 
     context 'with pagination' do
@@ -266,6 +279,18 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
         
         expect(photography_facet['count']).to eq(2)
         expect(videography_facet['count']).to eq(1)
+      end
+
+      it 'generates category facets respecting other filters' do
+        # Filter by price > 1000
+        variables = { filters: { priceMin: 1000 } }
+        result = schema.execute(query, variables: variables, context: context)
+        
+        category_facets = result.dig('data', 'searchServices', 'facets', 'categories')
+        photography_facet = category_facets.find { |f| f['slug'] == 'photography' }
+        
+        # Should only include "Wedding Photography" (1500), excluding "Event Photography" (800)
+        expect(photography_facet['count']).to eq(1)
       end
 
       it 'generates price range facets correctly' do

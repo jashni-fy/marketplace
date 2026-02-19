@@ -55,7 +55,10 @@ class Api::AuthController < ApiController
   end
 
   def auth_params
-    permitted_params = params.require(:auth).permit(:email, :password, :password_confirmation, :first_name, :last_name, :role)
+    permitted_params = params.require(:auth).permit(
+      :email, :password, :password_confirmation, :first_name, :last_name, :role,
+      vendor_profile_attributes: [:business_name, :location, :description, :phone, :website]
+    )
     permitted_params
   end
 

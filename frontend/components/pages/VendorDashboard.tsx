@@ -21,9 +21,13 @@ import {
   CheckCircle2, 
   Clock, 
   DollarSign,
-  Plus
+  Plus,
+  ShieldCheck,
+  AlertCircle,
+  Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 
 interface Service {
   id: string;
@@ -32,27 +36,52 @@ interface Service {
   formatted_price: string;
 }
 
-interface Booking {
+interface ActivityItem {
+  type: 'booking' | 'review';
   id: string;
-  service_name: string;
-  event_date: string;
-  status: string;
-  total_amount?: number;
+  customer: string;
+  date: string;
+  status?: string;
+  amount?: number;
+  rating?: number;
 }
 
-interface DashboardMetrics {
-  totalServices: number;
-  activeServices: number;
-  totalBookings: number;
-  pendingBookings: number;
-  completedBookings: number;
-  totalRevenue: number;
+interface AnalyticsData {
+  overview: {
+    total_bookings: number;
+    active_services: number;
+    average_rating: number;
+    total_reviews: number;
+    verification_status: string;
+  };
+  revenue_stats: {
+    total_revenue: number;
+    pending_revenue: number;
+    average_booking_value: number;
+  };
+  booking_stats: {
+    pending: number;
+    accepted: number;
+    completed: number;
+    cancelled: number;
+    conversion_rate: number;
+  };
+  rating_stats: {
+    average: number;
+    distribution: Record<string, number>;
+    breakdown: {
+      quality: number;
+      communication: number;
+      value: number;
+      punctuality: number;
+    };
+  };
+  recent_activity: ActivityItem[];
 }
 
 interface DashboardData {
   services: Service[];
-  bookings: Booking[];
-  metrics: DashboardMetrics;
+  analytics: AnalyticsData | null;
 }
 
 const VendorDashboard = () => {
@@ -60,18 +89,11 @@ const VendorDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [dashboardData, setDashboardData] = useState<DashboardData>({
     services: [],
-    bookings: [],
-    metrics: {
-      totalServices: 0,
-      activeServices: 0,
-      totalBookings: 0,
-      pendingBookings: 0,
-      completedBookings: 0,
-      totalRevenue: 0
-    }
+    analytics: null
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRequestingVerification, setIsRequestingVerification] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -82,22 +104,15 @@ const VendorDashboard = () => {
       setLoading(true);
       setError(null);
 
-      const servicesResponse = await apiService.services.getAll();
-      const services = servicesResponse.data.services || [];
-      const bookings: Booking[] = []; // Placeholder until booking API is implemented
+      const [servicesResponse, analyticsResponse] = await Promise.all([
+        apiService.services.getAll(),
+        apiService.analytics.dashboard()
+      ]);
 
-      const metrics: DashboardMetrics = {
-        totalServices: services.length,
-        activeServices: services.filter((s: Service) => s.status === 'active').length,
-        totalBookings: bookings.length,
-        pendingBookings: bookings.filter(b => b.status === 'pending').length,
-        completedBookings: bookings.filter(b => b.status === 'completed').length,
-        totalRevenue: bookings
-          .filter(b => b.status === 'completed')
-          .reduce((sum, b) => sum + (b.total_amount || 0), 0)
-      };
-
-      setDashboardData({ services, bookings, metrics });
+      setDashboardData({
+        services: servicesResponse.data.services || [],
+        analytics: analyticsResponse.data
+      });
     } catch (err) {
       console.error('Error loading dashboard data:', err);
       setError('Failed to load dashboard data. Please try again.');
@@ -106,116 +121,204 @@ const VendorDashboard = () => {
     }
   };
 
+  const handleRequestVerification = async () => {
+    try {
+      setIsRequestingVerification(true);
+      await apiService.profiles.requestVerification();
+      toast.success('Verification request submitted successfully!');
+      loadDashboardData(); // Reload to update status
+    } catch (err) {
+      toast.error('Failed to submit verification request.');
+    } finally {
+      setIsRequestingVerification(false);
+    }
+  };
+
   const handleServiceUpdate = () => {
     loadDashboardData();
   };
 
-  const renderOverview = () => (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="space-y-10"
-    >
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[
-          { label: 'Total Services', value: dashboardData.metrics.totalServices, icon: Briefcase, color: 'text-blue-500' },
-          { label: 'Active Status', value: dashboardData.metrics.activeServices, icon: CheckCircle2, color: 'text-green-500' },
-          { label: 'Total Bookings', value: dashboardData.metrics.totalBookings, icon: CalendarIcon, color: 'text-purple-500' },
-          { label: 'Total Revenue', value: `₹${dashboardData.metrics.totalRevenue}`, icon: DollarSign, color: 'text-emerald-500' },
-        ].map((item, index) => (
-          <Card key={index} className="border-border shadow-sm overflow-hidden group hover:border-foreground transition-colors">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-light mb-1">{item.label}</p>
-                  <p className="text-3xl font-light tracking-tight">{item.value}</p>
-                </div>
-                <div className={`p-3 rounded-2xl bg-secondary group-hover:bg-foreground group-hover:text-white transition-colors`}>
-                  <item.icon className="size-5" strokeWidth={1.5} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        {/* Recent Services */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-light tracking-tight">Recent Services</h3>
-            <Button variant="ghost" size="sm" onClick={() => setActiveTab('services')} className="font-light rounded-full">
-              View All
+  const renderVerificationStatus = () => {
+    if (!dashboardData.analytics) return null;
+    
+    const status = dashboardData.analytics.overview.verification_status;
+    
+    switch (status) {
+      case 'verified':
+        return (
+          <Badge className="bg-blue-500 hover:bg-blue-600 text-white rounded-full px-3 py-1 flex items-center gap-1">
+            <ShieldCheck className="size-3" /> Verified Partner
+          </Badge>
+        );
+      case 'pending_verification':
+        return (
+          <Badge variant="outline" className="text-orange-500 border-orange-500 rounded-full px-3 py-1 flex items-center gap-1">
+            <Clock className="size-3" /> Verification Pending
+          </Badge>
+        );
+      case 'rejected':
+        return (
+          <div className="flex items-center gap-3">
+            <Badge variant="destructive" className="rounded-full px-3 py-1 flex items-center gap-1">
+              <AlertCircle className="size-3" /> Rejected
+            </Badge>
+            <Button size="sm" variant="outline" onClick={handleRequestVerification} disabled={isRequestingVerification} className="h-8 text-xs rounded-full">
+              Re-apply
             </Button>
           </div>
-          
-          {dashboardData.services.length > 0 ? (
-            <div className="grid gap-4">
-              {dashboardData.services.slice(0, 4).map((service) => (
-                <Card key={service.id} className="border-border hover:shadow-md transition-shadow">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="size-12 rounded-xl bg-secondary flex items-center justify-center">
-                        <Briefcase className="size-5 text-muted-foreground" strokeWidth={1.5} />
-                      </div>
-                      <div>
-                        <p className="font-normal text-lg">{service.name}</p>
-                        <p className="text-sm text-muted-foreground font-light">{service.formatted_price}</p>
-                      </div>
-                    </div>
-                    <Badge variant={service.status === 'active' ? 'secondary' : 'outline'} className="rounded-full font-normal">
-                      {service.status}
-                    </Badge>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card className="border-dashed border-2 bg-transparent">
-              <CardContent className="p-12 text-center">
-                <p className="text-muted-foreground font-light mb-4">No services created yet</p>
-                <Button onClick={() => setActiveTab('services')} className="rounded-full font-normal">
-                  <Plus className="mr-2 size-4" /> Create Service
-                </Button>
+        );
+      default:
+        return (
+          <Button size="sm" onClick={handleRequestVerification} disabled={isRequestingVerification} className="h-8 text-xs rounded-full bg-blue-500 hover:bg-blue-600 text-white">
+            <ShieldCheck className="mr-1 size-3" /> Get Verified
+          </Button>
+        );
+    }
+  };
+
+  const renderOverview = () => {
+    if (!dashboardData.analytics) return null;
+    const { analytics } = dashboardData;
+
+    return (
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="space-y-10"
+      >
+        {/* Verification Status Banner */}
+        {analytics.overview.verification_status !== 'verified' && (
+          <Card className="bg-blue-50/50 border-blue-100">
+            <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-full text-blue-600">
+                  <ShieldCheck className="size-5" />
+                </div>
+                <div>
+                  <p className="font-normal text-blue-900">Professional Verification</p>
+                  <p className="text-xs text-blue-700 font-light text-center sm:text-left">Get the blue tick to build trust and get 3x more booking requests.</p>
+                </div>
+              </div>
+              {renderVerificationStatus()}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Metrics Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { label: 'Total Bookings', value: analytics.overview.total_bookings, icon: CalendarIcon, color: 'text-purple-500' },
+            { label: 'Total Revenue', value: `₹${analytics.revenue_stats.total_revenue.toLocaleString()}`, icon: DollarSign, color: 'text-emerald-500' },
+            { label: 'Active Services', value: analytics.overview.active_services, icon: Briefcase, color: 'text-blue-500' },
+            { label: 'Avg. Rating', value: analytics.overview.average_rating || 'N/A', icon: Star, color: 'text-orange-500' },
+          ].map((item, index) => (
+            <Card key={index} className="border-border shadow-sm overflow-hidden group hover:border-foreground transition-colors">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground font-light mb-1">{item.label}</p>
+                    <p className="text-3xl font-light tracking-tight">{item.value}</p>
+                  </div>
+                  <div className={`p-3 rounded-2xl bg-secondary group-hover:bg-foreground group-hover:text-white transition-colors`}>
+                    <item.icon className="size-5" strokeWidth={1.5} />
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          )}
+          ))}
         </div>
 
-        {/* Activity Feed / Pending */}
-        <div className="space-y-6">
-          <h3 className="text-2xl font-light tracking-tight">Recent Activity</h3>
-          <Card className="border-border shadow-sm">
-            <CardContent className="p-6">
-              {dashboardData.metrics.pendingBookings > 0 ? (
-                <div className="space-y-6">
-                  {dashboardData.bookings
-                    .filter(b => b.status === 'pending')
-                    .slice(0, 5)
-                    .map((booking) => (
-                      <div key={booking.id} className="flex gap-4">
-                        <div className="size-2 mt-2 rounded-full bg-orange-500 flex-shrink-0" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          {/* Recent Services */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-light tracking-tight">Your Services</h3>
+              <Button variant="ghost" size="sm" onClick={() => setActiveTab('services')} className="font-light rounded-full">
+                Manage
+              </Button>
+            </div>
+            
+            {dashboardData.services.length > 0 ? (
+              <div className="grid gap-4">
+                {dashboardData.services.slice(0, 4).map((service) => (
+                  <Card key={service.id} className="border-border hover:shadow-md transition-shadow">
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="size-12 rounded-xl bg-secondary flex items-center justify-center">
+                          <Briefcase className="size-5 text-muted-foreground" strokeWidth={1.5} />
+                        </div>
                         <div>
-                          <p className="text-sm font-normal">New booking request for {booking.service_name}</p>
-                          <p className="text-xs text-muted-foreground font-light">{booking.event_date}</p>
+                          <p className="font-normal text-lg">{service.name}</p>
+                          <p className="text-sm text-muted-foreground font-light">{service.formatted_price}</p>
+                        </div>
+                      </div>
+                      <Badge variant={service.status === 'active' ? 'secondary' : 'outline'} className="rounded-full font-normal capitalize">
+                        {service.status}
+                      </Badge>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="border-dashed border-2 bg-transparent">
+                <CardContent className="p-12 text-center">
+                  <p className="text-muted-foreground font-light mb-4">No services created yet</p>
+                  <Button onClick={() => setActiveTab('services')} className="rounded-full font-normal">
+                    <Plus className="mr-2 size-4" /> Create Service
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Activity Feed */}
+          <div className="space-y-6">
+            <h3 className="text-2xl font-light tracking-tight">Recent Activity</h3>
+            <Card className="border-border shadow-sm overflow-hidden">
+              <CardContent className="p-0">
+                {analytics.recent_activity.length > 0 ? (
+                  <div className="divide-y divide-border">
+                    {analytics.recent_activity.map((activity, idx) => (
+                      <div key={`${activity.type}-${activity.id}-${idx}`} className="p-4 flex gap-4 hover:bg-secondary/30 transition-colors">
+                        <div className={`size-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          activity.type === 'booking' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'
+                        }`}>
+                          {activity.type === 'booking' ? <CalendarIcon size={16} /> : <Star size={16} />}
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-normal leading-tight">
+                            {activity.type === 'booking' 
+                              ? `New booking from ${activity.customer}` 
+                              : `New ${activity.rating}-star review from ${activity.customer}`}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground font-light">
+                            <Clock size={12} />
+                            {new Date(activity.date).toLocaleDateString()}
+                            {activity.amount && (
+                              <>
+                                <span className="mx-1">•</span>
+                                <span className="font-normal text-foreground">₹${activity.amount.toLocaleString()}</span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
-                </div>
-              ) : (
-                <div className="text-center py-10">
-                  <Clock className="size-8 mx-auto mb-3 text-muted-foreground opacity-20" strokeWidth={1} />
-                  <p className="text-sm text-muted-foreground font-light">No recent notifications</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  </div>
+                ) : (
+                  <div className="text-center py-16">
+                    <Clock className="size-8 mx-auto mb-3 text-muted-foreground opacity-20" strokeWidth={1} />
+                    <p className="text-sm text-muted-foreground font-light">No recent activity</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
-    </motion.div>
-  );
+      </motion.div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -228,9 +331,18 @@ const VendorDashboard = () => {
           transition={{ duration: 0.5 }}
           className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6"
         >
-          <div>
-            <h1 className="text-4xl md:text-5xl font-extralight tracking-tight mb-2">Dashboard</h1>
-            <p className="text-xl text-muted-foreground font-light">Welcome back, {user?.first_name || 'Partner'}</p>
+          <div className="flex items-center gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <h1 className="text-4xl md:text-5xl font-extralight tracking-tight">Dashboard</h1>
+                {dashboardData.analytics?.overview.verification_status === 'verified' && (
+                  <div className="bg-blue-500 text-white rounded-full p-1 self-center" title="Verified Professional">
+                    <ShieldCheck size={20} />
+                  </div>
+                )}
+              </div>
+              <p className="text-xl text-muted-foreground font-light">Welcome back, {user?.first_name || 'Partner'}</p>
+            </div>
           </div>
           
           <div className="flex bg-secondary p-1 rounded-full overflow-hidden">
@@ -260,7 +372,7 @@ const VendorDashboard = () => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8">
             <Card className="border-destructive/50 bg-destructive/5">
               <CardContent className="p-4 text-destructive text-sm font-light flex items-center gap-2">
-                <Clock className="size-4" /> {error}
+                <AlertCircle className="size-4" /> {error}
               </CardContent>
             </Card>
           </motion.div>
@@ -293,7 +405,7 @@ const VendorDashboard = () => {
                 />
               )}
               {activeTab === 'portfolio' && <PortfolioManager />}
-              {activeTab === 'calendar' && <BookingCalendar bookings={dashboardData.bookings} />}
+              {activeTab === 'calendar' && <BookingCalendar bookings={[]} />}
             </motion.div>
           )}
         </AnimatePresence>

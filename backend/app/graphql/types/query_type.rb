@@ -40,6 +40,16 @@ module Types
     field :vendor_profile, Types::VendorProfileType, null: true, description: "Find a vendor profile by ID" do
       argument :id, ID, required: true
     end
+
+    field :review, Types::ReviewType, null: true, description: "Find a review by ID" do
+      argument :id, ID, required: true
+    end
+
+    field :reviews, [Types::ReviewType], null: false, description: "List all published reviews" do
+      argument :limit, Integer, required: false, default_value: 20
+    end
+
+    field :vendor_dashboard, Types::VendorAnalyticsType, null: true, description: "Vendor analytics dashboard statistics"
     
     def service(id:)
       Service.active.find_by(id: id)
@@ -55,6 +65,21 @@ module Types
     
     def vendor_profile(id:)
       VendorProfile.find_by(id: id)
+    end
+
+    def review(id:)
+      Review.published.find_by(id: id)
+    end
+
+    def reviews(limit:)
+      Review.published.recent.limit(limit)
+    end
+
+    def vendor_dashboard
+      user = context[:current_user]
+      return nil unless user&.vendor? && user.vendor_profile
+      
+      VendorAnalyticsService.call(user.vendor_profile)
     end
   end
 end

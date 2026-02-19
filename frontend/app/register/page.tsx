@@ -19,6 +19,11 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState('customer');
+  
+  // Vendor specific fields
+  const [businessName, setBusinessName] = useState('');
+  const [location, setLocation] = useState('');
+
   const { register } = useAuth();
   const router = useRouter();
 
@@ -30,15 +35,24 @@ export default function Register() {
       return;
     }
 
+    const userData: any = { 
+      email, 
+      password, 
+      password_confirmation: confirmPassword,
+      first_name: firstName,
+      last_name: lastName,
+      role 
+    };
+
+    if (role === 'vendor') {
+      userData.vendor_profile_attributes = {
+        business_name: businessName,
+        location: location
+      };
+    }
+
     try {
-      const result = await register({ 
-        email, 
-        password, 
-        password_confirmation: confirmPassword,
-        first_name: firstName,
-        last_name: lastName,
-        role 
-      });
+      const result = await register(userData);
       
       if (result.success) {
         toast.success(result.message || 'Account created successfully!');
@@ -140,6 +154,35 @@ export default function Register() {
                 <option value="vendor">Photographer</option>
               </select>
             </div>
+
+            {role === 'vendor' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="businessName" className="font-normal">Business Name</Label>
+                  <Input
+                    id="businessName"
+                    type="text"
+                    placeholder="Amazing Photos Studio"
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    required
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location" className="font-normal">Location (City, State)</Label>
+                  <Input
+                    id="location"
+                    type="text"
+                    placeholder="Mumbai, Maharashtra"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    required
+                    className="h-11"
+                  />
+                </div>
+              </>
+            )}
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button type="submit" className="w-full bg-foreground hover:bg-foreground/90 h-11 rounded-full font-normal text-white">

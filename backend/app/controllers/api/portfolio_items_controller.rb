@@ -41,8 +41,7 @@ class Api::PortfolioItemsController < ApiController
     ensure_vendor_role
     return unless current_user.vendor_profile
     
-    service = PortfolioManagementService.new(current_user.vendor_profile)
-    result = service.create_portfolio_item(portfolio_item_params)
+    result = CreatePortfolioItem.(current_user.vendor_profile, portfolio_item_params)
 
     if result[:success]
       render json: { 
@@ -58,8 +57,7 @@ class Api::PortfolioItemsController < ApiController
 
   # PATCH/PUT /portfolio_items/:id
   def update
-    service = PortfolioManagementService.new(@portfolio_item.vendor_profile)
-    result = service.update_portfolio_item(@portfolio_item, portfolio_item_params)
+    result = UpdatePortfolioItem.(@portfolio_item, portfolio_item_params)
 
     if result[:success]
       render json: { 
@@ -75,15 +73,17 @@ class Api::PortfolioItemsController < ApiController
 
   # DELETE /portfolio_items/:id
   def destroy
-    @portfolio_item.destroy
-    render json: { message: 'Portfolio item deleted successfully' }
+    result = DeletePortfolioItem.(@portfolio_item)
+    if result[:success]
+      render json: { message: 'Portfolio item deleted successfully' }
+    else
+      render json: { errors: result[:errors] }, status: :unprocessable_entity
+    end
   end
 
   # POST /portfolio_items/:id/upload_images
   def upload_images
-    set_portfolio_item
-    service = PortfolioManagementService.new(@portfolio_item.vendor_profile)
-    result = service.bulk_upload_images(@portfolio_item, params[:images])
+    result = BulkUploadPortfolioImages.(@portfolio_item, params[:images])
     
     if result[:success]
       render json: { 
@@ -116,8 +116,7 @@ class Api::PortfolioItemsController < ApiController
   # GET /portfolio_items/summary
   def summary
     ensure_vendor_role
-    service = PortfolioManagementService.new(current_user.vendor_profile)
-    summary = service.get_portfolio_summary
+    summary = PortfolioSummaryService.(current_user.vendor_profile)
     
     render json: { summary: summary }
   end
@@ -125,8 +124,7 @@ class Api::PortfolioItemsController < ApiController
   # POST /portfolio_items/reorder
   def reorder
     ensure_vendor_role
-    service = PortfolioManagementService.new(current_user.vendor_profile)
-    result = service.reorder_portfolio_items(params[:category], params[:item_orders])
+    result = ReorderPortfolioItems.(current_user.vendor_profile, params[:category], params[:item_orders])
     
     if result[:success]
       render json: { 
@@ -143,9 +141,7 @@ class Api::PortfolioItemsController < ApiController
 
   # POST /portfolio_items/:id/duplicate
   def duplicate
-    set_portfolio_item
-    service = PortfolioManagementService.new(@portfolio_item.vendor_profile)
-    result = service.duplicate_portfolio_item(@portfolio_item)
+    result = DuplicatePortfolioItem.(@portfolio_item)
     
     if result[:success]
       render json: { 
@@ -162,8 +158,7 @@ class Api::PortfolioItemsController < ApiController
   # PATCH /portfolio_items/set_featured
   def set_featured
     ensure_vendor_role
-    service = PortfolioManagementService.new(current_user.vendor_profile)
-    result = service.set_featured_items(params[:item_ids], params[:featured])
+    result = SetFeaturedPortfolioItems.(current_user.vendor_profile, params[:item_ids], params[:featured])
     
     if result[:success]
       render json: { 

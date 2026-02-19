@@ -1,209 +1,87 @@
-# Marketplace Application
+# Jashnify 📸
 
-A full-stack marketplace application built with Rails (backend) and React (frontend), containerized with Docker.
+Jashnify is a professional marketplace for event services, specialized in connecting clients with curated photographers for weddings, parties, corporate events, and more. It features a minimalist, high-performance design built with modern technologies.
 
-## Project Structure
+## 🚀 Tech Stack
 
-```
-marketplace/
-├── backend/             # Rails backend code
-│   ├── app/
-│   ├── config/
-│   ├── db/
-│   ├── Gemfile
-│   └── ...
-├── frontend/            # Frontend code (React, etc.)
-│   ├── package.json
-│   ├── src/
-│   ├── public/
-│   └── ...
-├── docker-compose.yml   # Docker setup for both frontend and backend
-├── Makefile             # Common commands for both frontend and backend
-└── README.md            # Project documentation
-```
+### Frontend
+- **Framework:** Next.js 14+ (App Router)
+- **Styling:** Tailwind CSS v4 (Minimalist Grayscale Theme)
+- **Animations:** Framer Motion
+- **Icons:** Lucide React
+- **UI Components:** Radix UI / Shadcn UI
 
-## Quick Start
+### Backend
+- **Framework:** Ruby on Rails 7.x (API Mode)
+- **Authentication:** Devise + JWT
+- **Database:** PostgreSQL
+- **Background Jobs:** Sidekiq + Redis
+- **Architecture:** Packwerk (Component-based architecture)
+
+---
+
+## 🛠 Local Development
 
 ### Prerequisites
+- Docker & Docker Compose
+- Ruby 3.x
+- Node.js 20+
 
-- Docker and Docker Compose
-- Make (optional, for convenience commands)
+### Quick Start
+We provide a unified development script that handles Docker services (Postgres, Redis, Sidekiq) and local development servers (Rails, Next.js) simultaneously.
 
-### Setup and Run
-
-1. **Clone and navigate to the project:**
+1. **Clone the repository:**
    ```bash
-   cd marketplace
+   git clone https://github.com/your-username/jashnify.git
+   cd jashnify
    ```
 
-2. **Build and start all services:**
+2. **Run the development script:**
    ```bash
-   make setup
-   ```
-   
-   Or manually:
-   ```bash
-   docker-compose build
-   docker-compose up -d
-   docker-compose exec backend bundle exec rails db:create db:migrate db:seed
+   chmod +x dev.sh
+   ./dev.sh
    ```
 
-3. **Access the application:**
-   - Frontend: http://localhost (via nginx proxy)
-   - Backend API: http://localhost/api
-   - Direct Frontend: http://localhost:5173
-   - Direct Backend: http://localhost:3000
-   - Sidekiq Web UI: http://localhost/sidekiq (development only)
+- **Frontend:** [http://localhost:3000](http://localhost:3000)
+- **Backend API:** [http://localhost:3001](http://localhost:3001)
+- **Sidekiq Web UI:** [http://localhost:3001/sidekiq](http://localhost:3001/sidekiq)
 
-## Development
+---
 
-### Available Make Commands
+## 🌍 Deployment
 
-```bash
-make help           # Show all available commands
-make build          # Build all Docker images
-make up             # Start all services
-make down           # Stop all services
-make logs           # Show logs for all services
-make shell-backend  # Open shell in backend container
-make shell-frontend # Open shell in frontend container
-make test-backend   # Run backend tests
-make test-frontend  # Run frontend tests
-make clean          # Clean up containers and volumes
-```
+Jashnify is optimized for a "Zero Dollar" professional deployment strategy:
 
-### Backend Development
+- **Frontend:** Hosted on **Vercel** (`https://jashnify.in`)
+- **Backend API:** Hosted on **Render.com** (`https://api.jashnify.in`)
+- **Database:** **Supabase** (Managed PostgreSQL)
+- **Redis:** **Upstash** (Serverless Redis for Sidekiq)
 
-The Rails backend includes:
-- **API-first architecture** with JSON responses
-- **Domain-driven design** using packs-rails
-- **Authentication** with JWT tokens
-- **Background jobs** with Sidekiq
-- **Admin interface** with ActiveAdmin
-- **Testing** with RSpec
-
-Key backend commands:
-```bash
-make shell-backend
-bundle exec rails console
-bundle exec rspec
-bundle exec rails db:migrate
-```
-
-### Frontend Development
-
-The React frontend includes:
-- **Modern React** with hooks and context
-- **Routing** with React Router
-- **HTTP client** with Axios
-- **Testing** with Vitest and Testing Library
-- **Build tool** with Vite
-
-Key frontend commands:
-```bash
-make shell-frontend
-npm run dev
-npm test
-npm run build
-```
-
-### Database Operations
-
-```bash
-make db-migrate     # Run migrations
-make db-seed        # Seed database
-make db-reset       # Reset database
-```
-
-## Services
-
-The application consists of these Docker services:
-
-- **db**: PostgreSQL database
-- **redis**: Redis for caching and background jobs
-- **backend**: Rails API server
-- **sidekiq**: Background job processor
-- **frontend**: React development server
-- **nginx**: Reverse proxy (routes requests to frontend/backend)
-
-## Environment Variables
-
-### Backend (.env)
-```
-RAILS_ENV=development
-DATABASE_URL=postgresql://marketplace:password@db:5432/marketplace_development
-REDIS_URL=redis://redis:6379/0
-```
-
-### Frontend (.env)
-```
-VITE_API_URL=http://localhost:3000/api
-VITE_APP_NAME=Marketplace
-VITE_APP_VERSION=1.0.0
-```
-
-## Production Deployment
-
-For production deployment:
-
-1. **Build production images:**
+### Deployment Workflow
+1. Push changes to GitHub: `git push origin main`.
+2. Vercel and Render automatically trigger builds.
+3. For database changes, run migrations via the Render shell:
    ```bash
-   docker-compose -f docker-compose.prod.yml build
+   bundle exec rails db:migrate
    ```
 
-2. **Set production environment variables**
+---
 
-3. **Deploy with production compose file:**
-   ```bash
-   docker-compose -f docker-compose.prod.yml up -d
-   ```
+## 📂 Project Structure
 
-## Testing
-
-### Backend Tests
-```bash
-make test-backend
-# or
-docker-compose exec backend bundle exec rspec
+```text
+jashnify/
+├── frontend/           # Next.js application
+│   ├── app/            # App Router (pages & layouts)
+│   ├── components/     # UI & shared components
+│   └── lib/            # API services & Contexts
+├── backend/            # Rails API
+│   ├── app/            # Core Rails files
+│   ├── packs/          # Modular business logic
+│   └── config/         # Environment & initializers
+├── dev.sh              # Unified development script
+└── docker-compose.yml  # Docker services (DB, Redis, Sidekiq)
 ```
 
-### Frontend Tests
-```bash
-make test-frontend
-# or
-docker-compose exec frontend npm test
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Port conflicts**: Ensure ports 80, 3000, 5173, 5432, 6379 are available
-2. **Database connection**: Wait for database to be ready before starting backend
-3. **Node modules**: Delete `node_modules` and reinstall if frontend fails to start
-4. **Bundle issues**: Run `bundle install` in backend container if gems are missing
-
-### Logs
-```bash
-make logs                           # All services
-docker-compose logs backend         # Backend only
-docker-compose logs frontend        # Frontend only
-```
-
-### Reset Everything
-```bash
-make clean
-make setup
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License.
+## 📝 License
+Proprietary. All rights reserved.

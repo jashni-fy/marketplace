@@ -21,18 +21,18 @@ class Api::BookingsController < ApiController
   end
 
   def create
-    booking_service = BookingCreationService.new(
+    result = BookingCreationService.call(
       booking_params.merge(customer: current_user)
     )
 
-    if booking_service.call
+    if result[:success]
       render json: { 
-        booking: booking_json(booking_service.booking),
+        booking: booking_json(result[:booking]),
         message: 'Booking created successfully'
       }, status: :created
     else
       render json: { 
-        errors: booking_service.errors.full_messages,
+        errors: result[:errors],
         error: 'Failed to create booking'
       }, status: :unprocessable_entity
     end
@@ -64,27 +64,26 @@ class Api::BookingsController < ApiController
     return unless authorize_vendor_response!
 
     response_action = params[:response_action]
-    
-    case response_action
-    when 'accept'
-      @booking.update!(status: :accepted)
-      message = 'Booking accepted successfully'
-    when 'decline'
-      @booking.update!(status: :declined)
-      message = 'Booking declined'
-    when 'counter_offer'
-      @booking.update!(
-        status: :counter_offered,
-        total_amount: params[:counter_amount],
-        special_instructions: params[:counter_message]
-      )
-      message = 'Counter offer sent'
-    else
-      return render json: { error: 'Invalid response action' }, status: :bad_request
-    end
+    response_type = case response_action
+                    when 'accept' then 'approved'
+                    when 'decline' then 'rejected'
+                    when 'counter_offer' then 'requested_changes'
+                    else
+                      return render json: { error: 'Invalid response action' }, status: :bad_request
+                    end
 
-    # TODO: Send notification to customer
-    render json: { booking: booking_json(@booking), message: message }
+    result = BookingResponseService.call(
+      @booking, 
+      current_user, 
+      response_type, 
+      params[:counter_message]
+    )
+
+    if result[:success]
+      render json: { booking: booking_json(result[:booking]), message: "Booking #{response_action}ed successfully" }
+    else
+      render json: { errors: result[:errors] }, status: :unprocessable_entity
+    end
   end
 
   def messages
@@ -123,14 +122,14 @@ class Api::BookingsController < ApiController
     service = Service.find(params[:service_id])
     vendor_profile = service.vendor_profile
 
-    availability_checker = AvailabilityCheckerService.new(
+    result = AvailabilityCheckerService.call(
       vendor_profile: vendor_profile,
       date: Date.parse(params[:date]),
       start_time: params[:start_time],
       end_time: params[:end_time]
     )
 
-    if availability_checker.available?
+    if result[:available]
       render json: { 
         available: true,
         message: 'Time slot is available'
@@ -139,7 +138,7 @@ class Api::BookingsController < ApiController
       render json: { 
         available: false,
         message: 'Time slot is not available',
-        suggested_times: availability_checker.suggested_times
+        suggested_times: result[:suggested_times]
       }
     end
   rescue Date::Error, ArgumentError => e
@@ -147,15 +146,15 @@ class Api::BookingsController < ApiController
   end
 
   def suggest_alternatives
-    conflict_resolver = ConflictResolutionService.new(
+    result = ConflictResolutionService.call(
       vendor: User.find(params[:vendor_id]),
       event_date: DateTime.parse("#{params[:date]} #{params[:start_time]}"),
       event_end_date: DateTime.parse("#{params[:date]} #{params[:end_time]}")
     )
 
     render json: {
-      has_conflict: conflict_resolver.has_conflict?,
-      alternative_times: conflict_resolver.suggest_alternative_times
+      has_conflict: result[:has_conflict],
+      alternative_times: result[:suggested_times]
     }
   rescue Date::Error, ArgumentError => e
     render json: { error: 'Invalid date or time format' }, status: :bad_request
