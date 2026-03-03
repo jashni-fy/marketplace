@@ -1,131 +1,70 @@
 services:
-  # PostgreSQL Database
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: marketplace_development
+      POSTGRES_DB: marketplace_production
       POSTGRES_USER: marketplace
-      POSTGRES_PASSWORD: password
-    ports:
-      - "5432:5432"
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U marketplace -d marketplace_development"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "pg_isready -U marketplace -d marketplace_production"]
+      interval: 30s
+      timeout: 10s
       retries: 5
-    networks:
-      - marketplace-network
 
-  # Redis for caching and background jobs
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 10s
       retries: 5
-    networks:
-      - marketplace-network
 
-  # Rails Backend API
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.dev
-    ports:
-      - "3001:3000"
-    volumes:
-      - ./backend:/rails
-      - storage_data:/rails/storage
+      dockerfile: Dockerfile
     environment:
-      - RAILS_ENV=development
-      - DATABASE_URL=postgresql://marketplace:password@db:5432/marketplace_development
+      - RAILS_ENV=production
+      - DATABASE_URL=postgresql://marketplace:${DATABASE_PASSWORD}@db:5432/marketplace_production
       - REDIS_URL=redis://redis:6379/0
       - RAILS_SERVE_STATIC_FILES=true
-      - RAILS_LOG_TO_STDOUT=true
-      - JWT_SECRET_KEY=development_jwt_secret_key_change_in_production
-      - DEVISE_SECRET_KEY=development_devise_secret_key_change_in_production
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-    stdin_open: true
-    tty: true
-    networks:
-      - marketplace-network
-
-  # Background Job Processor
-  sidekiq:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
     volumes:
-      - ./backend:/rails
-      - bundle_cache:/usr/local/bundle
       - storage_data:/rails/storage
-    environment:
-      - RAILS_ENV=development
-      - DATABASE_URL=postgresql://marketplace:password@db:5432/marketplace_development
-      - REDIS_URL=redis://redis:6379/0
-      - JWT_SECRET_KEY=development_jwt_secret_key_change_in_production
-      - DEVISE_SECRET_KEY=development_devise_secret_key_change_in_production
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    command: bash -c "bundle install && bundle exec sidekiq"
-    networks:
-      - marketplace-network
+    restart: unless-stopped
 
-  # Next.js Frontend
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
+      dockerfile: Dockerfile
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:3001/api
-      - NEXT_PUBLIC_APP_NAME=Marketplace
-      - NEXT_PUBLIC_APP_VERSION=1.0.0
-      - NODE_ENV=development
-    depends_on:
-      - backend
-    stdin_open: true
-    tty: true
-    networks:
-      - marketplace-network
+      - NEXT_PUBLIC_API_URL=/api
+    restart: unless-stopped
 
-  # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
     ports:
-      - "8080:8080"
+      - "80:80"
+      - "443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/prod.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - backend
       - frontend
-    networks:
-      - marketplace-network
+    restart: unless-stopped
 
 volumes:
-  bundle_cache:
-  node_modules_cache:
   redis_data:
   postgres_data:
   storage_data:
-
-networks:
-  marketplace-network:
-    driver: bridge
