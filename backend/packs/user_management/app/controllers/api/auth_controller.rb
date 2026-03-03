@@ -26,8 +26,10 @@ class Api::AuthController < ApiController
     user = User.new(auth_params)
     
     if user.save
+      token = generate_jwt_token(user)
       render json: {
-        message: 'Registration successful. Please check your email to confirm your account.',
+        message: 'Registration successful',
+        token: token,
         user: user_response(user)
       }, status: :created
     else

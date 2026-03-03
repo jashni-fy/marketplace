@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Search,
   MapPin,
@@ -205,9 +206,11 @@ const Home = () => {
               <div key={provider.id} className="group bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded-2xl overflow-hidden hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300">
                 <div className="relative h-64 overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-60 z-10" />
-                  <img
+                  <Image
                     src={provider.portfolio}
                     alt={provider.specialty}
+                    fill
+                    unoptimized
                     className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
                   />
                   <div className="absolute top-4 right-4 z-20 bg-slate-900/90 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-xs font-medium border border-white/10">
@@ -217,14 +220,16 @@ const Home = () => {
 
                 <div className="p-6 relative">
                   <div className="absolute -top-10 left-6 z-20">
-                    <div className="relative">
-                      <img
+                    <div className="relative w-20 h-20">
+                      <Image
                         src={provider.image}
                         alt={provider.name}
-                        className="w-20 h-20 rounded-2xl object-cover border-4 border-slate-900 shadow-xl"
+                        fill
+                        unoptimized
+                        className="rounded-2xl object-cover border-4 border-slate-900 shadow-xl"
                       />
                       {provider.verified && (
-                        <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
+                        <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 z-30">
                           <CheckCircle2 className="w-4 h-4 text-blue-500 fill-blue-500/10" />
                         </div>
                       )}

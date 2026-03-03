@@ -52,6 +52,10 @@ const Register = () => {
       first_name: formData.firstName,
       last_name: formData.lastName,
       role: formData.role,
+      vendor_profile_attributes: formData.role === 'vendor' ? {
+        business_name: `${formData.firstName} ${formData.lastName}'s Business`,
+        location: 'Not specified'
+      } : undefined
     });
 
     if (result.success) {

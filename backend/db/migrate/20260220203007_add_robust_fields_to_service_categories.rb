@@ -1,4 +1,4 @@
-class AddRobustFieldsToServiceCategories < ActiveRecord::Migration[8.0]
+class AddRobustFieldsToServiceCategories < ActiveRecord::Migration[7.1]
   def change
     add_column :service_categories, :icon, :string
     add_column :service_categories, :ancestry, :string

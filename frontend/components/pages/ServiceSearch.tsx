@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { apiService } from '../../lib/api';
 import { ShieldCheck, Star, Search, MapPin } from 'lucide-react';
@@ -34,17 +34,7 @@ const ServiceSearch = () => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const searchParams = useSearchParams();
 
-  useEffect(() => {
-    const initialSearch = searchParams.get('search') || '';
-    const initialCategory = searchParams.get('category') || '';
-    
-    setSearchQuery(initialSearch);
-    setSelectedCategory(initialCategory);
-    
-    loadServices({ search: initialSearch, category: initialCategory });
-  }, [searchParams]);
-
-  const loadServices = async (filters: { search?: string; category?: string } = {}) => {
+  const loadServices = useCallback(async (filters: { search?: string; category?: string } = {}) => {
     try {
       setLoading(true);
       const response = await apiService.services.search({
@@ -59,7 +49,17 @@ const ServiceSearch = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, selectedCategory]);
+
+  useEffect(() => {
+    const initialSearch = searchParams.get('search') || '';
+    const initialCategory = searchParams.get('category') || '';
+
+    setSearchQuery(initialSearch);
+    setSelectedCategory(initialCategory);
+
+    loadServices({ search: initialSearch, category: initialCategory });
+  }, [searchParams, loadServices]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

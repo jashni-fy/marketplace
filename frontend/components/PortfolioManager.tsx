@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiService } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import {
   Camera
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 
 const PortfolioManager = () => {
   const [portfolioItems, setPortfolioItems] = useState<any[]>([]);
@@ -30,11 +31,7 @@ const PortfolioManager = () => {
   const [dragActive, setDragActive] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
-  useEffect(() => {
-    loadPortfolioData();
-  }, []);
-
-  const loadPortfolioData = async () => {
+  const loadPortfolioData = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiService.vendors.portfolioItems('me'); // Assuming an endpoint for current vendor
@@ -46,7 +43,11 @@ const PortfolioManager = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadPortfolioData();
+  }, [loadPortfolioData]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -162,9 +163,11 @@ const PortfolioManager = () => {
               <Card className="border-border shadow-sm overflow-hidden group bg-white">
                 <div className="relative aspect-square overflow-hidden bg-secondary">
                   {item.images && item.images[0] ? (
-                    <img 
+                    <Image 
                       src={item.images[0].url} 
                       alt={item.title} 
+                      fill
+                      unoptimized
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
                     />
                   ) : (

@@ -2,6 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Star, MapPin, IndianRupee } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface PhotographerCardProps {
   photographer: any; // Allow any for API flexibility
@@ -24,9 +25,11 @@ export default function PhotographerCard({ photographer }: PhotographerCardProps
     <Link href={`/photographer/${id}`}>
       <Card className="overflow-hidden hover:shadow-xl transition-all duration-500 cursor-pointer group border-border bg-white h-full flex flex-col">
         <div className="relative aspect-[4/5] overflow-hidden">
-          <img
+          <Image
             src={image}
             alt={name}
+            fill
+            unoptimized
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />

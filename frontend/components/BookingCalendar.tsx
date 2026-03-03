@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,11 +25,7 @@ const BookingCalendar = ({ bookings: initialBookings }: any) => {
   const [availabilitySlots, setAvailabilitySlots] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, [currentDate]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
@@ -44,7 +40,11 @@ const BookingCalendar = ({ bookings: initialBookings }: any) => {
     } catch (err) {
       console.error('Error loading calendar data:', err);
     }
-  };
+  }, [currentDate]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const daysInMonth = (date: Date) => {
     const year = date.getFullYear();

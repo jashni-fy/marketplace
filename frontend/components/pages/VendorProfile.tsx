@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Badge } from '../ui/badge';
 import { apiService } from '../../lib/api';
 import { ShieldCheck, Star, Clock, MessageSquare, Award, ThumbsUp } from 'lucide-react';
+import Image from 'next/image';
 
 interface VendorProfileProps {
   params: {
@@ -102,11 +104,7 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'services' | 'portfolio' | 'reviews'>('services');
 
-  useEffect(() => {
-    loadVendorData();
-  }, [params.id]);
-
-  const loadVendorData = async () => {
+  const loadVendorData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -128,7 +126,11 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id]);
+
+  useEffect(() => {
+    loadVendorData();
+  }, [loadVendorData]);
 
   if (loading) {
     return (
@@ -268,7 +270,7 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
                     <p className="text-slate-500 font-light text-sm line-clamp-3 mb-6 leading-relaxed">{service.description}</p>
                     <div className="flex justify-between items-end">
                       <div className="space-y-1">
-                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Starting from</p>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider leading-none">Starting from</p>
                         <span className="text-2xl font-light text-slate-900">
                           {service.formatted_price}
                         </span>
@@ -289,11 +291,13 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {portfolio.length > 0 ? portfolio.map((item) => (
                   <div key={item.id} className="group cursor-pointer">
-                    <div className="aspect-[4/3] rounded-2xl overflow-hidden mb-4 bg-slate-100">
+                    <div className="aspect-[4/3] rounded-2xl overflow-hidden mb-4 bg-slate-100 relative">
                       {item.primary_image_url ? (
-                        <img
+                        <Image
                           src={item.primary_image_url}
                           alt={item.title}
+                          fill
+                          unoptimized
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (

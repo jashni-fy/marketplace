@@ -11,6 +11,7 @@ import { Star, MapPin, IndianRupee, Calendar, Award, ArrowLeft, Check, AlertCirc
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { apiService } from '@/lib/api';
+import Image from 'next/image';
 
 export default function PhotographerDetail() {
   const params = useParams();
@@ -100,18 +101,18 @@ export default function PhotographerDetail() {
     );
   }
 
-  const name = photographer.name || photographer.business_name || 'Anonymous Photographer';
-  const image = photographer.image || photographer.profile_image_url || photographer.image_url || 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?q=80&w=1000&auto=format&fit=crop';
-  const rating = photographer.rating || photographer.average_rating || 0;
-  const reviewCount = photographer.reviewCount || photographer.reviews_count || 0;
+  const name = photographer.business_name || photographer.name || 'Anonymous Photographer';
+  const image = photographer.profile_image_url || photographer.image_url || photographer.image || 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?q=80&w=1000&auto=format&fit=crop';
+  const rating = photographer.average_rating || photographer.rating || 0;
+  const reviewCount = photographer.total_reviews || photographer.reviewCount || photographer.reviews_count || 0;
   const location = photographer.location || photographer.city || 'Location not specified';
-  const bio = photographer.bio || photographer.description || 'No bio available.';
-  const categories = photographer.categories || (photographer.service_category ? [photographer.service_category] : []);
-  const priceRange = photographer.priceRange || (photographer.base_price ? `₹${photographer.base_price}` : 'Price on request');
-  const yearsOfExperience = photographer.yearsOfExperience || photographer.experience_years || 0;
+  const bio = photographer.description || photographer.bio || 'No bio available.';
+  const categories = photographer.service_categories || photographer.categories || (photographer.service_category ? [photographer.service_category] : []);
+  const priceRange = photographer.base_price ? `₹${photographer.base_price}` : (photographer.priceRange || 'Price on request');
+  const yearsOfExperience = photographer.years_experience || photographer.yearsOfExperience || photographer.experience_years || 0;
   const availableSlots = photographer.availableSlots ?? 10;
-  const portfolio = photographer.portfolio || photographer.portfolio_images || [];
-  const services = photographer.services || (photographer.offered_services ? photographer.offered_services.map((s: any) => s.name) : ['Photography', 'Editing', 'High-res images']);
+  const portfolio = photographer.featured_portfolio || photographer.portfolio || photographer.portfolio_images || [];
+  const services = photographer.service_categories || photographer.services || (photographer.offered_services ? photographer.offered_services.map((s: any) => s.name) : ['Photography', 'Editing', 'High-res images']);
 
   return (
     <div className="min-h-screen bg-background">
@@ -142,9 +143,11 @@ export default function PhotographerDetail() {
                 transition={{ duration: 0.6, delay: 0.1 }}
                 className="relative aspect-[16/10] overflow-hidden rounded-2xl"
               >
-                <img
+                <Image
                   src={image}
                   alt={name}
+                  fill
+                  unoptimized
                   className="w-full h-full object-cover"
                 />
               </motion.div>
@@ -235,9 +238,11 @@ export default function PhotographerDetail() {
                         transition={{ duration: 0.5, delay: index * 0.1 }}
                         className="relative aspect-square overflow-hidden rounded-xl group cursor-pointer"
                       >
-                        <img
-                          src={typeof img === 'string' ? img : img.url}
+                        <Image
+                          src={typeof img === 'string' ? img : (img.url || img.primary_image_url)}
                           alt={`Portfolio ${index + 1}`}
+                          fill
+                          unoptimized
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                         />
                       </motion.div>
