@@ -115,7 +115,7 @@ const ServiceManagement = ({ services: initialServices, onServiceUpdate }: any) 
     setFormData({
       name: service.name,
       description: service.description,
-      service_category_id: service.category.id.toString(),
+      service_category_id: service.category?.id?.toString() || '',
       base_price: service.base_price?.toString() || '',
       pricing_type: service.pricing_type,
       status: service.status
@@ -149,14 +149,14 @@ const ServiceManagement = ({ services: initialServices, onServiceUpdate }: any) 
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-light tracking-tight">Services</h2>
-          <p className="text-muted-foreground font-light text-sm">Manage your professional offerings</p>
+          <h2 className="text-xl font-bold text-white uppercase tracking-widest">Services</h2>
+          <p className="text-slate-500 text-xs mt-1">Manage your professional offerings</p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="rounded-full font-normal text-white">
-          <Plus className="mr-2 size-4" /> Add Service
+        <Button onClick={() => setShowForm(true)} size="sm" className="rounded-lg font-bold">
+          <Plus className="mr-1.5 size-3.5" /> Add Service
         </Button>
       </div>
 
@@ -168,11 +168,10 @@ const ServiceManagement = ({ services: initialServices, onServiceUpdate }: any) 
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <Card className="border-border shadow-sm mb-10 bg-white">
-              <CardContent className="p-8">
-                <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-xl font-light">{editingService ? 'Edit Service' : 'New Service'}</h3>
-                  <Button variant="ghost" size="icon" onClick={resetForm} className="rounded-full">
+            <div className="border border-white/[0.05] shadow-2xl mb-10 bg-[#16191e] rounded-2xl p-8">
+                <div className="flex justify-between items-center mb-8 pb-4 border-b border-white/[0.03]">
+                  <h3 className="text-base font-bold text-white uppercase tracking-widest">{editingService ? 'Edit Service' : 'New Service'}</h3>
+                  <Button variant="ghost" size="icon" onClick={resetForm} className="rounded-full hover:bg-white/[0.05] text-slate-400">
                     <X className="size-4" />
                   </Button>
                 </div>
@@ -180,139 +179,135 @@ const ServiceManagement = ({ services: initialServices, onServiceUpdate }: any) 
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label className="font-normal text-sm">Service Name</Label>
+                      <Label className="font-bold text-xs uppercase tracking-widest text-slate-400">Service Name</Label>
                       <Input
                         name="name"
                         value={formData.name}
                         onChange={handleInputChange}
                         required
-                        className="h-11 rounded-xl"
+                        className="h-11 rounded-xl bg-background/50 border-white/[0.05] focus-visible:ring-primary/50 text-white"
                         placeholder="e.g. Wedding Photography Pack"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="font-normal text-sm">Category</Label>
+                      <Label className="font-bold text-xs uppercase tracking-widest text-slate-400">Category</Label>
                       <select
                         name="service_category_id"
                         value={formData.service_category_id}
                         onChange={handleInputChange}
                         required
-                        className="w-full h-11 rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="w-full h-11 rounded-xl border border-white/[0.05] bg-background/50 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
                       >
-                        <option value="">Select category</option>
-                        {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                        <option value="" className="bg-[#16191e]">Select category</option>
+                        {categories.map(cat => <option key={cat.id} value={cat.id} className="bg-[#16191e]">{cat.name}</option>)}
                       </select>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="font-normal text-sm">Description</Label>
+                    <Label className="font-bold text-xs uppercase tracking-widest text-slate-400">Description</Label>
                     <Textarea
                       name="description"
                       value={formData.description}
                       onChange={handleInputChange}
                       required
-                      className="rounded-xl min-h-[120px]"
+                      className="rounded-xl min-h-[120px] bg-background/50 border-white/[0.05] focus-visible:ring-primary/50 text-white"
                       placeholder="Detail what's included in this service..."
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <div className="space-y-2">
-                      <Label className="font-normal text-sm">Pricing Type</Label>
+                      <Label className="font-bold text-xs uppercase tracking-widest text-slate-400">Pricing Type</Label>
                       <select
                         name="pricing_type"
                         value={formData.pricing_type}
                         onChange={handleInputChange}
-                        className="w-full h-11 rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                        className="w-full h-11 rounded-xl border border-white/[0.05] bg-background/50 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
                       >
-                        <option value="hourly">Hourly</option>
-                        <option value="package">Package</option>
-                        <option value="custom">Custom</option>
+                        <option value="hourly" className="bg-[#16191e]">Hourly</option>
+                        <option value="package" className="bg-[#16191e]">Package</option>
+                        <option value="custom" className="bg-[#16191e]">Custom</option>
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <Label className="font-normal text-sm">Base Price (₹)</Label>
+                      <Label className="font-bold text-xs uppercase tracking-widest text-slate-400">Base Price (₹)</Label>
                       <Input
                         type="number"
                         name="base_price"
                         value={formData.base_price}
                         onChange={handleInputChange}
-                        className="h-11 rounded-xl"
+                        className="h-11 rounded-xl bg-background/50 border-white/[0.05] focus-visible:ring-primary/50 text-white"
                         placeholder="0.00"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="font-normal text-sm">Status</Label>
+                      <Label className="font-bold text-xs uppercase tracking-widest text-slate-400">Status</Label>
                       <select
                         name="status"
                         value={formData.status}
                         onChange={handleInputChange}
-                        className="w-full h-11 rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                        className="w-full h-11 rounded-xl border border-white/[0.05] bg-background/50 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
                       >
-                        <option value="draft">Draft</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
+                        <option value="draft" className="bg-[#16191e]">Draft</option>
+                        <option value="active" className="bg-[#16191e]">Active</option>
+                        <option value="inactive" className="bg-[#16191e]">Inactive</option>
                       </select>
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-3 pt-4">
-                    <Button type="button" variant="ghost" onClick={resetForm} className="rounded-full font-light px-8">
+                  <div className="flex justify-end gap-3 pt-4 border-t border-white/[0.03]">
+                    <Button type="button" variant="outline" onClick={resetForm} className="rounded-lg font-bold px-8 border-white/[0.05] text-slate-300 hover:bg-white/[0.02]">
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={loading} className="rounded-full font-normal px-8 text-white">
+                    <Button type="submit" disabled={loading} className="rounded-lg font-bold px-8">
                       {loading ? 'Saving...' : 'Save Service'}
                     </Button>
                   </div>
                 </form>
-              </CardContent>
-            </Card>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {services.length > 0 ? (
           services.map((service, index) => (
             <motion.div
               key={service.id}
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
+              className="p-5 rounded-xl border border-white/[0.03] bg-[#16191e] hover:border-primary/20 transition-all group flex flex-col cursor-pointer"
             >
-              <Card className="border-border shadow-sm hover:shadow-md transition-all group bg-white">
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="size-10 rounded-xl bg-secondary flex items-center justify-center">
-                      <Briefcase className="size-5 text-muted-foreground" strokeWidth={1.5} />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(service)} className="size-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Edit2 className="size-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(service.id)} className="size-8 rounded-full text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </div>
+                <div className="flex justify-between items-start mb-4">
+                  <div className="size-10 rounded-xl bg-white/[0.02] border border-white/[0.03] flex items-center justify-center group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <Briefcase className="size-5 text-slate-500 group-hover:text-primary transition-colors" strokeWidth={1.5} />
                   </div>
-                  
-                  <h4 className="text-xl font-normal tracking-tight mb-2">{service.name}</h4>
-                  <p className="text-sm text-muted-foreground font-light mb-6 line-clamp-2">{service.description}</p>
-                  
-                  <div className="flex items-center justify-between pt-4 border-t border-border">
-                    <div className="text-lg font-light">{service.formatted_price}</div>
-                    <Badge variant={service.status === 'active' ? 'secondary' : 'outline'} className="rounded-full font-normal capitalize">
-                      {service.status}
-                    </Badge>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => handleEdit(service)} className="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors">
+                      <Edit2 className="size-3.5" />
+                    </button>
+                    <button onClick={() => handleDelete(service.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-400/10 transition-colors">
+                      <Trash2 className="size-3.5" />
+                    </button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+                
+                <h4 className="text-base font-bold text-white mb-1 tracking-tight group-hover:text-primary transition-colors">{service.name}</h4>
+                <p className="text-xs text-slate-400 font-light mb-5 line-clamp-2 leading-relaxed flex-1">{service.description}</p>
+                
+                <div className="flex items-center justify-between pt-4 border-t border-white/[0.03] mt-auto">
+                  <div className="text-sm font-bold text-white">{service.formatted_price}</div>
+                  <Badge variant={service.status === 'active' ? 'default' : 'outline'} className={`text-[9px] uppercase tracking-widest px-2 py-0.5 rounded border-none ${service.status === 'active' ? 'bg-primary/20 text-primary' : 'bg-white/[0.05] text-slate-400'}`}>
+                    {service.status}
+                  </Badge>
+                </div>
             </motion.div>
           ))
         ) : (
-          <div className="col-span-full py-20 text-center">
-            <p className="text-muted-foreground font-light">No services found. Start by adding one.</p>
+          <div className="col-span-full py-20 text-center border-2 border-dashed border-white/[0.03] rounded-2xl">
+            <p className="text-slate-500 text-sm">No services found. Start by adding one.</p>
           </div>
         )}
       </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Camera, LogIn, UserPlus, ArrowRight, Check } from 'lucide-react';
+import { Camera, LogIn, UserPlus, ArrowRight, Check, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
@@ -13,7 +13,7 @@ export default function Landing() {
   const categories = [
     {
       name: 'Weddings',
-      image: 'https://images.unsplash.com/photo-1769038933441-2457038f8dda?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHh8fHxlbGVnYW50JTIwYnJpZGUlMjBwb3J0cmFpdCUyMHBob3RvZ3JhcGh5fGVufDF8fHx8MTc3MTA4MjM0N3ww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+      image: 'https://images.unsplash.com/photo-1769038933441-2457038f8dda?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHh8fHxlbGVnYW50JTIwYnJpZGUlMjBwb3J0cmFpdCUyMHBob3RvZ3JhcGh5fGVufDF8fHx8MTc3MTA4MjM0Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
     },
     {
       name: 'Celebrations',
@@ -26,291 +26,197 @@ export default function Landing() {
   ];
 
   const features = [
-    'Curated professional photographers',
-    'Instant booking confirmation',
+    'Verified professionals',
+    'Instant booking',
     'Portfolio preview',
     'Secure payment',
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Minimalist Header */}
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
+      {/* Compact Header */}
       <motion.header
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-border"
+        transition={{ duration: 0.4 }}
+        className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50"
       >
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex h-20 items-center justify-between">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-2">
-              <Camera className="size-7 text-foreground" strokeWidth={1.5} />
-              <span className="text-xl font-light tracking-tight">jashnify</span>
+              <div className="p-1.5 rounded-lg bg-primary/10">
+                <Camera className="size-5 text-primary" strokeWidth={2} />
+              </div>
+              <span className="text-lg font-bold tracking-tight text-white">jashnify</span>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Link href="/login">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-10 hover:bg-secondary rounded-full"
-                  title="Login"
-                >
-                  <LogIn className="size-5" strokeWidth={1.5} />
-                </Button>
+                <Button variant="ghost" size="sm" className="rounded-full text-slate-400 hover:text-white">Sign In</Button>
               </Link>
               <Link href="/register">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-10 hover:bg-secondary rounded-full"
-                  title="Register"
-                >
-                  <UserPlus className="size-5" strokeWidth={1.5} />
-                </Button>
+                <Button size="sm" className="bg-primary text-primary-foreground rounded-full font-bold px-5">Join</Button>
               </Link>
             </div>
           </div>
         </div>
       </motion.header>
 
-      {/* Hero Section - Fullscreen with large image */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
-        {/* Background Image with overlay */}
-        <motion.div
-          initial={{ scale: 1.1, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 1.2, ease: 'easeOut' }}
-          className="absolute inset-0"
-        >
+      {/* Hero Section - Reduced height and simplified */}
+      <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden pt-16">
+        <div className="absolute inset-0 z-0">
           <ImageWithFallback
             src="https://images.unsplash.com/photo-1769230385107-bc6eaa7a123e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHx8fHxwcm9mZXNzaW9uYWwlMjB3ZWRkaW5nJTIwcGhvdG9ncmFwaGVyJTIwY2FtZXJhfGVufDF8fHx8MTc3MTA4MjM0Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-            alt="Professional Photography"
-            className="w-full h-full object-cover"
+            alt="Hero"
+            fill
+            unoptimized
+            className="w-full h-full object-cover opacity-40"
           />
-          <div className="absolute inset-0 bg-black/40" />
-        </motion.div>
+          <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-background/80 to-background" />
+        </div>
 
-        {/* Hero Content */}
-        <div className="relative z-10 max-w-5xl mx-auto px-6 text-center text-white">
-          <motion.h1
-            initial={{ opacity: 0, y: 40 }}
+        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="text-6xl md:text-8xl font-extralight tracking-tight mb-8 leading-[1.1]"
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold mb-6"
           >
-            Capture the
-            <br />
-            <span className="font-light">Moment</span>
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Top Rated Talent</span>
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-4xl md:text-6xl font-bold tracking-tight mb-6 leading-tight text-white"
+          >
+            Capture the moments <br /> that matter.
           </motion.h1>
 
           <motion.p
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
-            className="text-xl md:text-2xl font-light mb-12 text-white/90 max-w-2xl mx-auto"
+            transition={{ delay: 0.2 }}
+            className="text-base md:text-lg text-slate-400 mb-10 max-w-xl mx-auto leading-relaxed font-light"
           >
-            Connect with professional photographers for every occasion
+            Find and book premium professional photographers for your special events with ease.
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.7 }}
+            transition={{ delay: 0.3 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
-            <Button
-              size="lg"
-              onClick={() => router.push('/register')}
-              className="bg-white text-black hover:bg-white/90 text-base px-10 h-14 rounded-full font-normal group"
-            >
+            <Button size="lg" onClick={() => router.push('/register')} className="rounded-full font-bold px-10 h-12 shadow-xl shadow-primary/10">
               Get Started
-              <ArrowRight className="ml-2 size-5 group-hover:translate-x-1 transition-transform" strokeWidth={1.5} />
+            </Button>
+            <Button size="lg" variant="outline" onClick={() => router.push('/marketplace')} className="rounded-full font-bold px-10 h-12 bg-transparent border-border/50 text-slate-300 hover:bg-secondary">
+              Browse Pros
             </Button>
           </motion.div>
         </div>
-
-        {/* Scroll indicator */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 1.5 }}
-          className="absolute bottom-12 left-1/2 -translate-x-1/2"
-        >
-          <motion.div
-            animate={{ y: [0, 10, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-            className="w-6 h-10 border-2 border-white/50 rounded-full flex items-start justify-center p-2"
-          >
-            <div className="w-1.5 h-1.5 bg-white/50 rounded-full" />
-          </motion.div>
-        </motion.div>
       </section>
 
-      {/* Categories Grid Section */}
-      <section className="py-32 px-6 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-100px' }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-20"
-          >
-            <h2 className="text-5xl md:text-6xl font-extralight tracking-tight mb-6">
-              For Every Occasion
-            </h2>
-            <p className="text-xl text-muted-foreground font-light max-w-2xl mx-auto">
-              From weddings to corporate events, find the perfect photographer
-            </p>
-          </motion.div>
+      {/* Categories - Compact Grid */}
+      <section className="py-20 px-6 bg-background">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex justify-between items-end mb-12">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Popular Categories</h2>
+              <p className="text-slate-400 text-sm font-light">Tailored services for every need</p>
+            </div>
+            <Link href="/marketplace" className="text-primary text-sm font-bold hover:underline underline-offset-4 flex items-center gap-1">
+              View all <ArrowRight className="size-3.5" />
+            </Link>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {categories.map((category, index) => (
               <motion.div
                 key={category.name}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-100px' }}
-                transition={{ duration: 0.6, delay: index * 0.2 }}
-                className="group cursor-pointer"
+                initial={{ opacity: 0, scale: 0.98 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="group cursor-pointer relative aspect-[4/5] rounded-2xl overflow-hidden border border-border/30"
               >
-                <div className="relative aspect-[3/4] overflow-hidden rounded-xl mb-4">
-                  <ImageWithFallback
-                    src={category.image}
-                    alt={category.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors duration-500" />
+                <ImageWithFallback
+                  src={category.image}
+                  alt={category.name}
+                  fill
+                  unoptimized
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent opacity-80" />
+                <div className="absolute bottom-5 left-5">
+                  <h3 className="text-lg font-bold text-white mb-0.5">{category.name}</h3>
+                  <p className="text-xs text-primary font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Explore</p>
                 </div>
-                <h3 className="text-2xl font-light tracking-tight">{category.name}</h3>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-32 px-6 bg-background">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-20 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, margin: '-100px' }}
-              transition={{ duration: 0.8 }}
-            >
-              <h2 className="text-5xl md:text-6xl font-extralight tracking-tight mb-8">
-                Simple.
-                <br />
-                Professional.
-                <br />
-                Seamless.
+      {/* Features - Simplified Layout */}
+      <section className="py-20 px-6 bg-secondary/20 border-y border-border/30">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight">
+                Quality meets <br /><span className="text-primary">Simplicity.</span>
               </h2>
-              <p className="text-xl text-muted-foreground font-light mb-10">
-                Book verified professional photographers with ease. No hassle, just beautiful memories.
+              <p className="text-slate-400 font-light leading-relaxed">
+                The modern way to handle event photography. No more endless back-and-forth emails or unverified portfolios.
               </p>
-
-              <div className="space-y-5">
-                {features.map((feature, index) => (
-                  <motion.div
-                    key={feature}
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    className="flex items-center gap-4"
-                  >
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-foreground flex items-center justify-center">
-                      <Check className="size-4 text-white" strokeWidth={2} />
+              <div className="grid grid-cols-2 gap-4">
+                {features.map((feature) => (
+                  <div key={feature} className="flex items-center gap-2.5">
+                    <div className="size-5 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                      <Check className="size-3 text-primary" strokeWidth={3} />
                     </div>
-                    <span className="text-lg font-light">{feature}</span>
-                  </motion.div>
+                    <span className="text-sm font-medium text-slate-300">{feature}</span>
+                  </div>
                 ))}
               </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, margin: '-100px' }}
-              transition={{ duration: 0.8 }}
-              className="relative aspect-[4/5]"
-            >
-              <div className="absolute inset-0 rounded-2xl overflow-hidden">
-                <ImageWithFallback
+            </div>
+            <div className="relative aspect-video rounded-2xl overflow-hidden border border-border/50 shadow-2xl">
+               <ImageWithFallback
                   src="https://images.unsplash.com/photo-1762522927402-f390672558d8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHx8fHxjb3Jwb3JhdGUlMjBidXNpbmVzcyUyMHByb2Zlc3Npb25hbCUyMGhlYWRzaG90fGVufDF8fHx8MTc3MTA4MjM0OXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-                  alt="Professional Photography"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </motion.div>
+                  alt="Feature"
+                  fill
+                  unoptimized
+                  className="object-cover"
+               />
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-32 px-6 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-16 text-center">
-            {[
-              { number: '500+', label: 'Photographers' },
-              { number: '10k+', label: 'Events Covered' },
-              { number: '98%', label: 'Satisfaction Rate' },
-            ].map((stat, index) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-100px' }}
-                transition={{ duration: 0.6, delay: index * 0.2 }}
-              >
-                <div className="text-6xl md:text-7xl font-extralight mb-4">{stat.number}</div>
-                <div className="text-lg text-muted-foreground font-light">{stat.label}</div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-32 px-6 bg-foreground text-white">
+      {/* Compact CTA */}
+      <section className="py-24 px-6 text-center">
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
-          transition={{ duration: 0.8 }}
-          className="max-w-4xl mx-auto text-center"
+          viewport={{ once: true }}
+          className="max-w-2xl mx-auto space-y-8 p-12 glass rounded-3xl border border-primary/10 shadow-2xl"
         >
-          <h2 className="text-5xl md:text-7xl font-extralight tracking-tight mb-8">
-            Ready to begin?
-          </h2>
-          <p className="text-xl md:text-2xl font-light mb-12 text-white/80">
-            Join thousands who trust Jashnify for their special moments
-          </p>
-          <Button
-            size="lg"
-            onClick={() => router.push('/register')}
-            className="bg-white text-black hover:bg-white/90 text-base px-10 h-14 rounded-full font-normal group"
-          >
-            Create Free Account
-            <ArrowRight className="ml-2 size-5 group-hover:translate-x-1 transition-transform" strokeWidth={1.5} />
+          <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight">Ready to begin?</h2>
+          <p className="text-slate-400 font-light">Join Jashnify today and connect with professional photographers.</p>
+          <Button size="lg" onClick={() => router.push('/register')} className="rounded-full px-12 font-bold h-12 shadow-lg shadow-primary/20">
+            Create Account
           </Button>
         </motion.div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 px-6 bg-white border-t border-border">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-2">
-              <Camera className="size-6 text-foreground" strokeWidth={1.5} />
-              <span className="text-lg font-light">jashnify</span>
-            </div>
-            <p className="text-sm text-muted-foreground font-light">
-              &copy; 2026 Jashnify. Capturing moments, creating memories.
-            </p>
-          </div>
+      <footer className="py-10 border-t border-border/30 text-center">
+        <div className="flex items-center justify-center gap-2 mb-4 opacity-50">
+          <Camera className="size-4 text-primary" />
+          <span className="text-sm font-bold text-white uppercase tracking-tighter">jashnify</span>
         </div>
+        <p className="text-[11px] text-slate-500 font-medium uppercase tracking-widest">&copy; 2026 Jashnify. All rights reserved.</p>
       </footer>
     </div>
   );

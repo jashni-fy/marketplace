@@ -31,7 +31,7 @@ const NotFound = () => {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             href="/"
-            className="w-full sm:w-auto btn-primary px-6 py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 bg-white text-violet-900 hover:bg-violet-50"
+            className="w-full sm:w-auto btn-primary px-6 py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 bg-card text-violet-900 hover:bg-violet-50"
           >
             <Home className="w-4 h-4" />
             Back to Home
@@ -39,7 +39,7 @@ const NotFound = () => {
 
           <Link
             href="/search"
-            className="w-full sm:w-auto px-6 py-3 rounded-xl font-medium transition-all duration-300 hover:bg-white/5 border border-white/10 flex items-center justify-center gap-2 text-white"
+            className="w-full sm:w-auto px-6 py-3 rounded-xl font-medium transition-all duration-300 hover:bg-card/5 border border-white/10 flex items-center justify-center gap-2 text-white"
           >
             <Search className="w-4 h-4" />
             Explore Services

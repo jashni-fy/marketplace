@@ -71,7 +71,7 @@ export default function Marketplace() {
       <Header />
       
       {/* Hero Section - Minimalist */}
-      <section className="bg-white border-b border-border">
+      <section className="bg-card border-b border-border">
         <div className="container mx-auto px-6 py-20">
           <div className="max-w-4xl mx-auto text-center">
             <motion.h1
@@ -104,7 +104,7 @@ export default function Marketplace() {
                 placeholder="Search by name, location, or speciality..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 h-12 bg-white border-border rounded-full font-light"
+                className="pl-12 h-12 bg-card border-border rounded-full font-light"
               />
             </motion.div>
           </div>

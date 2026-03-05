@@ -1,14 +1,32 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Badge } from '../ui/badge';
 import { apiService } from '../../lib/api';
-import { ShieldCheck, Star, Clock, MessageSquare, Award, ThumbsUp } from 'lucide-react';
-
-interface VendorProfileProps {
-  params: {
-    id: string;
-  };
-}
+import { 
+  ShieldCheck, 
+  Star, 
+  Clock, 
+  Award, 
+  ThumbsUp, 
+  MapPin, 
+  IndianRupee, 
+  Link as LinkIcon, 
+  Phone,
+  Calendar as CalendarIcon,
+  Check,
+  ChevronRight,
+  Info,
+  Zap,
+  ArrowLeft,
+  ArrowRight
+} from 'lucide-react';
+import Image from 'next/image';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 interface Service {
   id: string;
@@ -16,373 +34,303 @@ interface Service {
   description: string;
   base_price: number;
   formatted_price: string;
-  pricing_type: string;
-  category: {
-    id: string;
-    name: string;
-    slug: string;
-  };
-  has_images: boolean;
-  primary_image_url?: string;
+  category: { name: string };
 }
 
-interface PortfolioItem {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  is_featured: boolean;
-  image_count: number;
-  images: Array<{
-    id: string;
-    filename: string;
-    url: string;
-    thumbnail_url: string;
-    medium_url: string;
-  }>;
-  primary_image_url?: string;
-}
-
-interface Review {
-  id: string;
-  rating: number;
-  quality_rating?: number;
-  communication_rating?: number;
-  value_rating?: number;
-  punctuality_rating?: number;
-  comment: string;
-  created_at: string;
-  customer: {
-    id: string;
-    name: string;
-  };
-  service: {
-    id: string;
-    name: string;
-  };
-}
-
-interface Vendor {
-  id: string;
-  business_name: string;
-  description: string;
-  location: string;
-  phone?: string;
-  website?: string;
-  service_categories: string[];
-  business_license?: string;
-  years_experience: number;
-  average_rating: string;
-  total_reviews: number;
-  verification_status: string;
-  is_verified: boolean;
-  profile_complete: boolean;
-  services_count: number;
-  portfolio_items_count: number;
-  featured_portfolio: PortfolioItem[];
-  portfolio_categories: string[];
-  coordinates: {
-    latitude?: number;
-    longitude?: number;
-  };
-  user: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
-}
-
-const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
-  const [vendor, setVendor] = useState<Vendor | null>(null);
+const VendorProfile = ({ params }: { params: { id: string } }) => {
+  const router = useRouter();
+  const [vendor, setVendor] = useState<any>(null);
   const [services, setServices] = useState<Service[]>([]);
-  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [portfolio, setPortfolio] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'services' | 'portfolio' | 'reviews'>('services');
+  
+  // Interactive Booking State
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [addons, setAddons] = useState<string[]>([]);
+  const [bookingDate, setBookingDate] = useState('');
 
-  useEffect(() => {
-    loadVendorData();
-  }, [params.id]);
-
-  const loadVendorData = async () => {
+  const loadVendorData = useCallback(async () => {
     try {
       setLoading(true);
-
       const [vendorRes, servicesRes, portfolioRes, reviewsRes] = await Promise.all([
         apiService.vendors.getById(params.id),
         apiService.vendors.getServices(params.id),
         apiService.vendors.getPortfolio(params.id),
         apiService.vendors.getReviews(params.id)
       ]);
-
       setVendor(vendorRes.data.vendor);
       setServices(servicesRes.data.services);
       setPortfolio(portfolioRes.data.portfolio_items);
       setReviews(reviewsRes.data.reviews);
-
+      
+      if (servicesRes.data.services?.length > 0) {
+        setSelectedService(servicesRes.data.services[0]);
+      }
     } catch (err) {
       console.error('Error loading vendor data:', err);
-      setError('Failed to load vendor profile');
     } finally {
       setLoading(false);
     }
+  }, [params.id]);
+
+  useEffect(() => {
+    loadVendorData();
+  }, [loadVendorData]);
+
+  const totalPrice = useMemo(() => {
+    if (!selectedService) return 0;
+    const base = selectedService.base_price || 0;
+    const addonPrice = addons.length * 5000; // Mock addon price
+    return base + addonPrice;
+  }, [selectedService, addons]);
+
+  const toggleAddon = (id: string) => {
+    setAddons(prev => prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-light">Loading profile...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !vendor) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-light text-gray-900 mb-4">Vendor Not Found</h1>
-          <p className="text-gray-600 font-light">{error || 'The vendor profile you are looking for does not exist.'}</p>
-        </div>
-      </div>
-    );
-  }
-
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex gap-0.5">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            size={16}
-            className={star <= Math.round(rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}
-          />
-        ))}
-      </div>
-    );
+  const handleBookingRequest = () => {
+    if (!bookingDate) {
+      toast.error('Please select a date first');
+      return;
+    }
+    toast.success('Requesting booking for ' + bookingDate);
+    router.push(`/booking/${selectedService?.id}?date=${bookingDate}`);
   };
 
-  const isVerified = vendor.verification_status === 'verified' || vendor.is_verified;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-[#0f1115]">
+      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary"></div>
+    </div>
+  );
+
+  if (!vendor) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-20">
-      <div className="container mx-auto px-4 py-12 max-w-6xl">
-        {/* Vendor Header */}
-        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm mb-8">
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
-            <div className="flex-1 space-y-6">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-4xl font-extralight tracking-tight text-slate-900">{vendor.business_name}</h1>
-                  {isVerified && (
-                    <div className="bg-blue-500 text-white rounded-full p-1 shadow-sm" title="Verified Professional">
-                      <ShieldCheck size={20} />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-4 text-slate-600">
-                  <div className="flex items-center gap-2">
-                    {renderStars(parseFloat(vendor.average_rating))}
-                    <span className="text-sm font-normal">
-                      {vendor.average_rating} ({vendor.total_reviews} reviews)
-                    </span>
-                  </div>
-                  <span className="text-slate-300">|</span>
-                  <span className="text-sm font-light">{vendor.years_experience} years experience</span>
-                </div>
+    <div className="min-h-screen bg-[#0f1115] text-foreground font-sans pb-20">
+      {/* Dynamic Navigation */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#0f1115]/80 backdrop-blur-md border-b border-white/[0.03]">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+           <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest">
+              <ArrowLeft className="size-4" /> Back
+           </button>
+           <div className="flex items-center gap-4">
+              <span className="text-xs font-bold text-white uppercase tracking-widest">{vendor.business_name}</span>
+              <div className="h-4 w-px bg-white/10" />
+              <div className="flex items-center gap-1">
+                 <Star className="size-3 fill-primary text-primary" />
+                 <span className="text-xs font-bold text-white">{vendor.average_rating}</span>
               </div>
-
-              <p className="text-slate-600 font-light leading-relaxed max-w-3xl text-lg">{vendor.description}</p>
-
-              <div className="flex flex-wrap gap-2">
-                {vendor.service_categories.map((category, index) => (
-                  <span key={index} className="bg-slate-100 text-slate-700 text-xs font-normal px-3 py-1.5 rounded-full border border-slate-200">
-                    {category}
-                  </span>
-                ))}
-              </div>
-
-              <div className="flex flex-wrap gap-6 text-sm text-slate-500 pt-2">
-                <span className="flex items-center gap-1.5 font-light">📍 {vendor.location}</span>
-                {vendor.phone && <span className="flex items-center gap-1.5 font-light">📞 {vendor.phone}</span>}
-                {vendor.website && (
-                  <a href={vendor.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 font-normal transition-colors underline underline-offset-4">
-                    🌐 Website
-                  </a>
-                )}
-              </div>
-            </div>
-
-            <div className="md:w-64 space-y-4">
-              <button className="w-full bg-slate-900 text-white py-4 rounded-full hover:bg-slate-800 font-normal transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
-                Book Photographer
-              </button>
-              <button className="w-full bg-white text-slate-900 border border-slate-200 py-4 rounded-full hover:bg-slate-50 font-normal transition-all">
-                Send Message
-              </button>
-            </div>
-          </div>
+           </div>
         </div>
+      </header>
 
-        {/* Navigation Tabs */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="border-b border-slate-100">
-            <nav className="flex space-x-12 px-8">
-              {[
-                { id: 'services', label: 'Services', count: services.length },
-                { id: 'portfolio', label: 'Portfolio', count: portfolio.length },
-                { id: 'reviews', label: 'Reviews', count: vendor.total_reviews }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`py-6 px-1 border-b-2 font-normal text-sm transition-all relative ${activeTab === tab.id
-                      ? 'border-slate-900 text-slate-900'
-                      : 'border-transparent text-slate-400 hover:text-slate-600'
-                    }`}
-                >
-                  {tab.label}
-                  <span className="ml-2 text-xs opacity-60 font-light">({tab.count})</span>
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          <div className="p-8">
-            {/* Services Tab */}
-            {activeTab === 'services' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {services.length > 0 ? services.map((service) => (
-                  <div key={service.id} className="group border border-slate-100 p-6 rounded-2xl hover:border-slate-300 hover:shadow-xl transition-all duration-300">
-                    <div className="mb-4">
-                      <span className="text-[10px] uppercase tracking-widest font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md">
-                        {service.category.name}
-                      </span>
-                    </div>
-                    <h3 className="text-xl font-normal mb-3 group-hover:text-blue-600 transition-colors">{service.name}</h3>
-                    <p className="text-slate-500 font-light text-sm line-clamp-3 mb-6 leading-relaxed">{service.description}</p>
-                    <div className="flex justify-between items-end">
-                      <div className="space-y-1">
-                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Starting from</p>
-                        <span className="text-2xl font-light text-slate-900">
-                          {service.formatted_price}
-                        </span>
-                      </div>
-                      <button className="bg-slate-50 text-slate-900 px-5 py-2.5 rounded-full hover:bg-slate-900 hover:text-white transition-all text-sm font-normal">
-                        Details
-                      </button>
+      <main className="max-w-7xl mx-auto px-6 pt-24">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+          
+          {/* Content Column */}
+          <div className="lg:col-span-8 space-y-12">
+            {/* Minimal Pro Header */}
+            <section className="space-y-6">
+               <div className="flex items-start justify-between">
+                  <div>
+                    <h1 className="text-4xl font-bold text-white tracking-tight mb-3">{vendor.business_name}</h1>
+                    <div className="flex flex-wrap items-center gap-4 text-xs font-bold uppercase tracking-widest text-slate-500">
+                       <span className="flex items-center gap-1.5 text-slate-300"><MapPin className="size-3.5 text-primary" /> {vendor.location}</span>
+                       <span className="flex items-center gap-1.5"><Clock className="size-3.5 text-primary" /> Usually responds in 2h</span>
+                       {vendor.is_verified && (
+                         <span className="flex items-center gap-1.5 text-primary"><ShieldCheck className="size-3.5" /> Verified Pro</span>
+                       )}
                     </div>
                   </div>
-                )) : (
-                  <p className="col-span-full text-slate-400 text-center py-12 font-light italic">No services listed yet.</p>
-                )}
-              </div>
-            )}
+               </div>
+               <p className="text-slate-400 text-lg font-light leading-relaxed max-w-3xl">
+                 {vendor.description}
+               </p>
+            </section>
 
-            {/* Portfolio Tab */}
-            {activeTab === 'portfolio' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {portfolio.length > 0 ? portfolio.map((item) => (
-                  <div key={item.id} className="group cursor-pointer">
-                    <div className="aspect-[4/3] rounded-2xl overflow-hidden mb-4 bg-slate-100">
-                      {item.primary_image_url ? (
-                        <img
-                          src={item.primary_image_url}
-                          alt={item.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-300">No images</div>
-                      )}
+            {/* Visual Portfolio Preview */}
+            <section>
+               <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-sm font-bold text-white uppercase tracking-[0.2em]">Selected Works</h2>
+                  <button onClick={() => setActiveTab('portfolio')} className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline">View All Gallery</button>
+               </div>
+               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {portfolio.slice(0, 6).map((item, i) => (
+                    <div key={i} className="relative aspect-[4/5] rounded-xl overflow-hidden border border-white/[0.05] bg-[#16191e] group cursor-pointer">
+                       <Image src={item.primary_image_url || 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e'} alt="work" fill className="object-cover transition-transform duration-700 group-hover:scale-110 grayscale-[20%] group-hover:grayscale-0" unoptimized />
+                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-normal text-slate-900">{item.title}</h3>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{item.category}</span>
-                    </div>
-                    <p className="text-xs text-slate-500 font-light">{item.image_count} photos</p>
-                  </div>
-                )) : (
-                  <p className="col-span-full text-slate-400 text-center py-12 font-light italic">No portfolio work added yet.</p>
-                )}
-              </div>
-            )}
+                  ))}
+               </div>
+            </section>
 
-            {/* Reviews Tab */}
-            {activeTab === 'reviews' && (
-              <div className="space-y-10 max-w-4xl mx-auto">
-                {reviews.length > 0 ? (
-                  <>
-                    {/* Granular Breakdown (Simplified UI version) */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-slate-50 rounded-2xl border border-slate-100 mb-10">
-                      {[
-                        { label: 'Quality', icon: Award },
-                        { label: 'Communication', icon: MessageSquare },
-                        { label: 'Value', icon: ThumbsUp },
-                        { label: 'Punctuality', icon: Clock }
-                      ].map((stat) => (
-                        <div key={stat.label} className="text-center space-y-1">
-                          <stat.icon className="size-4 mx-auto text-slate-400" />
-                          <p className="text-[10px] uppercase font-bold text-slate-500">{stat.label}</p>
-                          <p className="text-sm font-normal">4.9/5</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="space-y-8 divide-y divide-slate-100">
-                      {reviews.map((review) => (
-                        <div key={review.id} className="pt-8 first:pt-0">
-                          <div className="flex justify-between items-start mb-4">
-                            <div className="space-y-1">
-                              <p className="font-normal text-slate-900">{review.customer.name}</p>
-                              <div className="flex items-center gap-3">
-                                {renderStars(review.rating)}
-                                <span className="text-xs text-slate-400 font-light">
-                                  {new Date(review.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })}
-                                </span>
-                              </div>
-                            </div>
-                            <Badge variant="outline" className="text-[10px] font-light rounded-full border-slate-200">
-                              {review.service.name}
-                            </Badge>
+            {/* Services Detail List */}
+            <section className="space-y-6">
+               <h2 className="text-sm font-bold text-white uppercase tracking-[0.2em]">Available Packages</h2>
+               <div className="space-y-4">
+                  {services.map((service) => (
+                    <div 
+                      key={service.id} 
+                      onClick={() => setSelectedService(service)}
+                      className={`p-6 rounded-2xl border transition-all cursor-pointer flex flex-col md:flex-row justify-between gap-6 ${
+                        selectedService?.id === service.id ? 'bg-primary/5 border-primary/40 ring-1 ring-primary/40' : 'bg-[#16191e] border-white/[0.03] hover:border-white/10'
+                      }`}
+                    >
+                       <div className="space-y-2">
+                          <div className="flex items-center gap-3">
+                             <h3 className="font-bold text-white">{service.name}</h3>
+                             {selectedService?.id === service.id && <div className="size-5 rounded-full bg-primary flex items-center justify-center"><Check className="size-3 text-primary-foreground" strokeWidth={4} /></div>}
                           </div>
-                          <p className="text-slate-600 font-light leading-relaxed italic">"{review.comment}"</p>
-                          
-                          {(review.quality_rating || review.communication_rating) && (
-                            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
-                              {review.quality_rating && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[10px] uppercase font-bold text-slate-400">Quality</span>
-                                  <div className="flex gap-0.5">{renderStars(review.quality_rating)}</div>
-                                </div>
-                              )}
-                              {review.communication_rating && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[10px] uppercase font-bold text-slate-400">Comm.</span>
-                                  <div className="flex gap-0.5">{renderStars(review.communication_rating)}</div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                          <p className="text-sm text-slate-400 font-light max-w-md">{service.description}</p>
+                       </div>
+                       <div className="text-right shrink-0">
+                          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Starting at</p>
+                          <p className="text-2xl font-bold text-white">₹{service.base_price.toLocaleString()}</p>
+                       </div>
                     </div>
-                  </>
-                ) : (
-                  <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
-                    <Star className="size-12 mx-auto mb-4 text-slate-200" strokeWidth={1} />
-                    <p className="text-slate-500 font-light italic">Be the first to review this photographer!</p>
+                  ))}
+               </div>
+            </section>
+
+            {/* Reviews Summary */}
+            <section className="p-8 rounded-[2rem] border border-white/[0.03] bg-[#16191e]">
+               <div className="flex flex-col md:flex-row justify-between gap-8 mb-10 pb-10 border-b border-white/[0.03]">
+                  <div>
+                     <h2 className="text-4xl font-bold text-white mb-2">{vendor.average_rating}</h2>
+                     <div className="flex gap-1 mb-2">
+                        {[1,2,3,4,5].map(i => <Star key={i} className="size-4 fill-primary text-primary" />)}
+                     </div>
+                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Based on {vendor.total_reviews} client reviews</p>
                   </div>
-                )}
-              </div>
-            )}
+                  <div className="grid grid-cols-2 gap-x-12 gap-y-4">
+                     {['Quality', 'Speed', 'Communication', 'Value'].map(label => (
+                        <div key={label} className="space-y-1">
+                           <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                              <span>{label}</span>
+                              <span className="text-white">4.9</span>
+                           </div>
+                           <div className="h-1 w-32 bg-white/5 rounded-full overflow-hidden">
+                              <div className="h-full bg-primary w-[95%]" />
+                           </div>
+                        </div>
+                     ))}
+                  </div>
+               </div>
+               
+               <div className="space-y-6">
+                  {reviews.slice(0, 3).map((review, i) => (
+                    <div key={i} className="space-y-3">
+                       <div className="flex justify-between">
+                          <p className="text-sm font-bold text-white">{review.customer?.name || 'Verified Client'}</p>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">{new Date().toLocaleDateString()}</span>
+                       </div>
+                       <p className="text-sm text-slate-400 font-light italic leading-relaxed">"{review.comment}"</p>
+                    </div>
+                  ))}
+               </div>
+            </section>
+          </div>
+
+          {/* Sticky Interactive Sidebar */}
+          <div className="lg:col-span-4">
+            <div className="sticky top-24 space-y-6">
+               <Card className="border border-primary/20 bg-[#1a1d23] shadow-3xl shadow-primary/5 overflow-hidden">
+                  <div className="p-6 bg-primary/10 border-b border-primary/10">
+                     <h3 className="text-sm font-bold text-primary uppercase tracking-[0.2em] flex items-center gap-2">
+                        <Zap className="size-4" fill="currentColor" /> Quick Booking
+                     </h3>
+                  </div>
+                  <CardContent className="p-6 space-y-6">
+                     {/* Step 1: Date */}
+                     <div className="space-y-3">
+                        <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 flex items-center gap-2">
+                           <CalendarIcon className="size-3" /> Select Event Date
+                        </label>
+                        <input 
+                          type="date" 
+                          value={bookingDate}
+                          onChange={(e) => setBookingDate(e.target.value)}
+                          className="w-full bg-[#0f1115] border border-white/[0.05] rounded-xl h-12 px-4 text-white focus:outline-none focus:border-primary/50 [color-scheme:dark] text-sm font-bold" 
+                        />
+                     </div>
+
+                     {/* Step 2: Package Summary */}
+                     <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.03] space-y-3">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Package</p>
+                        <div className="flex justify-between items-center">
+                           <span className="text-sm font-bold text-white">{selectedService?.name}</span>
+                           <span className="text-sm font-bold text-white">₹{selectedService?.base_price.toLocaleString()}</span>
+                        </div>
+                     </div>
+
+                     {/* Step 3: Addons (The Value Add) */}
+                     <div className="space-y-3">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Popular Add-ons</p>
+                        <div className="space-y-2">
+                           {[
+                             { id: 'exp', label: 'Express 48h Delivery', price: '₹5,000' },
+                             { id: 'raw', label: 'Raw Files Access', price: '₹5,000' },
+                           ].map(addon => (
+                             <button 
+                                key={addon.id}
+                                onClick={() => toggleAddon(addon.id)}
+                                className={`w-full flex items-center justify-between p-3 rounded-lg border text-xs font-bold transition-all ${
+                                  addons.includes(addon.id) ? 'bg-primary/20 border-primary text-primary' : 'bg-[#0f1115] border-white/[0.05] text-slate-400 hover:border-white/20'
+                                }`}
+                             >
+                                <span>{addon.label}</span>
+                                <span>{addon.price}</span>
+                             </button>
+                           ))}
+                        </div>
+                     </div>
+
+                     {/* Final Price & CTA */}
+                     <div className="pt-6 border-t border-white/[0.05] space-y-4">
+                        <div className="flex justify-between items-end">
+                           <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Estimated Total</span>
+                           <div className="text-right">
+                              <span className="text-3xl font-bold text-white tracking-tighter flex items-center justify-end gap-1">
+                                 <IndianRupee className="size-5 text-primary" strokeWidth={3} />
+                                 {totalPrice.toLocaleString()}
+                              </span>
+                              <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter mt-1">Inclusive of platform fees</p>
+                           </div>
+                        </div>
+                        
+                        <Button 
+                          onClick={handleBookingRequest}
+                          className="w-full h-14 rounded-xl font-bold text-base shadow-xl shadow-primary/20 group"
+                        >
+                           Confirm Booking Request
+                           <ArrowRight className="size-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                        </Button>
+                        
+                        <p className="text-[10px] text-slate-500 text-center flex items-center justify-center gap-1.5">
+                           <Info className="size-3" /> No payment required until professional accepts.
+                        </p>
+                     </div>
+                  </CardContent>
+               </Card>
+
+               {/* Quick Info Card */}
+               <div className="p-6 rounded-2xl border border-white/[0.03] bg-[#16191e] space-y-4">
+                  <div className="flex items-center gap-3">
+                     <div className="size-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                        <ShieldCheck size={18} />
+                     </div>
+                     <p className="text-xs font-bold text-white">Jashnify Protected</p>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                     Your payment is held securely and only released after the professional delivers the service.
+                  </p>
+               </div>
+            </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

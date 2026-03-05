@@ -22,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body className={`${plusJakartaSans.className} antialiased min-h-screen`}>
         <AuthProvider>
           <AppProvider>

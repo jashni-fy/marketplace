@@ -7,7 +7,6 @@ import { apiService } from '@/lib/api';
 import ServiceManagement from '../ServiceManagement';
 import PortfolioManager from '../PortfolioManager';
 import BookingCalendar from '../BookingCalendar';
-import Header from '@/components/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,76 +23,31 @@ import {
   Plus,
   ShieldCheck,
   AlertCircle,
-  Star
+  Star,
+  ChevronRight,
+  User,
+  Settings,
+  Bell,
+  Search,
+  LogOut,
+  Menu,
+  X,
+  Camera
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-
-interface Service {
-  id: string;
-  name: string;
-  status: string;
-  formatted_price: string;
-}
-
-interface ActivityItem {
-  type: 'booking' | 'review';
-  id: string;
-  customer: string;
-  date: string;
-  status?: string;
-  amount?: number;
-  rating?: number;
-}
-
-interface AnalyticsData {
-  overview: {
-    total_bookings: number;
-    active_services: number;
-    average_rating: number;
-    total_reviews: number;
-    verification_status: string;
-  };
-  revenue_stats: {
-    total_revenue: number;
-    pending_revenue: number;
-    average_booking_value: number;
-  };
-  booking_stats: {
-    pending: number;
-    accepted: number;
-    completed: number;
-    cancelled: number;
-    conversion_rate: number;
-  };
-  rating_stats: {
-    average: number;
-    distribution: Record<string, number>;
-    breakdown: {
-      quality: number;
-      communication: number;
-      value: number;
-      punctuality: number;
-    };
-  };
-  recent_activity: ActivityItem[];
-}
-
-interface DashboardData {
-  services: Service[];
-  analytics: AnalyticsData | null;
-}
+import { useRouter } from 'next/navigation';
 
 const VendorDashboard = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
-  const [dashboardData, setDashboardData] = useState<DashboardData>({
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [dashboardData, setDashboardData] = useState<any>({
     services: [],
     analytics: null
   });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isRequestingVerification, setIsRequestingVerification] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -102,314 +56,269 @@ const VendorDashboard = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      setError(null);
-
       const [servicesResponse, analyticsResponse] = await Promise.all([
         apiService.services.getAll(),
         apiService.analytics.dashboard()
       ]);
-
       setDashboardData({
         services: servicesResponse.data.services || [],
         analytics: analyticsResponse.data
       });
     } catch (err) {
       console.error('Error loading dashboard data:', err);
-      setError('Failed to load dashboard data. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRequestVerification = async () => {
-    try {
-      setIsRequestingVerification(true);
-      await apiService.profiles.requestVerification();
-      toast.success('Verification request submitted successfully!');
-      loadDashboardData(); // Reload to update status
-    } catch (err) {
-      toast.error('Failed to submit verification request.');
-    } finally {
-      setIsRequestingVerification(false);
-    }
-  };
+  const navItems = [
+    { id: 'overview', name: 'Overview', icon: LayoutDashboard },
+    { id: 'services', name: 'Services', icon: Briefcase },
+    { id: 'portfolio', name: 'Portfolio', icon: ImageIcon },
+    { id: 'calendar', name: 'Calendar', icon: CalendarIcon },
+    { id: 'settings', name: 'Settings', icon: Settings },
+  ];
 
-  const handleServiceUpdate = () => {
-    loadDashboardData();
-  };
-
-  const renderVerificationStatus = () => {
-    if (!dashboardData.analytics) return null;
-    
-    const status = dashboardData.analytics.overview.verification_status;
-    
-    switch (status) {
-      case 'verified':
-        return (
-          <Badge className="bg-blue-500 hover:bg-blue-600 text-white rounded-full px-3 py-1 flex items-center gap-1">
-            <ShieldCheck className="size-3" /> Verified Partner
-          </Badge>
-        );
-      case 'pending_verification':
-        return (
-          <Badge variant="outline" className="text-orange-500 border-orange-500 rounded-full px-3 py-1 flex items-center gap-1">
-            <Clock className="size-3" /> Verification Pending
-          </Badge>
-        );
-      case 'rejected':
-        return (
-          <div className="flex items-center gap-3">
-            <Badge variant="destructive" className="rounded-full px-3 py-1 flex items-center gap-1">
-              <AlertCircle className="size-3" /> Rejected
-            </Badge>
-            <Button size="sm" variant="outline" onClick={handleRequestVerification} disabled={isRequestingVerification} className="h-8 text-xs rounded-full">
-              Re-apply
-            </Button>
-          </div>
-        );
-      default:
-        return (
-          <Button size="sm" onClick={handleRequestVerification} disabled={isRequestingVerification} className="h-8 text-xs rounded-full bg-blue-500 hover:bg-blue-600 text-white">
-            <ShieldCheck className="mr-1 size-3" /> Get Verified
-          </Button>
-        );
-    }
+  const handleLogout = () => {
+    logout();
+    router.push('/');
   };
 
   const renderOverview = () => {
-    if (!dashboardData.analytics) return null;
-    const { analytics } = dashboardData;
+    const analytics = dashboardData.analytics;
+    if (!analytics) return null;
 
     return (
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="space-y-10"
-      >
-        {/* Verification Status Banner */}
-        {analytics.overview.verification_status !== 'verified' && (
-          <Card className="bg-blue-50/50 border-blue-100">
-            <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-full text-blue-600">
-                  <ShieldCheck className="size-5" />
-                </div>
-                <div>
-                  <p className="font-normal text-blue-900">Professional Verification</p>
-                  <p className="text-xs text-blue-700 font-light text-center sm:text-left">Get the blue tick to build trust and get 3x more booking requests.</p>
-                </div>
-              </div>
-              {renderVerificationStatus()}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Metrics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="space-y-8 animate-in fade-in duration-500">
+        {/* Compact Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Total Bookings', value: analytics.overview.total_bookings, icon: CalendarIcon, color: 'text-purple-500' },
-            { label: 'Total Revenue', value: `₹${analytics.revenue_stats.total_revenue.toLocaleString()}`, icon: DollarSign, color: 'text-emerald-500' },
-            { label: 'Active Services', value: analytics.overview.active_services, icon: Briefcase, color: 'text-blue-500' },
-            { label: 'Avg. Rating', value: analytics.overview.average_rating || 'N/A', icon: Star, color: 'text-orange-500' },
-          ].map((item, index) => (
-            <Card key={index} className="border-border shadow-sm overflow-hidden group hover:border-foreground transition-colors">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground font-light mb-1">{item.label}</p>
-                    <p className="text-3xl font-light tracking-tight">{item.value}</p>
-                  </div>
-                  <div className={`p-3 rounded-2xl bg-secondary group-hover:bg-foreground group-hover:text-white transition-colors`}>
-                    <item.icon className="size-5" strokeWidth={1.5} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            { label: 'Revenue', value: `₹${analytics.revenue_stats.total_revenue.toLocaleString()}`, icon: DollarSign, trend: '+12.5%' },
+            { label: 'Bookings', value: analytics.overview.total_bookings, icon: CalendarIcon, trend: '+3 today' },
+            { label: 'Active', value: analytics.overview.active_services, icon: Briefcase, trend: 'Running' },
+            { label: 'Rating', value: analytics.overview.average_rating || 'N/A', icon: Star, trend: 'Top 5%' },
+          ].map((stat, i) => (
+            <div key={i} className="p-5 rounded-xl border border-white/[0.03] bg-[#16191e] hover:border-primary/20 transition-all group">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{stat.label}</span>
+                <stat.icon className="size-4 text-slate-600 group-hover:text-primary transition-colors" />
+              </div>
+              <div className="flex items-end justify-between">
+                <h4 className="text-2xl font-bold text-white tracking-tight">{stat.value}</h4>
+                <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">{stat.trend}</span>
+              </div>
+            </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          {/* Recent Services */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Feed Area */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-light tracking-tight">Your Services</h3>
-              <Button variant="ghost" size="sm" onClick={() => setActiveTab('services')} className="font-light rounded-full">
-                Manage
-              </Button>
+            <div className="p-6 rounded-2xl border border-white/[0.03] bg-[#16191e] relative overflow-hidden group">
+               <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
+                  <TrendingUp size={120} strokeWidth={1} />
+               </div>
+               <div className="relative z-10">
+                  <h3 className="text-lg font-bold text-white mb-1">Growth Overview</h3>
+                  <p className="text-xs text-slate-500 mb-8">Your profile performance over the last 30 days</p>
+                  <div className="h-48 w-full flex items-end justify-between gap-2">
+                     {[40, 70, 45, 90, 65, 80, 100, 55, 75, 60, 85, 95].map((h, i) => (
+                        <div key={i} className="flex-1 bg-primary/10 rounded-t-sm hover:bg-primary/40 transition-all cursor-pointer relative group/bar" style={{ height: `${h}%` }}>
+                           <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-white text-black text-[10px] font-bold py-1 px-2 rounded opacity-0 group-hover/bar:opacity-100 transition-opacity whitespace-nowrap">
+                              {h}% increase
+                           </div>
+                        </div>
+                     ))}
+                  </div>
+               </div>
             </div>
-            
-            {dashboardData.services.length > 0 ? (
-              <div className="grid gap-4">
-                {dashboardData.services.slice(0, 4).map((service) => (
-                  <Card key={service.id} className="border-border hover:shadow-md transition-shadow">
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="size-12 rounded-xl bg-secondary flex items-center justify-center">
-                          <Briefcase className="size-5 text-muted-foreground" strokeWidth={1.5} />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <div className="p-6 rounded-2xl border border-white/[0.03] bg-[#16191e]">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-6">Recent Services</h3>
+                  <div className="space-y-4">
+                     {dashboardData.services.slice(0, 3).map((s: any) => (
+                        <div key={s.id} className="flex items-center justify-between p-3 rounded-xl bg-background/40 border border-white/[0.02]">
+                           <div className="flex items-center gap-3">
+                              <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                                 <Briefcase size={18} />
+                              </div>
+                              <div>
+                                 <p className="text-xs font-bold text-white">{s.name}</p>
+                                 <p className="text-[10px] text-slate-500">{s.formatted_price}</p>
+                              </div>
+                           </div>
+                           <ChevronRight size={14} className="text-slate-700" />
                         </div>
-                        <div>
-                          <p className="font-normal text-lg">{service.name}</p>
-                          <p className="text-sm text-muted-foreground font-light">{service.formatted_price}</p>
-                        </div>
-                      </div>
-                      <Badge variant={service.status === 'active' ? 'secondary' : 'outline'} className="rounded-full font-normal capitalize">
-                        {service.status}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card className="border-dashed border-2 bg-transparent">
-                <CardContent className="p-12 text-center">
-                  <p className="text-muted-foreground font-light mb-4">No services created yet</p>
-                  <Button onClick={() => setActiveTab('services')} className="rounded-full font-normal">
-                    <Plus className="mr-2 size-4" /> Create Service
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
+                     ))}
+                  </div>
+               </div>
+
+               <div className="p-6 rounded-2xl border border-white/[0.03] bg-[#16191e]">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-6">Quick Actions</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                     <button onClick={() => setActiveTab('services')} className="p-4 rounded-xl bg-primary/10 border border-primary/20 flex flex-col items-center gap-2 hover:bg-primary/20 transition-all">
+                        <Plus size={20} className="text-primary" />
+                        <span className="text-[10px] font-bold text-primary uppercase">New Service</span>
+                     </button>
+                     <button onClick={() => setActiveTab('portfolio')} className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex flex-col items-center gap-2 hover:bg-blue-500/20 transition-all">
+                        <Plus size={20} className="text-blue-400" />
+                        <span className="text-[10px] font-bold text-blue-400 uppercase">Add Media</span>
+                     </button>
+                  </div>
+               </div>
+            </div>
           </div>
 
-          {/* Activity Feed */}
+          {/* Sidebar Area */}
           <div className="space-y-6">
-            <h3 className="text-2xl font-light tracking-tight">Recent Activity</h3>
-            <Card className="border-border shadow-sm overflow-hidden">
-              <CardContent className="p-0">
-                {analytics.recent_activity.length > 0 ? (
-                  <div className="divide-y divide-border">
-                    {analytics.recent_activity.map((activity, idx) => (
-                      <div key={`${activity.type}-${activity.id}-${idx}`} className="p-4 flex gap-4 hover:bg-secondary/30 transition-colors">
-                        <div className={`size-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          activity.type === 'booking' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'
-                        }`}>
-                          {activity.type === 'booking' ? <CalendarIcon size={16} /> : <Star size={16} />}
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-normal leading-tight">
-                            {activity.type === 'booking' 
-                              ? `New booking from ${activity.customer}` 
-                              : `New ${activity.rating}-star review from ${activity.customer}`}
-                          </p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground font-light">
-                            <Clock size={12} />
-                            {new Date(activity.date).toLocaleDateString()}
-                            {activity.amount && (
-                              <>
-                                <span className="mx-1">•</span>
-                                <span className="font-normal text-foreground">₹${activity.amount.toLocaleString()}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
+             <div className="p-6 rounded-2xl border border-white/[0.03] bg-[#16191e]">
+                <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-6">Real-time Feed</h3>
+                <div className="space-y-6">
+                   {analytics.recent_activity.map((activity: any, idx: number) => (
+                      <div key={idx} className="flex gap-4 relative">
+                         {idx !== analytics.recent_activity.length - 1 && (
+                            <div className="absolute top-8 left-4 bottom-0 w-px bg-white/[0.05]" />
+                         )}
+                         <div className={`size-8 rounded-full flex items-center justify-center shrink-0 z-10 ${
+                            activity.type === 'booking' ? 'bg-orange-500/20 text-orange-400' : 'bg-primary/20 text-primary'
+                         }`}>
+                            {activity.type === 'booking' ? <CalendarIcon size={14} /> : <Star size={14} />}
+                         </div>
+                         <div className="space-y-1">
+                            <p className="text-xs font-bold text-slate-200 leading-snug">{activity.customer}</p>
+                            <p className="text-[11px] text-slate-500 leading-relaxed">
+                               {activity.type === 'booking' ? 'Requested a new wedding session' : 'Left a 5-star review'}
+                            </p>
+                            <p className="text-[9px] font-bold text-slate-600 uppercase mt-1">{new Date(activity.date).toLocaleDateString()}</p>
+                         </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-16">
-                    <Clock className="size-8 mx-auto mb-3 text-muted-foreground opacity-20" strokeWidth={1} />
-                    <p className="text-sm text-muted-foreground font-light">No recent activity</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                   ))}
+                </div>
+             </div>
+
+             <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/20 to-blue-600/10 border border-white/5 relative overflow-hidden group">
+                <div className="relative z-10">
+                   <ShieldCheck className="size-10 text-primary mb-4" />
+                   <h4 className="text-lg font-bold text-white mb-2">Get Verified</h4>
+                   <p className="text-xs text-slate-400 font-light mb-6">Build trust with a professional badge and reach more clients.</p>
+                   <Button size="sm" className="w-full bg-white text-black font-bold rounded-lg h-9">Upgrade Now</Button>
+                </div>
+                <div className="absolute -bottom-10 -right-10 size-32 bg-primary/20 rounded-full blur-2xl group-hover:bg-primary/30 transition-all" />
+             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
     );
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <Header />
-      
-      <div className="container mx-auto px-6 py-12">
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6"
-        >
-          <div className="flex items-center gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <h1 className="text-4xl md:text-5xl font-extralight tracking-tight">Dashboard</h1>
-                {dashboardData.analytics?.overview.verification_status === 'verified' && (
-                  <div className="bg-blue-500 text-white rounded-full p-1 self-center" title="Verified Professional">
-                    <ShieldCheck size={20} />
-                  </div>
-                )}
-              </div>
-              <p className="text-xl text-muted-foreground font-light">Welcome back, {user?.first_name || 'Partner'}</p>
+    <div className="min-h-screen bg-[#0f1115] flex text-foreground font-sans">
+      {/* High Density Sidebar */}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#0a0a0a] border-r border-white/[0.03] transition-transform duration-300 lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="flex flex-col h-full p-6">
+          <div className="flex items-center gap-2.5 mb-12">
+            <div className="p-1.5 rounded-lg bg-primary/10">
+              <Camera className="size-5 text-primary" strokeWidth={2} />
             </div>
+            <span className="text-lg font-bold tracking-tight text-white">jashnify</span>
           </div>
-          
-          <div className="flex bg-secondary p-1 rounded-full overflow-hidden">
-            {[
-              { id: 'overview', name: 'Overview', icon: LayoutDashboard },
-              { id: 'services', name: 'Services', icon: Briefcase },
-              { id: 'portfolio', name: 'Portfolio', icon: ImageIcon },
-              { id: 'calendar', name: 'Calendar', icon: CalendarIcon }
-            ].map((tab) => (
+
+          <nav className="flex-1 space-y-1">
+            {navItems.map((item) => (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-2 rounded-full text-sm font-normal transition-all flex items-center gap-2 ${
-                  activeTab === tab.id
-                    ? 'bg-foreground text-white shadow-lg'
-                    : 'text-muted-foreground hover:text-foreground'
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+                  activeTab === item.id 
+                    ? 'bg-primary/10 text-primary border border-primary/10' 
+                    : 'text-slate-500 hover:text-slate-200 hover:bg-white/[0.02]'
                 }`}
               >
-                <tab.icon className="size-4" strokeWidth={1.5} />
-                <span className={activeTab === tab.id ? 'block' : 'hidden lg:block'}>{tab.name}</span>
+                <item.icon size={18} strokeWidth={activeTab === item.id ? 2.5 : 2} />
+                {item.name}
               </button>
             ))}
+          </nav>
+
+          <div className="mt-auto space-y-4 pt-6 border-t border-white/[0.03]">
+            <div className="flex items-center gap-3 px-4 py-2">
+               <div className="size-8 rounded-full bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center text-[10px] font-bold text-white">
+                  {user?.first_name?.[0]}{user?.last_name?.[0]}
+               </div>
+               <div className="min-w-0">
+                  <p className="text-xs font-bold text-white truncate">{user?.first_name} {user?.last_name}</p>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-tighter">Pro Vendor</p>
+               </div>
+            </div>
+            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-500 hover:text-red-400 hover:bg-red-400/5 transition-all">
+              <LogOut size={18} />
+              Sign Out
+            </button>
           </div>
-        </motion.div>
+        </div>
+      </aside>
 
-        {error && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8">
-            <Card className="border-destructive/50 bg-destructive/5">
-              <CardContent className="p-4 text-destructive text-sm font-light flex items-center gap-2">
-                <AlertCircle className="size-4" /> {error}
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
+      {/* Main Content Area */}
+      <main className="flex-1 min-w-0 overflow-auto max-h-screen">
+        <header className="h-16 border-b border-white/[0.03] bg-[#0f1115]/80 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between px-8">
+           <div className="flex items-center gap-4">
+              <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden p-2 text-slate-400 hover:text-white">
+                 {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+              <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400">
+                 {navItems.find(n => n.id === activeTab)?.name}
+              </h2>
+           </div>
 
-        <AnimatePresence mode="wait">
-          {loading ? (
-            <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-10">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-2xl" />)}
+           <div className="flex items-center gap-4">
+              <div className="relative hidden md:block">
+                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-slate-500" />
+                 <input 
+                    type="text" 
+                    placeholder="Search dashboard..." 
+                    className="bg-white/[0.03] border border-white/[0.05] rounded-lg pl-9 pr-4 py-2 text-xs focus:outline-none focus:border-primary/50 w-64 transition-all"
+                 />
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                <Skeleton className="lg:col-span-2 h-[400px] w-full rounded-2xl" />
-                <Skeleton className="h-[400px] w-full rounded-2xl" />
+              <button className="p-2 text-slate-400 hover:text-white relative">
+                 <Bell size={18} />
+                 <span className="absolute top-2 right-2 size-1.5 bg-primary rounded-full shadow-lg shadow-primary/50" />
+              </button>
+           </div>
+        </header>
+
+        <div className="p-8 max-w-7xl mx-auto">
+          <AnimatePresence mode="wait">
+            {loading ? (
+              <div key="loading" className="space-y-8 animate-pulse">
+                <div className="grid grid-cols-4 gap-4">
+                  {[1,2,3,4].map(i => <div key={i} className="h-24 bg-white/[0.02] rounded-xl border border-white/[0.03]" />)}
+                </div>
+                <div className="h-96 bg-white/[0.02] rounded-2xl border border-white/[0.03]" />
               </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              transition={{ duration: 0.3 }}
-            >
-              {activeTab === 'overview' && renderOverview()}
-              {activeTab === 'services' && (
-                <ServiceManagement 
-                  services={dashboardData.services}
-                  onServiceUpdate={handleServiceUpdate}
-                />
-              )}
-              {activeTab === 'portfolio' && <PortfolioManager />}
-              {activeTab === 'calendar' && <BookingCalendar bookings={[]} />}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+            ) : (
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+              >
+                {activeTab === 'overview' && renderOverview()}
+                {activeTab === 'services' && <ServiceManagement services={dashboardData.services} onServiceUpdate={loadDashboardData} />}
+                {activeTab === 'portfolio' && <PortfolioManager />}
+                {activeTab === 'calendar' && <BookingCalendar bookings={[]} />}
+                {activeTab === 'settings' && (
+                   <div className="p-12 text-center border-2 border-dashed border-white/[0.03] rounded-3xl opacity-30">
+                      <Settings className="size-12 mx-auto mb-4" strokeWidth={1} />
+                      <p className="font-bold uppercase tracking-widest text-xs">Settings coming soon</p>
+                   </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </main>
     </div>
   );
 };
