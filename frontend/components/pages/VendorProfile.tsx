@@ -1,17 +1,32 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Badge } from '../ui/badge';
 import { apiService } from '../../lib/api';
-import { ShieldCheck, Star, Clock, MessageSquare, Award, ThumbsUp, MapPin, IndianRupee, Link as LinkIcon, Phone } from 'lucide-react';
+import { 
+  ShieldCheck, 
+  Star, 
+  Clock, 
+  Award, 
+  ThumbsUp, 
+  MapPin, 
+  IndianRupee, 
+  Link as LinkIcon, 
+  Phone,
+  Calendar as CalendarIcon,
+  Check,
+  ChevronRight,
+  Info,
+  Zap,
+  ArrowLeft,
+  ArrowRight
+} from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-
-interface VendorProfileProps {
-  params: {
-    id: string;
-  };
-}
+import { Card, CardContent } from '@/components/ui/card';
+import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 interface Service {
   id: string;
@@ -19,111 +34,42 @@ interface Service {
   description: string;
   base_price: number;
   formatted_price: string;
-  pricing_type: string;
-  category: {
-    id: string;
-    name: string;
-    slug: string;
-  };
-  has_images: boolean;
-  primary_image_url?: string;
+  category: { name: string };
 }
 
-interface PortfolioItem {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  is_featured: boolean;
-  image_count: number;
-  images: Array<{
-    id: string;
-    filename: string;
-    url: string;
-    thumbnail_url: string;
-    medium_url: string;
-  }>;
-  primary_image_url?: string;
-}
-
-interface Review {
-  id: string;
-  rating: number;
-  quality_rating?: number;
-  communication_rating?: number;
-  value_rating?: number;
-  punctuality_rating?: number;
-  comment: string;
-  created_at: string;
-  customer: {
-    id: string;
-    name: string;
-  };
-  service: {
-    id: string;
-    name: string;
-  };
-}
-
-interface Vendor {
-  id: string;
-  business_name: string;
-  description: string;
-  location: string;
-  phone?: string;
-  website?: string;
-  service_categories: string[];
-  business_license?: string;
-  years_experience: number;
-  average_rating: string;
-  total_reviews: number;
-  verification_status: string;
-  is_verified: boolean;
-  profile_complete: boolean;
-  services_count: number;
-  portfolio_items_count: number;
-  featured_portfolio: PortfolioItem[];
-  portfolio_categories: string[];
-  coordinates: {
-    latitude?: number;
-    longitude?: number;
-  };
-  user: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
-}
-
-const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
-  const [vendor, setVendor] = useState<Vendor | null>(null);
+const VendorProfile = ({ params }: { params: { id: string } }) => {
+  const router = useRouter();
+  const [vendor, setVendor] = useState<any>(null);
   const [services, setServices] = useState<Service[]>([]);
-  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [portfolio, setPortfolio] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'services' | 'portfolio' | 'reviews'>('services');
+  
+  // Interactive Booking State
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [addons, setAddons] = useState<string[]>([]);
+  const [bookingDate, setBookingDate] = useState('');
 
   const loadVendorData = useCallback(async () => {
     try {
       setLoading(true);
-
       const [vendorRes, servicesRes, portfolioRes, reviewsRes] = await Promise.all([
         apiService.vendors.getById(params.id),
         apiService.vendors.getServices(params.id),
         apiService.vendors.getPortfolio(params.id),
         apiService.vendors.getReviews(params.id)
       ]);
-
       setVendor(vendorRes.data.vendor);
       setServices(servicesRes.data.services);
       setPortfolio(portfolioRes.data.portfolio_items);
       setReviews(reviewsRes.data.reviews);
-
+      
+      if (servicesRes.data.services?.length > 0) {
+        setSelectedService(servicesRes.data.services[0]);
+      }
     } catch (err) {
       console.error('Error loading vendor data:', err);
-      setError('Failed to load vendor profile');
     } finally {
       setLoading(false);
     }
@@ -133,233 +79,258 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
     loadVendorData();
   }, [loadVendorData]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0f1115]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Loading Profile...</p>
-        </div>
-      </div>
-    );
-  }
+  const totalPrice = useMemo(() => {
+    if (!selectedService) return 0;
+    const base = selectedService.base_price || 0;
+    const addonPrice = addons.length * 5000; // Mock addon price
+    return base + addonPrice;
+  }, [selectedService, addons]);
 
-  if (error || !vendor) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0f1115]">
-        <div className="text-center max-w-md p-8 border border-white/5 rounded-2xl bg-[#16191e]">
-          <h1 className="text-xl font-bold text-white mb-2">Profile Not Found</h1>
-          <p className="text-slate-400 text-sm">{error || 'The professional you are looking for does not exist.'}</p>
-        </div>
-      </div>
-    );
-  }
-
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex gap-0.5">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            size={12}
-            className={star <= Math.round(rating) ? "fill-primary text-primary" : "text-slate-600"}
-          />
-        ))}
-      </div>
-    );
+  const toggleAddon = (id: string) => {
+    setAddons(prev => prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]);
   };
 
-  const isVerified = vendor.verification_status === 'verified' || vendor.is_verified;
+  const handleBookingRequest = () => {
+    if (!bookingDate) {
+      toast.error('Please select a date first');
+      return;
+    }
+    toast.success('Requesting booking for ' + bookingDate);
+    router.push(`/booking/${selectedService?.id}?date=${bookingDate}`);
+  };
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-[#0f1115]">
+      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary"></div>
+    </div>
+  );
+
+  if (!vendor) return null;
 
   return (
     <div className="min-h-screen bg-[#0f1115] text-foreground font-sans pb-20">
-      {/* Cover Banner (Abstract) */}
-      <div className="h-48 w-full bg-gradient-to-r from-primary/10 to-[#16191e] border-b border-white/[0.03] relative overflow-hidden">
-         <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
-      </div>
-
-      <div className="container mx-auto px-6 max-w-5xl -mt-16 relative z-10">
-        {/* Profile Header Card */}
-        <div className="bg-[#16191e] p-8 rounded-2xl border border-white/[0.05] shadow-2xl mb-8 flex flex-col md:flex-row gap-8 items-start">
-          <div className="flex-1 space-y-4">
-            <div className="flex items-start gap-4">
-              <div className="size-20 rounded-xl bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-primary/20 shrink-0">
-                 {vendor.business_name[0]}
+      {/* Dynamic Navigation */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#0f1115]/80 backdrop-blur-md border-b border-white/[0.03]">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+           <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest">
+              <ArrowLeft className="size-4" /> Back
+           </button>
+           <div className="flex items-center gap-4">
+              <span className="text-xs font-bold text-white uppercase tracking-widest">{vendor.business_name}</span>
+              <div className="h-4 w-px bg-white/10" />
+              <div className="flex items-center gap-1">
+                 <Star className="size-3 fill-primary text-primary" />
+                 <span className="text-xs font-bold text-white">{vendor.average_rating}</span>
               </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">{vendor.business_name}</h1>
-                  {isVerified && (
-                    <div className="bg-primary/20 text-primary rounded-full p-1 border border-primary/30" title="Verified Professional">
-                      <ShieldCheck size={16} strokeWidth={2.5} />
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-wrap items-center gap-4 text-xs font-bold uppercase tracking-widest text-slate-400">
-                  <span className="flex items-center gap-1.5 text-white">
-                    <Star className="size-3.5 fill-primary text-primary" /> {vendor.average_rating} ({vendor.total_reviews} reviews)
-                  </span>
-                  <span className="hidden sm:inline">&bull;</span>
-                  <span>{vendor.years_experience} YRS EXP</span>
-                </div>
-              </div>
-            </div>
-
-            <p className="text-slate-300 text-sm leading-relaxed max-w-2xl">{vendor.description}</p>
-
-            <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-400 pt-2">
-              <span className="flex items-center gap-1.5"><MapPin className="size-3.5" /> {vendor.location}</span>
-              {vendor.phone && <span className="flex items-center gap-1.5"><Phone className="size-3.5" /> {vendor.phone}</span>}
-              {vendor.website && (
-                <a href={vendor.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-primary hover:underline">
-                  <LinkIcon className="size-3.5" /> Website
-                </a>
-              )}
-            </div>
-          </div>
-
-          <div className="w-full md:w-64 shrink-0 flex flex-col gap-3">
-            <Button className="w-full font-bold h-12 shadow-lg shadow-primary/20">
-              Request Booking
-            </Button>
-            <Button variant="outline" className="w-full font-bold h-12 border-white/[0.05] hover:bg-white/[0.02]">
-              Message
-            </Button>
-          </div>
+           </div>
         </div>
+      </header>
 
-        {/* Tab Navigation */}
-        <div className="flex gap-2 border-b border-white/[0.05] mb-8 overflow-x-auto hide-scrollbar">
-           {[
-            { id: 'services', label: 'Services', count: services.length },
-            { id: 'portfolio', label: 'Portfolio', count: portfolio.length },
-            { id: 'reviews', label: 'Reviews', count: vendor.total_reviews }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-6 py-3 text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap border-b-2 ${
-                activeTab === tab.id
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-slate-500 hover:text-slate-300 hover:bg-white/[0.02]'
-              }`}
-            >
-              {tab.label} <span className="opacity-50 ml-1">({tab.count})</span>
-            </button>
-          ))}
-        </div>
-
-        <div className="min-h-[400px]">
-          {/* Services Tab */}
-          {activeTab === 'services' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {services.length > 0 ? services.map((service) => (
-                <div key={service.id} className="group p-5 rounded-xl border border-white/[0.03] bg-[#16191e] hover:border-primary/30 transition-all flex flex-col cursor-pointer">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-base font-bold text-white group-hover:text-primary transition-colors">{service.name}</h3>
-                    <Badge variant="secondary" className="text-[9px] uppercase tracking-widest bg-white/[0.02] text-slate-400 border-white/[0.05]">{service.category.name}</Badge>
-                  </div>
-                  <p className="text-slate-400 text-xs line-clamp-2 mb-5 leading-relaxed flex-1">{service.description}</p>
-                  <div className="flex items-center justify-between border-t border-white/[0.03] pt-4 mt-auto">
-                    <div className="flex items-center gap-1.5 text-white font-bold">
-                       <IndianRupee className="size-3.5 text-primary" />
-                       <span>{service.formatted_price}</span>
+      <main className="max-w-7xl mx-auto px-6 pt-24">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+          
+          {/* Content Column */}
+          <div className="lg:col-span-8 space-y-12">
+            {/* Minimal Pro Header */}
+            <section className="space-y-6">
+               <div className="flex items-start justify-between">
+                  <div>
+                    <h1 className="text-4xl font-bold text-white tracking-tight mb-3">{vendor.business_name}</h1>
+                    <div className="flex flex-wrap items-center gap-4 text-xs font-bold uppercase tracking-widest text-slate-500">
+                       <span className="flex items-center gap-1.5 text-slate-300"><MapPin className="size-3.5 text-primary" /> {vendor.location}</span>
+                       <span className="flex items-center gap-1.5"><Clock className="size-3.5 text-primary" /> Usually responds in 2h</span>
+                       {vendor.is_verified && (
+                         <span className="flex items-center gap-1.5 text-primary"><ShieldCheck className="size-3.5" /> Verified Pro</span>
+                       )}
                     </div>
-                    <span className="text-[10px] font-bold text-primary uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">View Details &rarr;</span>
                   </div>
-                </div>
-              )) : (
-                <div className="col-span-full py-20 text-center border border-dashed border-white/[0.05] rounded-xl">
-                   <p className="text-slate-500 text-sm font-medium">No services listed yet.</p>
-                </div>
-              )}
-            </div>
-          )}
+               </div>
+               <p className="text-slate-400 text-lg font-light leading-relaxed max-w-3xl">
+                 {vendor.description}
+               </p>
+            </section>
 
-          {/* Portfolio Tab */}
-          {activeTab === 'portfolio' && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {portfolio.length > 0 ? portfolio.map((item) => (
-                <div key={item.id} className="group relative aspect-square rounded-lg overflow-hidden border border-white/[0.03] bg-[#16191e] cursor-pointer">
-                  {item.primary_image_url ? (
-                    <Image
-                      src={item.primary_image_url}
-                      alt={item.title}
-                      fill
-                      unoptimized
-                      className="object-cover transition-transform duration-700 group-hover:scale-110 grayscale-[20%] group-hover:grayscale-0"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-600 text-xs font-bold uppercase">No Image</div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-2 group-hover:translate-y-0">
-                    <h3 className="text-xs font-bold text-white truncate">{item.title}</h3>
-                    <p className="text-[9px] text-slate-400 uppercase tracking-widest">{item.image_count} photos</p>
-                  </div>
-                </div>
-              )) : (
-                <div className="col-span-full py-20 text-center border border-dashed border-white/[0.05] rounded-xl">
-                   <p className="text-slate-500 text-sm font-medium">No portfolio work added yet.</p>
-                </div>
-              )}
-            </div>
-          )}
+            {/* Visual Portfolio Preview */}
+            <section>
+               <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-sm font-bold text-white uppercase tracking-[0.2em]">Selected Works</h2>
+                  <button onClick={() => setActiveTab('portfolio')} className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline">View All Gallery</button>
+               </div>
+               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {portfolio.slice(0, 6).map((item, i) => (
+                    <div key={i} className="relative aspect-[4/5] rounded-xl overflow-hidden border border-white/[0.05] bg-[#16191e] group cursor-pointer">
+                       <Image src={item.primary_image_url || 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e'} alt="work" fill className="object-cover transition-transform duration-700 group-hover:scale-110 grayscale-[20%] group-hover:grayscale-0" unoptimized />
+                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  ))}
+               </div>
+            </section>
 
-          {/* Reviews Tab */}
-          {activeTab === 'reviews' && (
-            <div className="space-y-8 max-w-3xl">
-              {reviews.length > 0 ? (
-                <>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {[
-                      { label: 'Quality', val: 4.9 },
-                      { label: 'Communication', val: 4.8 },
-                      { label: 'Value', val: 4.7 },
-                      { label: 'Punctuality', val: 5.0 }
-                    ].map((stat) => (
-                      <div key={stat.label} className="p-4 rounded-xl border border-white/[0.03] bg-[#16191e] text-center">
-                        <p className="text-[9px] uppercase tracking-widest text-slate-500 mb-1">{stat.label}</p>
-                        <p className="text-lg font-bold text-white">{stat.val.toFixed(1)}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="space-y-4">
-                    {reviews.map((review) => (
-                      <div key={review.id} className="p-5 rounded-xl border border-white/[0.03] bg-[#16191e]">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <p className="font-bold text-sm text-white">{review.customer.name}</p>
-                            <p className="text-[10px] text-slate-500 uppercase tracking-widest">
-                              {new Date(review.created_at).toLocaleDateString()}
-                            </p>
+            {/* Services Detail List */}
+            <section className="space-y-6">
+               <h2 className="text-sm font-bold text-white uppercase tracking-[0.2em]">Available Packages</h2>
+               <div className="space-y-4">
+                  {services.map((service) => (
+                    <div 
+                      key={service.id} 
+                      onClick={() => setSelectedService(service)}
+                      className={`p-6 rounded-2xl border transition-all cursor-pointer flex flex-col md:flex-row justify-between gap-6 ${
+                        selectedService?.id === service.id ? 'bg-primary/5 border-primary/40 ring-1 ring-primary/40' : 'bg-[#16191e] border-white/[0.03] hover:border-white/10'
+                      }`}
+                    >
+                       <div className="space-y-2">
+                          <div className="flex items-center gap-3">
+                             <h3 className="font-bold text-white">{service.name}</h3>
+                             {selectedService?.id === service.id && <div className="size-5 rounded-full bg-primary flex items-center justify-center"><Check className="size-3 text-primary-foreground" strokeWidth={4} /></div>}
                           </div>
-                          <div className="flex items-center gap-2">
-                             <Badge variant="outline" className="text-[9px] uppercase tracking-widest border-white/[0.05] text-slate-400">
-                               {review.service.name}
-                             </Badge>
-                             <div className="flex items-center gap-1 bg-white/[0.02] px-2 py-1 rounded border border-white/[0.02]">
-                                <Star size={10} className="fill-primary text-primary" />
-                                <span className="text-[10px] font-bold text-white">{review.rating.toFixed(1)}</span>
-                             </div>
-                          </div>
+                          <p className="text-sm text-slate-400 font-light max-w-md">{service.description}</p>
+                       </div>
+                       <div className="text-right shrink-0">
+                          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Starting at</p>
+                          <p className="text-2xl font-bold text-white">₹{service.base_price.toLocaleString()}</p>
+                       </div>
+                    </div>
+                  ))}
+               </div>
+            </section>
+
+            {/* Reviews Summary */}
+            <section className="p-8 rounded-[2rem] border border-white/[0.03] bg-[#16191e]">
+               <div className="flex flex-col md:flex-row justify-between gap-8 mb-10 pb-10 border-b border-white/[0.03]">
+                  <div>
+                     <h2 className="text-4xl font-bold text-white mb-2">{vendor.average_rating}</h2>
+                     <div className="flex gap-1 mb-2">
+                        {[1,2,3,4,5].map(i => <Star key={i} className="size-4 fill-primary text-primary" />)}
+                     </div>
+                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Based on {vendor.total_reviews} client reviews</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-12 gap-y-4">
+                     {['Quality', 'Speed', 'Communication', 'Value'].map(label => (
+                        <div key={label} className="space-y-1">
+                           <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                              <span>{label}</span>
+                              <span className="text-white">4.9</span>
+                           </div>
+                           <div className="h-1 w-32 bg-white/5 rounded-full overflow-hidden">
+                              <div className="h-full bg-primary w-[95%]" />
+                           </div>
                         </div>
-                        <p className="text-slate-300 text-sm font-light leading-relaxed">"{review.comment}"</p>
-                      </div>
-                    ))}
+                     ))}
                   </div>
-                </>
-              ) : (
-                <div className="py-20 text-center border border-dashed border-white/[0.05] rounded-xl">
-                  <Star className="size-8 mx-auto mb-3 text-slate-600" />
-                  <p className="text-slate-500 text-sm font-medium">Be the first to review this professional.</p>
-                </div>
-              )}
+               </div>
+               
+               <div className="space-y-6">
+                  {reviews.slice(0, 3).map((review, i) => (
+                    <div key={i} className="space-y-3">
+                       <div className="flex justify-between">
+                          <p className="text-sm font-bold text-white">{review.customer?.name || 'Verified Client'}</p>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">{new Date().toLocaleDateString()}</span>
+                       </div>
+                       <p className="text-sm text-slate-400 font-light italic leading-relaxed">"{review.comment}"</p>
+                    </div>
+                  ))}
+               </div>
+            </section>
+          </div>
+
+          {/* Sticky Interactive Sidebar */}
+          <div className="lg:col-span-4">
+            <div className="sticky top-24 space-y-6">
+               <Card className="border border-primary/20 bg-[#1a1d23] shadow-3xl shadow-primary/5 overflow-hidden">
+                  <div className="p-6 bg-primary/10 border-b border-primary/10">
+                     <h3 className="text-sm font-bold text-primary uppercase tracking-[0.2em] flex items-center gap-2">
+                        <Zap className="size-4" fill="currentColor" /> Quick Booking
+                     </h3>
+                  </div>
+                  <CardContent className="p-6 space-y-6">
+                     {/* Step 1: Date */}
+                     <div className="space-y-3">
+                        <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 flex items-center gap-2">
+                           <CalendarIcon className="size-3" /> Select Event Date
+                        </label>
+                        <input 
+                          type="date" 
+                          value={bookingDate}
+                          onChange={(e) => setBookingDate(e.target.value)}
+                          className="w-full bg-[#0f1115] border border-white/[0.05] rounded-xl h-12 px-4 text-white focus:outline-none focus:border-primary/50 [color-scheme:dark] text-sm font-bold" 
+                        />
+                     </div>
+
+                     {/* Step 2: Package Summary */}
+                     <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.03] space-y-3">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Package</p>
+                        <div className="flex justify-between items-center">
+                           <span className="text-sm font-bold text-white">{selectedService?.name}</span>
+                           <span className="text-sm font-bold text-white">₹{selectedService?.base_price.toLocaleString()}</span>
+                        </div>
+                     </div>
+
+                     {/* Step 3: Addons (The Value Add) */}
+                     <div className="space-y-3">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Popular Add-ons</p>
+                        <div className="space-y-2">
+                           {[
+                             { id: 'exp', label: 'Express 48h Delivery', price: '₹5,000' },
+                             { id: 'raw', label: 'Raw Files Access', price: '₹5,000' },
+                           ].map(addon => (
+                             <button 
+                                key={addon.id}
+                                onClick={() => toggleAddon(addon.id)}
+                                className={`w-full flex items-center justify-between p-3 rounded-lg border text-xs font-bold transition-all ${
+                                  addons.includes(addon.id) ? 'bg-primary/20 border-primary text-primary' : 'bg-[#0f1115] border-white/[0.05] text-slate-400 hover:border-white/20'
+                                }`}
+                             >
+                                <span>{addon.label}</span>
+                                <span>{addon.price}</span>
+                             </button>
+                           ))}
+                        </div>
+                     </div>
+
+                     {/* Final Price & CTA */}
+                     <div className="pt-6 border-t border-white/[0.05] space-y-4">
+                        <div className="flex justify-between items-end">
+                           <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Estimated Total</span>
+                           <div className="text-right">
+                              <span className="text-3xl font-bold text-white tracking-tighter flex items-center justify-end gap-1">
+                                 <IndianRupee className="size-5 text-primary" strokeWidth={3} />
+                                 {totalPrice.toLocaleString()}
+                              </span>
+                              <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter mt-1">Inclusive of platform fees</p>
+                           </div>
+                        </div>
+                        
+                        <Button 
+                          onClick={handleBookingRequest}
+                          className="w-full h-14 rounded-xl font-bold text-base shadow-xl shadow-primary/20 group"
+                        >
+                           Confirm Booking Request
+                           <ArrowRight className="size-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                        </Button>
+                        
+                        <p className="text-[10px] text-slate-500 text-center flex items-center justify-center gap-1.5">
+                           <Info className="size-3" /> No payment required until professional accepts.
+                        </p>
+                     </div>
+                  </CardContent>
+               </Card>
+
+               {/* Quick Info Card */}
+               <div className="p-6 rounded-2xl border border-white/[0.03] bg-[#16191e] space-y-4">
+                  <div className="flex items-center gap-3">
+                     <div className="size-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                        <ShieldCheck size={18} />
+                     </div>
+                     <p className="text-xs font-bold text-white">Jashnify Protected</p>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                     Your payment is held securely and only released after the professional delivers the service.
+                  </p>
+               </div>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

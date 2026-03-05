@@ -18,11 +18,11 @@ import {
   Users,
   Trophy,
   Sparkles,
-  ChevronDown,
-  ShieldCheck
+  ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
+import { motion } from 'framer-motion';
 
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,10 +47,14 @@ const Home = () => {
         </div>
 
         <div className="max-w-5xl mx-auto text-center relative z-10">
-          <motion_div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/[0.05] text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/[0.05] text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-8"
+          >
             <Sparkles className="size-3 text-primary" />
             <span>Premium Creative Network</span>
-          </motion_div>
+          </motion.div>
 
           <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight leading-[1.1]">
             Elevate your <br />
@@ -69,15 +73,21 @@ const Home = () => {
                 <input
                   type="text"
                   placeholder="Search by style or name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-transparent border-none text-white placeholder-slate-600 focus:outline-none focus:ring-0 py-3 text-sm font-medium"
                 />
               </div>
               <div className="h-px md:h-8 w-full md:w-px bg-white/[0.05] my-auto" />
               <div className="flex-1 flex items-center px-4 relative">
                 <MapPin className="size-4 text-slate-500 mr-3" />
-                <select className="w-full bg-transparent border-none text-slate-300 focus:outline-none focus:ring-0 py-3 text-sm font-medium appearance-none cursor-pointer">
-                  <option className="bg-[#1a1d23]">All Categories</option>
-                  {categories.map(c => <option key={c.name} className="bg-[#1a1d23]">{c.name}</option>)}
+                <select 
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full bg-transparent border-none text-slate-300 focus:outline-none focus:ring-0 py-3 text-sm font-medium appearance-none cursor-pointer"
+                >
+                  <option value="" className="bg-[#1a1d23]">All Categories</option>
+                  {categories.map(c => <option key={c.name} value={c.name.toLowerCase()} className="bg-[#1a1d23]">{c.name}</option>)}
                 </select>
                 <ChevronDown className="size-3.5 text-slate-600 absolute right-4 pointer-events-none" />
               </div>
