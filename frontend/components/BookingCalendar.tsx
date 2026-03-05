@@ -85,26 +85,26 @@ const BookingCalendar = ({ bookings: initialBookings }: any) => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
       {/* Calendar Grid */}
       <div className="lg:col-span-2 space-y-6">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-3xl font-light tracking-tight">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-xl font-bold text-white uppercase tracking-widest">
             {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
           </h2>
           <div className="flex gap-2">
-            <Button variant="outline" size="icon" onClick={() => navigateMonth(-1)} className="rounded-full border-border">
+            <Button variant="outline" size="icon" onClick={() => navigateMonth(-1)} className="rounded-lg border-white/[0.05] text-slate-400 hover:text-white hover:bg-white/[0.02]">
               <ChevronLeft className="size-4" />
             </Button>
-            <Button variant="outline" size="icon" onClick={() => navigateMonth(1)} className="rounded-full border-border">
+            <Button variant="outline" size="icon" onClick={() => navigateMonth(1)} className="rounded-lg border-white/[0.05] text-slate-400 hover:text-white hover:bg-white/[0.02]">
               <ChevronRight className="size-4" />
             </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-px bg-border border border-border rounded-2xl overflow-hidden shadow-sm">
+        <div className="grid grid-cols-7 gap-px bg-white/[0.03] border border-white/[0.03] rounded-2xl overflow-hidden shadow-2xl">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-            <div key={d} className="bg-secondary p-4 text-center text-xs font-normal uppercase tracking-widest text-muted-foreground">
+            <div key={d} className="bg-[#16191e] p-3 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
               {d}
             </div>
           ))}
@@ -115,23 +115,23 @@ const BookingCalendar = ({ bookings: initialBookings }: any) => {
               <div
                 key={i}
                 onClick={() => day && setSelectedDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day))}
-                className={`min-h-[120px] p-2 bg-white transition-all cursor-pointer relative group ${
-                  !day ? 'bg-secondary/20' : 'hover:bg-secondary/50'
-                } ${isSelected(day) ? 'ring-2 ring-inset ring-foreground z-10' : ''}`}
+                className={`min-h-[100px] p-2 transition-all cursor-pointer relative group ${
+                  !day ? 'bg-[#0f1115]/50' : 'bg-[#16191e] hover:bg-white/[0.02]'
+                } ${isSelected(day) ? 'ring-2 ring-inset ring-primary z-10' : ''}`}
               >
                 {day && (
                   <>
-                    <span className={`text-sm font-light ${isToday(day) ? 'size-7 bg-foreground text-white rounded-full flex items-center justify-center' : ''}`}>
+                    <span className={`text-xs font-bold ${isToday(day) ? 'size-6 bg-primary text-primary-foreground rounded flex items-center justify-center' : 'text-slate-400'}`}>
                       {day}
                     </span>
                     <div className="mt-2 space-y-1">
                       {dayBookings.slice(0, 2).map((b: any, idx: number) => (
-                        <div key={idx} className="text-[10px] px-2 py-0.5 rounded-full bg-foreground/5 border border-border truncate font-light">
+                        <div key={idx} className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 truncate font-bold uppercase tracking-widest">
                           {b.service_name}
                         </div>
                       ))}
                       {dayBookings.length > 2 && (
-                        <div className="text-[10px] text-muted-foreground font-light pl-2">
+                        <div className="text-[9px] text-slate-500 font-bold pl-1.5 uppercase tracking-widest">
                           +{dayBookings.length - 2} more
                         </div>
                       )}
@@ -145,8 +145,8 @@ const BookingCalendar = ({ bookings: initialBookings }: any) => {
       </div>
 
       {/* Sidebar Details */}
-      <div className="space-y-8">
-        <h3 className="text-2xl font-light tracking-tight">Details</h3>
+      <div className="space-y-6">
+        <h3 className="text-xl font-bold text-white uppercase tracking-widest mb-2">Details</h3>
         {selectedDate ? (
           <AnimatePresence mode="wait">
             <motion.div
@@ -156,46 +156,46 @@ const BookingCalendar = ({ bookings: initialBookings }: any) => {
               exit={{ opacity: 0, x: -10 }}
               className="space-y-6"
             >
-              <div className="p-6 rounded-2xl bg-secondary/50 border border-border">
-                <p className="text-sm text-muted-foreground font-light mb-1">
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-primary/10 to-[#16191e] border border-white/[0.03]">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">
                   {selectedDate.toLocaleDateString('default', { weekday: 'long' })}
                 </p>
-                <p className="text-2xl font-light">
+                <p className="text-2xl font-bold text-white tracking-tight">
                   {selectedDate.toLocaleDateString('default', { month: 'long', day: 'numeric' })}
                 </p>
               </div>
 
-              <div className="space-y-4">
-                <h4 className="text-sm font-normal uppercase tracking-widest text-muted-foreground">Bookings</h4>
+              <div className="space-y-3">
+                <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Scheduled Events</h4>
                 {getBookingsForDate(selectedDate).length > 0 ? (
                   getBookingsForDate(selectedDate).map((b: any) => (
-                    <Card key={b.id} className="border-border shadow-sm group hover:border-foreground transition-colors">
+                    <Card key={b.id} className="border-white/[0.03] bg-[#16191e] shadow-sm group hover:border-primary/20 transition-colors">
                       <CardContent className="p-4 space-y-3">
                         <div className="flex justify-between items-start">
-                          <div className="font-normal">{b.service_name}</div>
-                          <Badge variant="secondary" className="rounded-full text-[10px] font-normal uppercase">{b.status}</Badge>
+                          <div className="font-bold text-sm text-white">{b.service_name}</div>
+                          <Badge variant="secondary" className="rounded text-[8px] font-bold uppercase tracking-widest px-1.5 bg-white/[0.05] border-none text-slate-400">{b.status}</Badge>
                         </div>
-                        <div className="space-y-1 text-xs text-muted-foreground font-light">
-                          <div className="flex items-center gap-2"><User className="size-3" /> {b.customer_name}</div>
-                          <div className="flex items-center gap-2"><Clock className="size-3" /> {b.start_time}</div>
+                        <div className="space-y-1 text-xs text-slate-400 font-medium">
+                          <div className="flex items-center gap-2"><User className="size-3 text-slate-500" /> {b.customer_name}</div>
+                          <div className="flex items-center gap-2"><Clock className="size-3 text-slate-500" /> {b.start_time}</div>
                         </div>
                       </CardContent>
                     </Card>
                   ))
                 ) : (
-                  <div className="py-10 text-center border-2 border-dashed border-border rounded-2xl">
-                    <p className="text-sm text-muted-foreground font-light">No events scheduled</p>
+                  <div className="py-12 text-center border-2 border-dashed border-white/[0.03] rounded-2xl">
+                    <p className="text-xs text-slate-500 font-medium">No events scheduled</p>
                   </div>
                 )}
               </div>
 
-              <Button className="w-full rounded-full h-12 font-normal text-white">
-                <Plus className="mr-2 size-4" /> Add Availability
+              <Button size="sm" className="w-full rounded-lg font-bold">
+                <Plus className="mr-1.5 size-3.5" /> Add Availability
               </Button>
             </motion.div>
           </AnimatePresence>
         ) : (
-          <div className="py-20 text-center text-muted-foreground font-light">
+          <div className="py-20 text-center text-slate-500 text-xs font-medium border border-dashed border-white/[0.03] rounded-2xl">
             Select a date to view details
           </div>
         )}

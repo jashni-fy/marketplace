@@ -18,13 +18,17 @@ import {
   MapPin, 
   ArrowRight,
   User,
-  Settings
+  Settings,
+  Bell,
+  Search,
+  LogOut,
+  Camera
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 
 const CustomerDashboard = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [bookings, setBookings] = useState([]);
@@ -38,116 +42,113 @@ const CustomerDashboard = () => {
   }, []);
 
   const stats = [
-    { label: 'Upcoming', value: '0', icon: CalendarIcon },
-    { label: 'Favorites', value: '0', icon: Heart },
-    { label: 'Total Spent', value: '₹0', icon: ShoppingBag },
+    { label: 'Upcoming Events', value: '0', icon: CalendarIcon, trend: 'No events' },
+    { label: 'Saved Pros', value: '0', icon: Heart, trend: 'Explore now' },
+    { label: 'Total Spent', value: '₹0', icon: ShoppingBag, trend: 'Lifetime' },
   ];
 
   const renderOverview = () => (
-    <div className="space-y-12">
+    <div className="space-y-8 animate-in fade-in duration-500">
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {stats.map((stat, i) => (
-          <Card key={i} className="border-border shadow-sm group hover:border-foreground transition-colors">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-light mb-1">{stat.label}</p>
-                  <p className="text-3xl font-light tracking-tight">{stat.value}</p>
-                </div>
-                <div className="p-3 rounded-2xl bg-secondary group-hover:bg-foreground group-hover:text-white transition-colors">
-                  <stat.icon className="size-5" strokeWidth={1.5} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div key={i} className="p-5 rounded-xl border border-white/[0.03] bg-[#16191e] hover:border-primary/20 transition-all group">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{stat.label}</span>
+              <stat.icon className="size-4 text-slate-600 group-hover:text-primary transition-colors" />
+            </div>
+            <div className="flex items-end justify-between">
+              <h4 className="text-2xl font-bold text-white tracking-tight">{stat.value}</h4>
+              <span className="text-[10px] font-bold text-slate-500 bg-white/5 px-1.5 py-0.5 rounded">{stat.trend}</span>
+            </div>
+          </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Feed */}
-        <div className="lg:col-span-2 space-y-8">
-          <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-light tracking-tight">Recent Activity</h3>
-          </div>
+        <div className="lg:col-span-2 space-y-6">
+          <div className="p-6 rounded-2xl border border-white/[0.03] bg-[#16191e]">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-sm font-bold text-white uppercase tracking-widest">Recent Bookings</h3>
+            </div>
 
-          <Card className="border-dashed border-2 bg-transparent">
-            <CardContent className="p-16 text-center">
-              <div className="size-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-6">
-                <ShoppingBag className="size-8 text-muted-foreground opacity-40" strokeWidth={1} />
+            <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-2 border-dashed border-white/[0.03] rounded-xl">
+              <div className="size-12 rounded-full bg-secondary flex items-center justify-center mb-4 opacity-30">
+                <ShoppingBag className="size-5 text-slate-400" strokeWidth={2} />
               </div>
-              <h4 className="text-xl font-light mb-2">No bookings yet</h4>
-              <p className="text-muted-foreground font-light mb-8 max-w-xs mx-auto">
+              <h4 className="text-sm font-bold text-white mb-1">No bookings yet</h4>
+              <p className="text-xs text-slate-500 mb-6 max-w-xs">
                 Find the perfect photographer for your next special occasion.
               </p>
               <Link href="/marketplace">
-                <Button className="rounded-full px-8 font-normal text-white">
+                <Button size="sm" className="rounded-lg font-bold text-xs">
                   Explore Marketplace
                 </Button>
               </Link>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-8">
-          <h3 className="text-2xl font-light tracking-tight">Profile</h3>
-          <Card className="border-border shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="size-12 rounded-full bg-secondary flex items-center justify-center">
-                  <User className="size-6 text-muted-foreground" strokeWidth={1.5} />
+        <div className="space-y-6">
+          <div className="p-6 rounded-2xl border border-white/[0.03] bg-[#16191e]">
+            <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-6">Quick Links</h3>
+            <div className="space-y-2">
+              <button className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/[0.02] transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
+                    <Heart size={16} />
+                  </div>
+                  <span className="text-sm font-bold text-slate-300 group-hover:text-white">Saved Professionals</span>
                 </div>
-                <div>
-                  <p className="font-normal">{user?.first_name} {user?.last_name}</p>
-                  <p className="text-xs text-muted-foreground font-light capitalize">{user?.role}</p>
+                <ChevronRight size={14} className="text-slate-600" />
+              </button>
+              <button className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/[0.02] transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20 transition-colors">
+                    <Settings size={16} />
+                  </div>
+                  <span className="text-sm font-bold text-slate-300 group-hover:text-white">Account Settings</span>
                 </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Button variant="ghost" className="w-full justify-start font-light rounded-xl hover:bg-secondary">
-                  <Settings className="mr-2 size-4" strokeWidth={1.5} />
-                  Account Settings
-                </Button>
-                <Button variant="ghost" className="w-full justify-start font-light rounded-xl hover:bg-secondary">
-                  <Heart className="mr-2 size-4" strokeWidth={1.5} />
-                  My Favorites
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                <ChevronRight size={14} className="text-slate-600" />
+              </button>
+            </div>
+          </div>
 
-          <Card className="border-border bg-foreground text-white overflow-hidden relative">
-            <CardContent className="p-6 relative z-10">
-              <h4 className="text-xl font-light mb-2">Want to earn?</h4>
-              <p className="text-white/70 text-sm font-light mb-6">
-                Switch to a photographer account and start showcasing your portfolio.
-              </p>
-              <Button variant="outline" className="w-full rounded-full border-white/20 hover:bg-white hover:text-black transition-colors font-normal">
-                Become a Partner
-              </Button>
-            </CardContent>
-            <div className="absolute top-0 right-0 size-24 bg-white/5 rounded-full -mr-12 -mt-12" />
-          </Card>
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/20 to-blue-600/10 border border-white/5 relative overflow-hidden group">
+            <div className="relative z-10">
+               <Camera className="size-8 text-primary mb-3" />
+               <h4 className="text-base font-bold text-white mb-2">Are you a professional?</h4>
+               <p className="text-xs text-slate-400 font-light mb-5">Switch to a vendor account to list your services and start earning.</p>
+               <Button size="sm" className="w-full bg-white text-black font-bold rounded-lg h-9 hover:bg-slate-200">Become a Partner</Button>
+            </div>
+            <div className="absolute -bottom-10 -right-10 size-32 bg-primary/20 rounded-full blur-2xl group-hover:bg-primary/30 transition-all" />
+          </div>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-[#0f1115] text-foreground font-sans">
       <Header />
       
-      <div className="container mx-auto px-6 py-12">
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-12"
-        >
-          <h1 className="text-4xl md:text-5xl font-extralight tracking-tight mb-2">Dashboard</h1>
-          <p className="text-xl text-muted-foreground font-light">Hello, {user?.first_name || 'Guest'}</p>
-        </motion.div>
+      <main className="max-w-7xl mx-auto px-6 py-10">
+        {/* Dashboard Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-6">
+          <div className="flex items-center gap-5">
+            <div className="size-16 rounded-[1.5rem] bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center text-white shadow-xl shadow-primary/20">
+               <span className="text-xl font-bold">{user?.first_name?.[0] || 'C'}</span>
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-white mb-1">
+                Dashboard
+              </h1>
+              <p className="text-sm text-slate-400">Welcome back, <span className="text-white font-medium">{user?.first_name || 'Guest'}</span></p>
+            </div>
+          </div>
+        </div>
 
         <AnimatePresence mode="wait">
           {loading ? (
@@ -156,30 +157,49 @@ const CustomerDashboard = () => {
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }} 
-              className="space-y-10"
+              className="space-y-8"
             >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-2xl" />)}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-28 w-full rounded-xl bg-white/[0.02]" />)}
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                <Skeleton className="lg:col-span-2 h-[400px] w-full rounded-2xl" />
-                <Skeleton className="h-[400px] w-full rounded-2xl" />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Skeleton className="lg:col-span-2 h-[300px] w-full rounded-2xl bg-white/[0.02]" />
+                <Skeleton className="h-[300px] w-full rounded-2xl bg-white/[0.02]" />
               </div>
             </motion.div>
           ) : (
             <motion.div
               key="content"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
+              transition={{ duration: 0.4 }}
             >
               {renderOverview()}
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </main>
     </div>
   );
 };
+
+function ChevronRight(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m9 18 6-6-9-6" />
+    </svg>
+  );
+}
 
 export default CustomerDashboard;

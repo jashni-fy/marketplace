@@ -5,73 +5,89 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 interface PhotographerCardProps {
-  photographer: any; // Allow any for API flexibility
+  photographer: any;
 }
 
 export default function PhotographerCard({ photographer }: PhotographerCardProps) {
-  // Map API fields or provide defaults
   const id = photographer.id;
-  const name = photographer.name || photographer.business_name || 'Anonymous Photographer';
-  const image = photographer.image || photographer.profile_image_url || photographer.image_url || 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?q=80&w=1000&auto=format&fit=crop';
+  const name = photographer.name || photographer.business_name || 'Anonymous';
+  const image = photographer.image || photographer.profile_image_url || 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?q=80&w=1000&auto=format&fit=crop';
   const rating = photographer.rating || photographer.average_rating || 0;
-  const location = photographer.location || photographer.city || 'Location not specified';
-  const bio = photographer.bio || photographer.description || 'No bio available.';
-  const categories = photographer.categories || (photographer.service_category ? [photographer.service_category] : []);
-  const priceRange = photographer.priceRange || (photographer.base_price ? `Starts from ₹${photographer.base_price}` : 'Price on request');
-  const yearsOfExperience = photographer.yearsOfExperience || photographer.experience_years || 0;
-  const availableSlots = photographer.availableSlots ?? 10;
+  const location = photographer.location || 'Unknown';
+  const priceRange = photographer.base_price ? `₹${photographer.base_price}` : 'Price on request';
 
   return (
     <Link href={`/photographer/${id}`}>
-      <Card className="overflow-hidden hover:shadow-xl transition-all duration-500 cursor-pointer group border-border bg-white h-full flex flex-col">
-        <div className="relative aspect-[4/5] overflow-hidden">
-          <Image
-            src={image}
-            alt={name}
-            fill
-            unoptimized
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          {availableSlots <= 3 && availableSlots > 0 && (
-            <Badge className="absolute top-4 right-4 bg-black text-white hover:bg-black/90 font-normal rounded-full">
-              {availableSlots} slots left
-            </Badge>
-          )}
+      <div className="group relative aspect-[3/4] overflow-hidden rounded-lg border border-white/5 bg-secondary/20 transition-all duration-500">
+        {/* Imagery as Hero */}
+        <Image
+          src={image}
+          alt={name}
+          fill
+          unoptimized
+          className="object-cover transition-transform duration-700 group-hover:scale-110 grayscale-[30%] group-hover:grayscale-0"
+        />
+        
+        {/* Permanent Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent opacity-60" />
+
+        {/* Top Floating Badge */}
+        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-md bg-background/40 backdrop-blur-md border border-white/5">
+          <Star className="size-3 fill-primary text-primary" />
+          <span className="text-[10px] font-bold text-white tracking-tighter">{Number(rating).toFixed(1)}</span>
         </div>
-        <CardContent className="p-6 flex-1 flex flex-col">
-          <div className="flex items-start justify-between mb-3">
-            <h3 className="font-normal text-xl tracking-tight line-clamp-1">{name}</h3>
-            <div className="flex items-center gap-1 text-sm flex-shrink-0">
-              <Star className="size-4 fill-foreground text-foreground" strokeWidth={1.5} />
-              <span className="font-normal">{Number(rating).toFixed(1)}</span>
-            </div>
+
+        {/* Bottom Permanent Info */}
+        <div className="absolute bottom-4 left-4 right-4">
+          <h3 className="text-sm font-bold text-white truncate tracking-tight mb-0.5">{name}</h3>
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-medium tracking-tight truncate flex items-center gap-1">
+              <MapPin className="size-2.5 text-primary" /> {location}
+            </span>
           </div>
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-3 font-light">
-            <MapPin className="size-4 flex-shrink-0" strokeWidth={1.5} />
-            <span className="line-clamp-1">{location}</span>
-          </div>
-          <p className="text-sm text-muted-foreground mb-4 line-clamp-2 font-light flex-1">
-            {bio}
-          </p>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {categories.slice(0, 3).map((category: string) => (
-              <Badge key={category} variant="secondary" className="text-xs font-normal rounded-full bg-secondary capitalize">
-                {category}
-              </Badge>
-            ))}
-          </div>
-          <div className="flex items-center justify-between pt-3 border-t border-border mt-auto">
-            <div className="flex items-center gap-1 text-sm font-normal">
-              <IndianRupee className="size-4" strokeWidth={1.5} />
-              <span className="line-clamp-1">{priceRange}</span>
-            </div>
-            <p className="text-xs text-muted-foreground font-light flex-shrink-0">
-              {yearsOfExperience}y exp
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Hover: Detail Reveal */}
+        <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-all duration-500 backdrop-blur-[2px] flex flex-col justify-end p-4">
+           <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-500 space-y-3">
+              <div className="flex flex-wrap gap-1.5">
+                {(photographer.service_categories || []).slice(0, 2).map((cat: string) => (
+                  <span key={cat} className="text-[9px] font-bold uppercase tracking-widest bg-primary/20 text-primary px-2 py-0.5 rounded border border-primary/20">
+                    {cat}
+                  </span>
+                ))}
+              </div>
+              <div className="flex items-center justify-between border-t border-white/10 pt-3">
+                <div className="flex flex-col">
+                  <span className="text-[8px] uppercase tracking-tighter text-slate-400">Starting from</span>
+                  <span className="text-sm font-bold text-white">{priceRange}</span>
+                </div>
+                <div className="size-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                  <ChevronRight className="size-4" />
+                </div>
+              </div>
+           </div>
+        </div>
+      </div>
     </Link>
+  );
+}
+
+function ChevronRight(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m9 18 6-6-9-6" />
+    </svg>
   );
 }

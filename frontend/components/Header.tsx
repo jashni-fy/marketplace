@@ -21,17 +21,21 @@ export default function Header() {
   const dashboardLink = user?.role === 'vendor' ? '/vendor/dashboard' : '/customer/dashboard';
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-xl border-b border-border">
+    <header className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-xl border-b border-border/50">
       <div className="container mx-auto flex h-20 items-center justify-between px-6">
-        <Link href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
-          <Camera className="size-7 text-foreground" strokeWidth={1.5} />
-          <span className="text-xl font-light tracking-tight">jashnify</span>
+        <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-all group">
+          <div className="p-1.5 rounded-lg bg-primary/10 border border-primary/20 group-hover:bg-primary/20 transition-colors">
+            <Camera className="size-5 text-primary" strokeWidth={2} />
+          </div>
+          <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+            jashnify
+          </span>
         </Link>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <Link href="/marketplace" className="hidden sm:block">
-            <Button variant="ghost" className="rounded-full font-light gap-2">
-              <ShoppingBag className="size-4" strokeWidth={1.5} />
+            <Button variant="ghost" className="rounded-full font-medium gap-2 text-slate-300 hover:text-white hover:bg-secondary">
+              <ShoppingBag className="size-4" strokeWidth={2} />
               Explore
             </Button>
           </Link>
@@ -42,34 +46,36 @@ export default function Header() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="flex items-center gap-2 h-10 rounded-full font-normal"
+                  className="flex items-center gap-2 h-10 rounded-full font-medium text-slate-300 hover:text-white hover:bg-secondary"
                 >
-                  <LayoutDashboard className="size-4" strokeWidth={1.5} />
+                  <LayoutDashboard className="size-4" strokeWidth={2} />
                   <span className="hidden sm:inline">Dashboard</span>
                 </Button>
               </Link>
-              <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground font-light px-3">
-                <User className="size-4" strokeWidth={1.5} />
-                <span>{user.name}</span>
+              <div className="hidden md:flex items-center gap-2 text-sm text-slate-400 font-medium border-l border-border pl-4 px-3">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                  <User className="size-4 text-primary" strokeWidth={2} />
+                </div>
+                <span className="max-w-[120px] truncate text-slate-200">{user.first_name || user.name}</span>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleLogout}
-                className="flex items-center gap-2 h-10 rounded-full font-normal"
+                className="flex items-center gap-2 h-10 rounded-full font-medium border-border/50 hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-all"
               >
-                <LogOut className="size-4" strokeWidth={1.5} />
+                <LogOut className="size-4" strokeWidth={2} />
                 <span className="hidden sm:inline">Logout</span>
               </Button>
             </>
           )}
           {!user && (
-             <div className="flex items-center gap-2">
+             <div className="flex items-center gap-3">
                 <Link href="/login">
-                  <Button variant="ghost" className="rounded-full font-light">Login</Button>
+                  <Button variant="ghost" className="rounded-full font-medium text-slate-300 hover:text-white hover:bg-secondary">Login</Button>
                 </Link>
                 <Link href="/register">
-                  <Button className="rounded-full font-light px-6">Join</Button>
+                  <Button className="bg-primary hover:bg-primary/90 text-white rounded-full font-bold px-6 shadow-lg shadow-primary/20">Join</Button>
                 </Link>
              </div>
           )}

@@ -3,8 +3,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Badge } from '../ui/badge';
 import { apiService } from '../../lib/api';
-import { ShieldCheck, Star, Clock, MessageSquare, Award, ThumbsUp } from 'lucide-react';
+import { ShieldCheck, Star, Clock, MessageSquare, Award, ThumbsUp, MapPin, IndianRupee, Link as LinkIcon, Phone } from 'lucide-react';
 import Image from 'next/image';
+import { Button } from '@/components/ui/button';
 
 interface VendorProfileProps {
   params: {
@@ -134,10 +135,10 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-[#0f1115]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-light">Loading profile...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Loading Profile...</p>
         </div>
       </div>
     );
@@ -145,10 +146,10 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
 
   if (error || !vendor) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-light text-gray-900 mb-4">Vendor Not Found</h1>
-          <p className="text-gray-600 font-light">{error || 'The vendor profile you are looking for does not exist.'}</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#0f1115]">
+        <div className="text-center max-w-md p-8 border border-white/5 rounded-2xl bg-[#16191e]">
+          <h1 className="text-xl font-bold text-white mb-2">Profile Not Found</h1>
+          <p className="text-slate-400 text-sm">{error || 'The professional you are looking for does not exist.'}</p>
         </div>
       </div>
     );
@@ -160,8 +161,8 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            size={16}
-            className={star <= Math.round(rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}
+            size={12}
+            className={star <= Math.round(rating) ? "fill-primary text-primary" : "text-slate-600"}
           />
         ))}
       </div>
@@ -171,220 +172,192 @@ const VendorProfile: React.FC<VendorProfileProps> = ({ params }) => {
   const isVerified = vendor.verification_status === 'verified' || vendor.is_verified;
 
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-20">
-      <div className="container mx-auto px-4 py-12 max-w-6xl">
-        {/* Vendor Header */}
-        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm mb-8">
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
-            <div className="flex-1 space-y-6">
+    <div className="min-h-screen bg-[#0f1115] text-foreground font-sans pb-20">
+      {/* Cover Banner (Abstract) */}
+      <div className="h-48 w-full bg-gradient-to-r from-primary/10 to-[#16191e] border-b border-white/[0.03] relative overflow-hidden">
+         <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+      </div>
+
+      <div className="container mx-auto px-6 max-w-5xl -mt-16 relative z-10">
+        {/* Profile Header Card */}
+        <div className="bg-[#16191e] p-8 rounded-2xl border border-white/[0.05] shadow-2xl mb-8 flex flex-col md:flex-row gap-8 items-start">
+          <div className="flex-1 space-y-4">
+            <div className="flex items-start gap-4">
+              <div className="size-20 rounded-xl bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-primary/20 shrink-0">
+                 {vendor.business_name[0]}
+              </div>
               <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-4xl font-extralight tracking-tight text-slate-900">{vendor.business_name}</h1>
+                <div className="flex items-center gap-2 mb-1">
+                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">{vendor.business_name}</h1>
                   {isVerified && (
-                    <div className="bg-blue-500 text-white rounded-full p-1 shadow-sm" title="Verified Professional">
-                      <ShieldCheck size={20} />
+                    <div className="bg-primary/20 text-primary rounded-full p-1 border border-primary/30" title="Verified Professional">
+                      <ShieldCheck size={16} strokeWidth={2.5} />
                     </div>
                   )}
                 </div>
-
-                <div className="flex items-center gap-4 text-slate-600">
-                  <div className="flex items-center gap-2">
-                    {renderStars(parseFloat(vendor.average_rating))}
-                    <span className="text-sm font-normal">
-                      {vendor.average_rating} ({vendor.total_reviews} reviews)
-                    </span>
-                  </div>
-                  <span className="text-slate-300">|</span>
-                  <span className="text-sm font-light">{vendor.years_experience} years experience</span>
+                <div className="flex flex-wrap items-center gap-4 text-xs font-bold uppercase tracking-widest text-slate-400">
+                  <span className="flex items-center gap-1.5 text-white">
+                    <Star className="size-3.5 fill-primary text-primary" /> {vendor.average_rating} ({vendor.total_reviews} reviews)
+                  </span>
+                  <span className="hidden sm:inline">&bull;</span>
+                  <span>{vendor.years_experience} YRS EXP</span>
                 </div>
               </div>
-
-              <p className="text-slate-600 font-light leading-relaxed max-w-3xl text-lg">{vendor.description}</p>
-
-              <div className="flex flex-wrap gap-2">
-                {vendor.service_categories.map((category, index) => (
-                  <span key={index} className="bg-slate-100 text-slate-700 text-xs font-normal px-3 py-1.5 rounded-full border border-slate-200">
-                    {category}
-                  </span>
-                ))}
-              </div>
-
-              <div className="flex flex-wrap gap-6 text-sm text-slate-500 pt-2">
-                <span className="flex items-center gap-1.5 font-light">📍 {vendor.location}</span>
-                {vendor.phone && <span className="flex items-center gap-1.5 font-light">📞 {vendor.phone}</span>}
-                {vendor.website && (
-                  <a href={vendor.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 font-normal transition-colors underline underline-offset-4">
-                    🌐 Website
-                  </a>
-                )}
-              </div>
             </div>
 
-            <div className="md:w-64 space-y-4">
-              <button className="w-full bg-slate-900 text-white py-4 rounded-full hover:bg-slate-800 font-normal transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
-                Book Photographer
-              </button>
-              <button className="w-full bg-white text-slate-900 border border-slate-200 py-4 rounded-full hover:bg-slate-50 font-normal transition-all">
-                Send Message
-              </button>
+            <p className="text-slate-300 text-sm leading-relaxed max-w-2xl">{vendor.description}</p>
+
+            <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-400 pt-2">
+              <span className="flex items-center gap-1.5"><MapPin className="size-3.5" /> {vendor.location}</span>
+              {vendor.phone && <span className="flex items-center gap-1.5"><Phone className="size-3.5" /> {vendor.phone}</span>}
+              {vendor.website && (
+                <a href={vendor.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-primary hover:underline">
+                  <LinkIcon className="size-3.5" /> Website
+                </a>
+              )}
             </div>
+          </div>
+
+          <div className="w-full md:w-64 shrink-0 flex flex-col gap-3">
+            <Button className="w-full font-bold h-12 shadow-lg shadow-primary/20">
+              Request Booking
+            </Button>
+            <Button variant="outline" className="w-full font-bold h-12 border-white/[0.05] hover:bg-white/[0.02]">
+              Message
+            </Button>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="border-b border-slate-100">
-            <nav className="flex space-x-12 px-8">
-              {[
-                { id: 'services', label: 'Services', count: services.length },
-                { id: 'portfolio', label: 'Portfolio', count: portfolio.length },
-                { id: 'reviews', label: 'Reviews', count: vendor.total_reviews }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`py-6 px-1 border-b-2 font-normal text-sm transition-all relative ${activeTab === tab.id
-                      ? 'border-slate-900 text-slate-900'
-                      : 'border-transparent text-slate-400 hover:text-slate-600'
-                    }`}
-                >
-                  {tab.label}
-                  <span className="ml-2 text-xs opacity-60 font-light">({tab.count})</span>
-                </button>
-              ))}
-            </nav>
-          </div>
+        {/* Tab Navigation */}
+        <div className="flex gap-2 border-b border-white/[0.05] mb-8 overflow-x-auto hide-scrollbar">
+           {[
+            { id: 'services', label: 'Services', count: services.length },
+            { id: 'portfolio', label: 'Portfolio', count: portfolio.length },
+            { id: 'reviews', label: 'Reviews', count: vendor.total_reviews }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`px-6 py-3 text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap border-b-2 ${
+                activeTab === tab.id
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-slate-500 hover:text-slate-300 hover:bg-white/[0.02]'
+              }`}
+            >
+              {tab.label} <span className="opacity-50 ml-1">({tab.count})</span>
+            </button>
+          ))}
+        </div>
 
-          <div className="p-8">
-            {/* Services Tab */}
-            {activeTab === 'services' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {services.length > 0 ? services.map((service) => (
-                  <div key={service.id} className="group border border-slate-100 p-6 rounded-2xl hover:border-slate-300 hover:shadow-xl transition-all duration-300">
-                    <div className="mb-4">
-                      <span className="text-[10px] uppercase tracking-widest font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md">
-                        {service.category.name}
-                      </span>
+        <div className="min-h-[400px]">
+          {/* Services Tab */}
+          {activeTab === 'services' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {services.length > 0 ? services.map((service) => (
+                <div key={service.id} className="group p-5 rounded-xl border border-white/[0.03] bg-[#16191e] hover:border-primary/30 transition-all flex flex-col cursor-pointer">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="text-base font-bold text-white group-hover:text-primary transition-colors">{service.name}</h3>
+                    <Badge variant="secondary" className="text-[9px] uppercase tracking-widest bg-white/[0.02] text-slate-400 border-white/[0.05]">{service.category.name}</Badge>
+                  </div>
+                  <p className="text-slate-400 text-xs line-clamp-2 mb-5 leading-relaxed flex-1">{service.description}</p>
+                  <div className="flex items-center justify-between border-t border-white/[0.03] pt-4 mt-auto">
+                    <div className="flex items-center gap-1.5 text-white font-bold">
+                       <IndianRupee className="size-3.5 text-primary" />
+                       <span>{service.formatted_price}</span>
                     </div>
-                    <h3 className="text-xl font-normal mb-3 group-hover:text-blue-600 transition-colors">{service.name}</h3>
-                    <p className="text-slate-500 font-light text-sm line-clamp-3 mb-6 leading-relaxed">{service.description}</p>
-                    <div className="flex justify-between items-end">
-                      <div className="space-y-1">
-                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider leading-none">Starting from</p>
-                        <span className="text-2xl font-light text-slate-900">
-                          {service.formatted_price}
-                        </span>
+                    <span className="text-[10px] font-bold text-primary uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">View Details &rarr;</span>
+                  </div>
+                </div>
+              )) : (
+                <div className="col-span-full py-20 text-center border border-dashed border-white/[0.05] rounded-xl">
+                   <p className="text-slate-500 text-sm font-medium">No services listed yet.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Portfolio Tab */}
+          {activeTab === 'portfolio' && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {portfolio.length > 0 ? portfolio.map((item) => (
+                <div key={item.id} className="group relative aspect-square rounded-lg overflow-hidden border border-white/[0.03] bg-[#16191e] cursor-pointer">
+                  {item.primary_image_url ? (
+                    <Image
+                      src={item.primary_image_url}
+                      alt={item.title}
+                      fill
+                      unoptimized
+                      className="object-cover transition-transform duration-700 group-hover:scale-110 grayscale-[20%] group-hover:grayscale-0"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-600 text-xs font-bold uppercase">No Image</div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-2 group-hover:translate-y-0">
+                    <h3 className="text-xs font-bold text-white truncate">{item.title}</h3>
+                    <p className="text-[9px] text-slate-400 uppercase tracking-widest">{item.image_count} photos</p>
+                  </div>
+                </div>
+              )) : (
+                <div className="col-span-full py-20 text-center border border-dashed border-white/[0.05] rounded-xl">
+                   <p className="text-slate-500 text-sm font-medium">No portfolio work added yet.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Reviews Tab */}
+          {activeTab === 'reviews' && (
+            <div className="space-y-8 max-w-3xl">
+              {reviews.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      { label: 'Quality', val: 4.9 },
+                      { label: 'Communication', val: 4.8 },
+                      { label: 'Value', val: 4.7 },
+                      { label: 'Punctuality', val: 5.0 }
+                    ].map((stat) => (
+                      <div key={stat.label} className="p-4 rounded-xl border border-white/[0.03] bg-[#16191e] text-center">
+                        <p className="text-[9px] uppercase tracking-widest text-slate-500 mb-1">{stat.label}</p>
+                        <p className="text-lg font-bold text-white">{stat.val.toFixed(1)}</p>
                       </div>
-                      <button className="bg-slate-50 text-slate-900 px-5 py-2.5 rounded-full hover:bg-slate-900 hover:text-white transition-all text-sm font-normal">
-                        Details
-                      </button>
-                    </div>
+                    ))}
                   </div>
-                )) : (
-                  <p className="col-span-full text-slate-400 text-center py-12 font-light italic">No services listed yet.</p>
-                )}
-              </div>
-            )}
 
-            {/* Portfolio Tab */}
-            {activeTab === 'portfolio' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {portfolio.length > 0 ? portfolio.map((item) => (
-                  <div key={item.id} className="group cursor-pointer">
-                    <div className="aspect-[4/3] rounded-2xl overflow-hidden mb-4 bg-slate-100 relative">
-                      {item.primary_image_url ? (
-                        <Image
-                          src={item.primary_image_url}
-                          alt={item.title}
-                          fill
-                          unoptimized
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-300">No images</div>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-normal text-slate-900">{item.title}</h3>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{item.category}</span>
-                    </div>
-                    <p className="text-xs text-slate-500 font-light">{item.image_count} photos</p>
-                  </div>
-                )) : (
-                  <p className="col-span-full text-slate-400 text-center py-12 font-light italic">No portfolio work added yet.</p>
-                )}
-              </div>
-            )}
-
-            {/* Reviews Tab */}
-            {activeTab === 'reviews' && (
-              <div className="space-y-10 max-w-4xl mx-auto">
-                {reviews.length > 0 ? (
-                  <>
-                    {/* Granular Breakdown (Simplified UI version) */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-slate-50 rounded-2xl border border-slate-100 mb-10">
-                      {[
-                        { label: 'Quality', icon: Award },
-                        { label: 'Communication', icon: MessageSquare },
-                        { label: 'Value', icon: ThumbsUp },
-                        { label: 'Punctuality', icon: Clock }
-                      ].map((stat) => (
-                        <div key={stat.label} className="text-center space-y-1">
-                          <stat.icon className="size-4 mx-auto text-slate-400" />
-                          <p className="text-[10px] uppercase font-bold text-slate-500">{stat.label}</p>
-                          <p className="text-sm font-normal">4.9/5</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="space-y-8 divide-y divide-slate-100">
-                      {reviews.map((review) => (
-                        <div key={review.id} className="pt-8 first:pt-0">
-                          <div className="flex justify-between items-start mb-4">
-                            <div className="space-y-1">
-                              <p className="font-normal text-slate-900">{review.customer.name}</p>
-                              <div className="flex items-center gap-3">
-                                {renderStars(review.rating)}
-                                <span className="text-xs text-slate-400 font-light">
-                                  {new Date(review.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })}
-                                </span>
-                              </div>
-                            </div>
-                            <Badge variant="outline" className="text-[10px] font-light rounded-full border-slate-200">
-                              {review.service.name}
-                            </Badge>
+                  <div className="space-y-4">
+                    {reviews.map((review) => (
+                      <div key={review.id} className="p-5 rounded-xl border border-white/[0.03] bg-[#16191e]">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <p className="font-bold text-sm text-white">{review.customer.name}</p>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-widest">
+                              {new Date(review.created_at).toLocaleDateString()}
+                            </p>
                           </div>
-                          <p className="text-slate-600 font-light leading-relaxed italic">"{review.comment}"</p>
-                          
-                          {(review.quality_rating || review.communication_rating) && (
-                            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
-                              {review.quality_rating && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[10px] uppercase font-bold text-slate-400">Quality</span>
-                                  <div className="flex gap-0.5">{renderStars(review.quality_rating)}</div>
-                                </div>
-                              )}
-                              {review.communication_rating && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[10px] uppercase font-bold text-slate-400">Comm.</span>
-                                  <div className="flex gap-0.5">{renderStars(review.communication_rating)}</div>
-                                </div>
-                              )}
-                            </div>
-                          )}
+                          <div className="flex items-center gap-2">
+                             <Badge variant="outline" className="text-[9px] uppercase tracking-widest border-white/[0.05] text-slate-400">
+                               {review.service.name}
+                             </Badge>
+                             <div className="flex items-center gap-1 bg-white/[0.02] px-2 py-1 rounded border border-white/[0.02]">
+                                <Star size={10} className="fill-primary text-primary" />
+                                <span className="text-[10px] font-bold text-white">{review.rating.toFixed(1)}</span>
+                             </div>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
-                    <Star className="size-12 mx-auto mb-4 text-slate-200" strokeWidth={1} />
-                    <p className="text-slate-500 font-light italic">Be the first to review this photographer!</p>
+                        <p className="text-slate-300 text-sm font-light leading-relaxed">"{review.comment}"</p>
+                      </div>
+                    ))}
                   </div>
-                )}
-              </div>
-            )}
-          </div>
+                </>
+              ) : (
+                <div className="py-20 text-center border border-dashed border-white/[0.05] rounded-xl">
+                  <Star className="size-8 mx-auto mb-3 text-slate-600" />
+                  <p className="text-slate-500 text-sm font-medium">Be the first to review this professional.</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
