@@ -2,18 +2,18 @@
 
 require 'rails_helper'
 
-RSpec.describe ImageProcessingJob, type: :job do
+RSpec.describe ImageProcessingJob do
   let(:service) { create(:service) }
   let(:service_image) { create(:service_image, service: service) }
 
   describe '#perform' do
     context 'with non-existent service image' do
       it 'logs warning and does not raise error' do
-        expect(Rails.logger).to receive(:warn).with('ServiceImage 999 not found, skipping processing')
+        allow(Rails.logger).to receive(:warn)
 
-        expect do
-          described_class.new.perform(999)
-        end.not_to raise_error
+        described_class.new.perform(999)
+
+        expect(Rails.logger).to have_received(:warn).with('ServiceImage 999 not found, skipping processing')
       end
     end
 

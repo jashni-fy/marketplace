@@ -4,8 +4,8 @@ require 'rails_helper'
 
 RSpec.describe ConflictResolutionService, type: :service do
   let(:vendor) { create(:user, :vendor) }
-  let(:customer1) { create(:user, :customer) }
-  let(:customer2) { create(:user, :customer) }
+  let(:customer_one) { create(:user, :customer) }
+  let(:customer_two) { create(:user, :customer) }
   let(:service) { create(:service, vendor_profile: vendor.vendor_profile) }
   let(:event_date) { 1.week.from_now.change(hour: 10, min: 0) }
   let(:event_end_date) { event_date + 2.hours }
@@ -33,19 +33,17 @@ RSpec.describe ConflictResolutionService, type: :service do
     end
 
     context 'when there are non-conflicting bookings' do
-      let!(:early_booking) do
+      before do
         create(:booking,
-               customer: customer1,
+               customer: customer_one,
                vendor: vendor,
                service: service,
                event_date: event_date - 4.hours,
                event_end_date: event_date - 2.hours,
                status: :accepted)
-      end
 
-      let!(:late_booking) do
         create(:booking,
-               customer: customer2,
+               customer: customer_two,
                vendor: vendor,
                service: service,
                event_date: event_end_date + 1.hour,
@@ -67,7 +65,7 @@ RSpec.describe ConflictResolutionService, type: :service do
     context 'when there are conflicting bookings' do
       let!(:overlapping_booking) do
         create(:booking,
-               customer: customer1,
+               customer: customer_one,
                vendor: vendor,
                service: service,
                event_date: event_date + 1.hour,
@@ -113,7 +111,7 @@ RSpec.describe ConflictResolutionService, type: :service do
     context 'when excluding a specific booking' do
       let!(:existing_booking) do
         create(:booking,
-               customer: customer1,
+               customer: customer_one,
                vendor: vendor,
                service: service,
                event_date: event_date,
@@ -134,7 +132,7 @@ RSpec.describe ConflictResolutionService, type: :service do
 
       it 'includes other conflicting bookings' do
         other_booking = build(:booking,
-                              customer: customer2,
+                              customer: customer_two,
                               vendor: vendor,
                               service: service,
                               event_date: event_date + 30.minutes,
@@ -157,7 +155,7 @@ RSpec.describe ConflictResolutionService, type: :service do
       it 'uses 2 hours as default duration' do
         # Create a booking that would conflict with default 2-hour duration
         create(:booking,
-               customer: customer1,
+               customer: customer_one,
                vendor: vendor,
                service: service,
                event_date: event_date + 1.hour,
@@ -178,7 +176,7 @@ RSpec.describe ConflictResolutionService, type: :service do
   describe '#conflicting_bookings' do
     let!(:conflicting_booking) do
       create(:booking,
-             customer: customer1,
+             customer: customer_one,
              vendor: vendor,
              service: service,
              event_date: event_date + 1.hour,
@@ -188,7 +186,7 @@ RSpec.describe ConflictResolutionService, type: :service do
 
     let!(:non_conflicting_booking) do
       create(:booking,
-             customer: customer2,
+             customer: customer_two,
              vendor: vendor,
              service: service,
              event_date: event_date + 5.hours,
@@ -212,7 +210,7 @@ RSpec.describe ConflictResolutionService, type: :service do
   describe '#suggest_alternative_times' do
     let!(:existing_booking) do
       create(:booking,
-             customer: customer1,
+             customer: customer_one,
              vendor: vendor,
              service: service,
              event_date: event_date,
@@ -232,11 +230,11 @@ RSpec.describe ConflictResolutionService, type: :service do
       expect(alternatives).not_to be_empty
 
       # Should suggest times that don't conflict
-      alternatives.each do |alt|
-        expect(alt).to have_key(:start_time)
-        expect(alt).to have_key(:end_time)
-        expect(alt).to have_key(:duration_hours)
-      end
+      expect(alternatives).to all(
+        have_key(:start_time)
+          .and(have_key(:end_time))
+          .and(have_key(:duration_hours))
+      )
     end
 
     it 'returns empty array when no availability slots exist' do

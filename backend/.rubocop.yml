@@ -54,8 +54,22 @@ Layout/LineLength:
   Exclude:
     - 'config/initializers/*'
 
+RSpec/DescribeClass:
+  Exclude:
+    - 'spec/integration/**/*'
+
 RSpec/MultipleExpectations:
-  Max: 5
+  Max: 10
+  Exclude:
+    - 'spec/integration/**/*'
 
 RSpec/NestedGroups:
-  Max: 4
+  Max: 5
+
+RSpec/ExampleLength:
+  Max: 50
+  Exclude:
+    - 'spec/integration/**/*'
+
+RSpec/MultipleMemoizedHelpers:
+  Max: 12

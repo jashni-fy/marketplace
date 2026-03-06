@@ -74,7 +74,7 @@ RSpec.describe PortfolioManagementService, type: :service do
 
   describe '#bulk_upload_images' do
     let(:portfolio_item) { create(:portfolio_item, vendor_profile: vendor_profile) }
-    let(:mock_images) { [double('image1'), double('image2')] }
+    let(:mock_images) { [instance_double(ActiveStorage::Attached::One), instance_double(ActiveStorage::Attached::One)] }
 
     it 'uploads images successfully' do
       allow(portfolio_item.images).to receive(:attach)
@@ -95,13 +95,17 @@ RSpec.describe PortfolioManagementService, type: :service do
   end
 
   describe '#reorder_portfolio_items' do
-    let!(:item1) { create(:portfolio_item, vendor_profile: vendor_profile, category: 'photography', display_order: 1) }
-    let!(:item2) { create(:portfolio_item, vendor_profile: vendor_profile, category: 'photography', display_order: 2) }
+    let!(:portfolio_item_one) do
+      create(:portfolio_item, vendor_profile: vendor_profile, category: 'photography', display_order: 1)
+    end
+    let!(:portfolio_item_two) do
+      create(:portfolio_item, vendor_profile: vendor_profile, category: 'photography', display_order: 2)
+    end
 
     let(:item_orders) do
       [
-        { id: item1.id, display_order: 2 },
-        { id: item2.id, display_order: 1 }
+        { id: portfolio_item_one.id, display_order: 2 },
+        { id: portfolio_item_two.id, display_order: 1 }
       ]
     end
 
@@ -123,8 +127,10 @@ RSpec.describe PortfolioManagementService, type: :service do
   end
 
   describe '#get_portfolio_summary' do
-    let!(:featured_item) { create(:portfolio_item, :featured, vendor_profile: vendor_profile, category: 'photography') }
-    let!(:regular_item) { create(:portfolio_item, vendor_profile: vendor_profile, category: 'videography') }
+    before do
+      create(:portfolio_item, :featured, vendor_profile: vendor_profile, category: 'photography')
+      create(:portfolio_item, vendor_profile: vendor_profile, category: 'videography')
+    end
 
     it 'returns comprehensive portfolio summary' do
       result = service.get_portfolio_summary
@@ -149,28 +155,28 @@ RSpec.describe PortfolioManagementService, type: :service do
   end
 
   describe '#set_featured_items' do
-    let!(:item1) { create(:portfolio_item, vendor_profile: vendor_profile, is_featured: false) }
-    let!(:item2) { create(:portfolio_item, vendor_profile: vendor_profile, is_featured: false) }
+    let!(:portfolio_item_one) { create(:portfolio_item, vendor_profile: vendor_profile, is_featured: false) }
+    let!(:portfolio_item_two) { create(:portfolio_item, vendor_profile: vendor_profile, is_featured: false) }
 
     it 'sets items as featured successfully' do
-      result = service.set_featured_items([item1.id, item2.id], true)
+      result = service.set_featured_items([portfolio_item_one.id, portfolio_item_two.id], true)
 
       expect(result[:success]).to be true
       expect(result[:updated_count]).to eq(2)
 
-      item1.reload
-      item2.reload
-      expect(item1.is_featured).to be true
-      expect(item2.is_featured).to be true
+      portfolio_item_one.reload
+      portfolio_item_two.reload
+      expect(portfolio_item_one.is_featured).to be true
+      expect(portfolio_item_two.is_featured).to be true
     end
 
     it 'unsets featured status' do
-      item1.update(is_featured: true)
-      result = service.set_featured_items([item1.id], false)
+      portfolio_item_one.update(is_featured: true)
+      result = service.set_featured_items([portfolio_item_one.id], false)
 
       expect(result[:success]).to be true
-      item1.reload
-      expect(item1.is_featured).to be false
+      portfolio_item_one.reload
+      expect(portfolio_item_one.is_featured).to be false
     end
   end
 
@@ -187,34 +193,46 @@ RSpec.describe PortfolioManagementService, type: :service do
 
   describe 'private methods' do
     describe '#reorder_items_in_category' do
-      let!(:item1) do
+      let(:wedding_photo) do
         create(:portfolio_item, vendor_profile: vendor_profile, category: 'photography', display_order: 3)
       end
-      let!(:item2) do
+      let(:portrait_photo) do
         create(:portfolio_item, vendor_profile: vendor_profile, category: 'photography', display_order: 1)
       end
-      let!(:item3) do
+      let(:event_photo) do
         create(:portfolio_item, vendor_profile: vendor_profile, category: 'photography', display_order: 5)
+      end
+
+      before do
+        wedding_photo
+        portrait_photo
+        event_photo
       end
 
       it 'reorders items sequentially' do
         service.send(:reorder_items_in_category, 'photography')
 
-        item1.reload
-        item2.reload
-        item3.reload
+        wedding_photo.reload
+        portrait_photo.reload
+        event_photo.reload
 
         # Items should be reordered by their original display_order, then created_at
-        expect([item2, item1, item3].map(&:display_order)).to eq([1, 2, 3])
+        # portrait_photo(1) -> 1, wedding_photo(3) -> 2, event_photo(5) -> 3
+        expect([portrait_photo, wedding_photo, event_photo].map(&:display_order)).to eq([1, 2, 3])
       end
     end
 
     describe '#get_next_display_order' do
-      let!(:item1) do
+      let(:item_low_order) do
         create(:portfolio_item, vendor_profile: vendor_profile, category: 'photography', display_order: 3)
       end
-      let!(:item2) do
+      let(:item_high_order) do
         create(:portfolio_item, vendor_profile: vendor_profile, category: 'photography', display_order: 7)
+      end
+
+      before do
+        item_low_order
+        item_high_order
       end
 
       it 'returns next display order for category' do

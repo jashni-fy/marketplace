@@ -49,12 +49,12 @@ FactoryBot.define do
     service_categories { %w[Photography Videography].sample(2).join(', ') }
     business_license { Faker::Alphanumeric.alphanumeric(number: 10).upcase }
     years_experience { rand(0..20) }
-    is_verified { false }
+    verification_status { :unverified }
     average_rating { 0.0 }
     total_reviews { 0 }
 
     trait :verified do
-      is_verified { true }
+      verification_status { :verified }
     end
 
     trait :with_reviews do

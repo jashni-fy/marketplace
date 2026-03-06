@@ -71,15 +71,19 @@ class ServiceImage < ApplicationRecord
   def self.reorder_for_service(service_id, image_ids)
     transaction do
       image_ids.each_with_index do |image_id, index|
+        # rubocop:disable Rails/SkipsModelValidations
         where(id: image_id, service_id: service_id).update_all(display_order: index)
+        # rubocop:enable Rails/SkipsModelValidations
       end
     end
   end
 
   def self.set_primary_for_service(service_id, image_id)
     transaction do
+      # rubocop:disable Rails/SkipsModelValidations
       where(service_id: service_id).update_all(is_primary: false)
       where(id: image_id, service_id: service_id).update_all(is_primary: true)
+      # rubocop:enable Rails/SkipsModelValidations
     end
   end
 

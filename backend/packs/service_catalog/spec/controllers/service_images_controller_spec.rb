@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe ServiceImagesController, type: :controller do
+RSpec.describe ServiceImagesController do
   let(:vendor_user) { create(:user, :vendor) }
   let(:customer_user) { create(:user, :customer) }
   let(:service) { create(:service, vendor_profile: vendor_user.vendor_profile) }
@@ -129,7 +129,7 @@ RSpec.describe ServiceImagesController, type: :controller do
           post :create, params: { service_id: service.id }.merge(invalid_image_params)
         end.not_to change(ServiceImage, :count)
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         json_response = JSON.parse(response.body)
         expect(json_response['error']).to eq('Image upload failed')
         expect(json_response['details']).to be_an(Array)
@@ -192,15 +192,15 @@ RSpec.describe ServiceImagesController, type: :controller do
   end
 
   describe 'POST #reorder' do
-    let!(:image1) { create(:service_image, service: service, display_order: 0) }
-    let!(:image2) { create(:service_image, service: service, display_order: 1) }
+    let!(:first_service_image) { create(:service_image, service: service, display_order: 0) }
+    let!(:second_service_image) { create(:service_image, service: service, display_order: 1) }
 
     before { sign_in vendor_user }
 
     it 'reorders the images' do
       post :reorder, params: {
         service_id: service.id,
-        image_ids: [image2.id, image1.id]
+        image_ids: [second_service_image.id, first_service_image.id]
       }
 
       expect(response).to have_http_status(:ok)

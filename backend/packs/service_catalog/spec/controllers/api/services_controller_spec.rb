@@ -2,17 +2,18 @@
 
 require 'rails_helper'
 
-RSpec.describe Api::ServicesController, type: :controller do
+RSpec.describe Api::ServicesController do
   let(:vendor_user) { create(:user, role: 'vendor') }
   let(:customer_user) { create(:user, role: 'customer') }
   let(:vendor_profile) { vendor_user.vendor_profile }
   let(:service_category) { create(:service_category, :photography) }
   let(:videography_category) { create(:service_category, :videography) }
 
-  let!(:photography_service) do
+  let(:photography_service) do
     create(:service,
            name: 'Wedding Photography',
-           description: 'Professional wedding photography services in New York capturing your special moments with artistic flair',
+           description: 'Professional wedding photography services in New York capturing ' \
+                        'your special moments with artistic flair',
            base_price: 1000,
            pricing_type: 'package',
            status: 'active',
@@ -20,10 +21,11 @@ RSpec.describe Api::ServicesController, type: :controller do
            service_category: service_category)
   end
 
-  let!(:portrait_service) do
+  let(:portrait_service) do
     create(:service,
            name: 'Portrait Photography',
-           description: 'Studio portrait photography sessions with professional lighting and editing for stunning results',
+           description: 'Studio portrait photography sessions with professional lighting ' \
+                        'and editing for stunning results',
            base_price: 200,
            pricing_type: 'hourly',
            status: 'active',
@@ -31,10 +33,11 @@ RSpec.describe Api::ServicesController, type: :controller do
            service_category: service_category)
   end
 
-  let!(:videography_service) do
+  let(:videography_service) do
     create(:service,
            name: 'Event Videography',
-           description: 'Professional event video recording with multi-camera setup and post-production editing services',
+           description: 'Professional event video recording with multi-camera setup ' \
+                        'and post-production editing services',
            base_price: 1500,
            pricing_type: 'package',
            status: 'active',
@@ -42,13 +45,21 @@ RSpec.describe Api::ServicesController, type: :controller do
            service_category: videography_category)
   end
 
-  let!(:inactive_service) do
+  let(:inactive_service) do
     create(:service,
            name: 'Inactive Service',
-           description: 'This service is currently inactive and not available for booking at this time',
+           description: 'This service is currently inactive and not available for booking ' \
+                        'at this time',
            status: 'inactive',
            vendor_profile: vendor_profile,
            service_category: service_category)
+  end
+
+  before do
+    photography_service
+    portrait_service
+    videography_service
+    inactive_service
   end
 
   describe 'GET #index' do
@@ -284,7 +295,8 @@ RSpec.describe Api::ServicesController, type: :controller do
         {
           service: {
             name: 'New Photography Service',
-            description: 'A comprehensive new photography service offering professional quality images for all occasions',
+            description: 'A comprehensive new photography service offering ' \
+                         'professional quality images for all occasions',
             base_price: 300,
             pricing_type: 'hourly',
             service_category_id: service_category.id,
@@ -318,7 +330,7 @@ RSpec.describe Api::ServicesController, type: :controller do
           post :create, params: invalid_params
         end.not_to change(Service, :count)
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         json_response = JSON.parse(response.body)
 
         expect(json_response['error']).to eq('Service creation failed')
@@ -391,7 +403,7 @@ RSpec.describe Api::ServicesController, type: :controller do
 
         put :update, params: invalid_update_params
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         json_response = JSON.parse(response.body)
 
         expect(json_response['error']).to eq('Service update failed')

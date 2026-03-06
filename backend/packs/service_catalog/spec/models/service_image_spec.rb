@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe ServiceImage, type: :model do
+RSpec.describe ServiceImage do
   let(:service) { create(:service) }
   let(:service_image) { build(:service_image, service: service) }
 
@@ -80,17 +80,17 @@ RSpec.describe ServiceImage, type: :model do
     let(:other_service) { create(:service) }
     let!(:first_image) do
       img = create(:service_image, service: service, display_order: 1)
-      img.update_column(:is_primary, false)
+      img.update(is_primary: false)
       img
     end
     let!(:second_image) do
       img = create(:service_image, service: other_service, display_order: 0)
-      img.update_column(:is_primary, false)
+      img.update(is_primary: false)
       img
     end
     let!(:primary_image) do
       img = create(:service_image, service: service, display_order: 2)
-      img.update_column(:is_primary, true)
+      img.update(is_primary: true)
       img
     end
 
@@ -195,17 +195,18 @@ RSpec.describe ServiceImage, type: :model do
   end
 
   describe 'class methods' do
-    let!(:image1) { create(:service_image, service: service, display_order: 2) }
-    let!(:image2) { create(:service_image, service: service, display_order: 1) }
-    let!(:image3) { create(:service_image, service: service, display_order: 0) }
+    let!(:service_image_one) { create(:service_image, service: service, display_order: 2) }
+    let!(:service_image_two) { create(:service_image, service: service, display_order: 1) }
+    let!(:service_image_three) { create(:service_image, service: service, display_order: 0) }
 
     describe '.reorder_for_service' do
       it 'reorders images based on provided IDs' do
-        described_class.reorder_for_service(service.id, [image1.id, image3.id, image2.id])
+        described_class.reorder_for_service(service.id,
+                                            [service_image_one.id, service_image_three.id, service_image_two.id])
 
-        expect(image1.reload.display_order).to eq(0)
-        expect(image3.reload.display_order).to eq(1)
-        expect(image2.reload.display_order).to eq(2)
+        expect(service_image_one.reload.display_order).to eq(0)
+        expect(service_image_three.reload.display_order).to eq(1)
+        expect(service_image_two.reload.display_order).to eq(2)
       end
     end
 
@@ -213,12 +214,12 @@ RSpec.describe ServiceImage, type: :model do
       it 'sets specified image as primary and others as non-primary' do
         # Create first image which will be primary by default, then create another
         primary_img = create(:service_image, service: service, is_primary: false)
-        primary_img.update_column(:is_primary, true)
+        primary_img.update(is_primary: true)
 
-        described_class.set_primary_for_service(service.id, image2.id)
+        described_class.set_primary_for_service(service.id, service_image_two.id)
 
-        expect(image2.reload.is_primary).to be true
-        expect(service.service_images.where.not(id: image2.id).pluck(:is_primary)).to all(be false)
+        expect(service_image_two.reload.is_primary).to be true
+        expect(service.service_images.where.not(id: service_image_two.id).pluck(:is_primary)).to all(be false)
       end
     end
   end

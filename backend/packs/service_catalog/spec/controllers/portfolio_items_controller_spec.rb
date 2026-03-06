@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe PortfolioItemsController, type: :controller do
+RSpec.describe PortfolioItemsController do
   let(:vendor_user) { create(:user, :vendor) }
   let(:customer_user) { create(:user, :customer) }
   let(:vendor_profile) { vendor_user.vendor_profile }
@@ -11,8 +11,13 @@ RSpec.describe PortfolioItemsController, type: :controller do
 
   describe 'GET #index' do
     context 'when accessing vendor specific portfolio' do
-      let!(:portfolio_item1) { create(:portfolio_item, vendor_profile: vendor_profile, category: 'weddings') }
-      let!(:portfolio_item2) { create(:portfolio_item, vendor_profile: vendor_profile, category: 'events') }
+      let(:wedding_item) { create(:portfolio_item, vendor_profile: vendor_profile, category: 'weddings') }
+      let(:event_item) { create(:portfolio_item, vendor_profile: vendor_profile, category: 'events') }
+
+      before do
+        wedding_item
+        event_item
+      end
 
       it 'returns vendor portfolio items' do
         get :index, params: { vendor_profile_id: vendor_profile.id }
@@ -133,7 +138,7 @@ RSpec.describe PortfolioItemsController, type: :controller do
             post :create, params: invalid_params
           end.not_to change(PortfolioItem, :count)
 
-          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response).to have_http_status(:unprocessable_content)
           json_response = JSON.parse(response.body)
           expect(json_response['errors']).to be_an(Array)
         end
@@ -302,15 +307,19 @@ RSpec.describe PortfolioItemsController, type: :controller do
   describe 'POST #reorder' do
     before { sign_in vendor_user }
 
-    let!(:item1) { create(:portfolio_item, vendor_profile: vendor_profile, category: 'weddings', display_order: 0) }
-    let!(:item2) { create(:portfolio_item, vendor_profile: vendor_profile, category: 'weddings', display_order: 1) }
+    let!(:first_portfolio_item) do
+      create(:portfolio_item, vendor_profile: vendor_profile, category: 'weddings', display_order: 0)
+    end
+    let!(:second_portfolio_item) do
+      create(:portfolio_item, vendor_profile: vendor_profile, category: 'weddings', display_order: 1)
+    end
 
     it 'reorders portfolio items' do
       post :reorder, params: {
         category: 'weddings',
         item_orders: [
-          { id: item2.id, display_order: 0 },
-          { id: item1.id, display_order: 1 }
+          { id: second_portfolio_item.id, display_order: 0 },
+          { id: first_portfolio_item.id, display_order: 1 }
         ]
       }
 
@@ -337,20 +346,20 @@ RSpec.describe PortfolioItemsController, type: :controller do
   describe 'PATCH #set_featured' do
     before { sign_in vendor_user }
 
-    let!(:item1) { create(:portfolio_item, vendor_profile: vendor_profile, is_featured: false) }
-    let!(:item2) { create(:portfolio_item, vendor_profile: vendor_profile, is_featured: false) }
+    let!(:unfeatured_item_one) { create(:portfolio_item, vendor_profile: vendor_profile, is_featured: false) }
+    let!(:unfeatured_item_two) { create(:portfolio_item, vendor_profile: vendor_profile, is_featured: false) }
 
     it 'sets items as featured' do
       patch :set_featured, params: {
-        item_ids: [item1.id, item2.id],
+        item_ids: [unfeatured_item_one.id, unfeatured_item_two.id],
         featured: true
       }
 
       expect(response).to have_http_status(:ok)
       json_response = JSON.parse(response.body)
       expect(json_response['message']).to include('Successfully updated')
-      expect(item1.reload.is_featured).to be true
-      expect(item2.reload.is_featured).to be true
+      expect(unfeatured_item_one.reload.is_featured).to be true
+      expect(unfeatured_item_two.reload.is_featured).to be true
     end
   end
 end

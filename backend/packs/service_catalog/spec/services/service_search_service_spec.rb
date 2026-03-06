@@ -9,51 +9,62 @@ RSpec.describe ServiceSearchService, type: :service do
       vp.update!(business_name: 'Test Photography', location: 'New York, NY')
     end
   end
-  let!(:category1) { create(:service_category, :photography) }
-  let!(:category2) { create(:service_category, :videography) }
+  let(:photography_category) { create(:service_category, :photography) }
+  let(:videography_category) { create(:service_category, :videography) }
 
-  let!(:service1) do
+  let(:wedding_service) do
     create(:service,
            name: 'Wedding Photography',
-           description: 'Professional wedding photography services capturing your special moments with artistic flair and attention to detail',
+           description: 'Professional wedding photography services capturing your special ' \
+                        'moments with artistic flair and attention to detail',
            base_price: 1000,
            pricing_type: 'package',
            status: 'active',
            vendor_profile: vendor_profile,
-           service_category: category1)
+           service_category: photography_category)
   end
 
-  let!(:service2) do
+  let(:portrait_service) do
     create(:service,
            name: 'Portrait Photography',
-           description: 'Studio portrait photography sessions with professional lighting and editing for stunning results',
+           description: 'Studio portrait photography sessions with professional lighting ' \
+                        'and editing for stunning results',
            base_price: 200,
            pricing_type: 'hourly',
            status: 'active',
            vendor_profile: vendor_profile,
-           service_category: category1)
+           service_category: photography_category)
   end
 
-  let!(:service3) do
+  let(:video_service) do
     create(:service,
            name: 'Event Videography',
-           description: 'Professional event video recording with multi-camera setup and post-production editing services',
+           description: 'Professional event video recording with multi-camera setup ' \
+                        'and post-production editing services',
            base_price: 1500,
            pricing_type: 'package',
            status: 'active',
            vendor_profile: vendor_profile,
-           service_category: category2)
+           service_category: videography_category)
   end
 
-  let!(:inactive_service) do
+  let(:inactive_service) do
     create(:service,
            name: 'Inactive Service',
-           description: 'This service is currently inactive and not available for booking at this time',
+           description: 'This service is currently inactive and not available for booking ' \
+                        'at this time',
            base_price: 500,
            pricing_type: 'hourly',
            status: 'inactive',
            vendor_profile: vendor_profile,
-           service_category: category1)
+           service_category: photography_category)
+  end
+
+  before do
+    wedding_service
+    portrait_service
+    video_service
+    inactive_service
   end
 
   describe '#call' do
@@ -101,11 +112,11 @@ RSpec.describe ServiceSearchService, type: :service do
 
     context 'with category filter' do
       it 'filters by category' do
-        result = described_class.new(category_id: category1.id).call
+        result = described_class.new(category_id: photography_category.id).call
 
         expect(result[:services].count).to eq(2)
-        expect(result[:services].map(&:service_category_id)).to all(eq(category1.id))
-        expect(result[:filters][:category_id]).to eq(category1.id)
+        expect(result[:services].map(&:service_category_id)).to all(eq(photography_category.id))
+        expect(result[:filters][:category_id]).to eq(photography_category.id)
       end
     end
 
@@ -230,7 +241,7 @@ RSpec.describe ServiceSearchService, type: :service do
       it 'applies multiple filters correctly' do
         result = described_class.new(
           query: 'Photography',
-          category_id: category1.id,
+          category_id: photography_category.id,
           min_price: 100,
           max_price: 500
         ).call

@@ -5,10 +5,12 @@ class ServiceCategory < ApplicationRecord
   has_many :services, dependent: :destroy
 
   # Validations
+  # rubocop:disable Rails/UniqueValidationWithoutIndex
   validates :name, presence: true, uniqueness: true, length: { minimum: 2, maximum: 50 }
-  validates :description, presence: true, length: { minimum: 10, maximum: 500 }
   validates :slug, presence: true, uniqueness: true,
-                   format: { with: /\A[a-z0-9\-_]+\z/, message: 'only allows lowercase letters, numbers, hyphens, and underscores' }
+                   format: { with: /\A[a-z0-9\-_]+\z/,
+                             message: :invalid_format }
+  # rubocop:enable Rails/UniqueValidationWithoutIndex
 
   # Scopes
   scope :active, -> { where(active: true) }

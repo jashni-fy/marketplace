@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe 'GraphQL Search Integration', type: :request do
+RSpec.describe 'GraphQL Search Integration' do
   let!(:photography_category) { create(:service_category, name: 'Photography', slug: 'photography') }
   let!(:videography_category) { create(:service_category, name: 'Videography', slug: 'videography') }
 
@@ -10,40 +10,46 @@ RSpec.describe 'GraphQL Search Integration', type: :request do
   let!(:user_la) { create(:user, email: 'vendor_la@example.com', role: :vendor) }
   let!(:user_chicago) { create(:user, email: 'vendor_chicago@example.com', role: :vendor) }
 
-  let!(:vendor_ny) do
-    create(:vendor_profile,
-           user: user_ny,
-           business_name: 'NYC Photography',
-           location: 'New York, NY',
-           latitude: 40.7128,
-           longitude: -74.0060,
-           average_rating: 4.8,
-           is_verified: true)
+  let(:vendor_ny) do
+    user_ny.vendor_profile.tap do |profile|
+      profile.update!(
+        business_name: 'NYC Photography',
+        location: 'New York, NY',
+        latitude: 40.7128,
+        longitude: -74.0060,
+        average_rating: 4.8,
+        verification_status: :verified
+      )
+    end
   end
 
-  let!(:vendor_la) do
-    create(:vendor_profile,
-           user: user_la,
-           business_name: 'LA Video Productions',
-           location: 'Los Angeles, CA',
-           latitude: 34.0522,
-           longitude: -118.2437,
-           average_rating: 4.2,
-           is_verified: false)
+  let(:vendor_la) do
+    user_la.vendor_profile.tap do |profile|
+      profile.update!(
+        business_name: 'LA Video Productions',
+        location: 'Los Angeles, CA',
+        latitude: 34.0522,
+        longitude: -118.2437,
+        average_rating: 4.2,
+        verification_status: :unverified
+      )
+    end
   end
 
-  let!(:vendor_chicago) do
-    create(:vendor_profile,
-           user: user_chicago,
-           business_name: 'Chicago Events',
-           location: 'Chicago, IL',
-           latitude: 41.8781,
-           longitude: -87.6298,
-           average_rating: 3.9,
-           is_verified: true)
+  let(:vendor_chicago) do
+    user_chicago.vendor_profile.tap do |profile|
+      profile.update!(
+        business_name: 'Chicago Events',
+        location: 'Chicago, IL',
+        latitude: 41.8781,
+        longitude: -87.6298,
+        average_rating: 3.9,
+        verification_status: :verified
+      )
+    end
   end
 
-  let!(:service1) do
+  let(:wedding_service) do
     create(:service,
            name: 'Wedding Photography Package',
            description: 'Professional wedding photography with full day coverage',
@@ -54,7 +60,7 @@ RSpec.describe 'GraphQL Search Integration', type: :request do
            status: :active)
   end
 
-  let!(:service2) do
+  let(:video_service) do
     create(:service,
            name: 'Corporate Video Production',
            description: 'High-quality corporate video production services',
@@ -65,7 +71,7 @@ RSpec.describe 'GraphQL Search Integration', type: :request do
            status: :active)
   end
 
-  let!(:service3) do
+  let(:portrait_service) do
     create(:service,
            name: 'Portrait Photography Session',
            description: 'Individual and family portrait photography sessions',
@@ -76,8 +82,14 @@ RSpec.describe 'GraphQL Search Integration', type: :request do
            status: :active)
   end
 
+  before do
+    wedding_service
+    video_service
+    portrait_service
+  end
+
   describe 'POST /graphql' do
-    context 'basic search functionality' do
+    context 'with basic search functionality' do
       let(:search_query) do
         <<~GQL
           query SearchServices($query: String, $filters: ServiceFiltersInput, $location: LocationInput, $pagination: PaginationInput) {
@@ -153,9 +165,9 @@ RSpec.describe 'GraphQL Search Integration', type: :request do
 
         service_names = search_result['services'].pluck('name')
         expect(service_names).to include(
-          'Wedding Photography Package',
-          'Corporate Video Production',
-          'Portrait Photography Session'
+          wedding_service.name,
+          video_service.name,
+          portrait_service.name
         )
       end
 
@@ -170,8 +182,8 @@ RSpec.describe 'GraphQL Search Integration', type: :request do
         expect(search_result['totalCount']).to eq(2)
 
         service_names = search_result['services'].pluck('name')
-        expect(service_names).to include('Wedding Photography Package', 'Portrait Photography Session')
-        expect(service_names).not_to include('Corporate Video Production')
+        expect(service_names).to include(wedding_service.name, portrait_service.name)
+        expect(service_names).not_to include(video_service.name)
       end
 
       it 'filters by category' do
@@ -198,7 +210,7 @@ RSpec.describe 'GraphQL Search Integration', type: :request do
         search_result = json_response.dig('data', 'searchServices')
 
         expect(search_result['totalCount']).to eq(1)
-        expect(search_result['services'].first['name']).to eq('Wedding Photography Package')
+        expect(search_result['services'].first['name']).to eq(wedding_service.name)
         expect(search_result['services'].first['basePrice']).to eq(2500.0)
       end
 
@@ -288,7 +300,7 @@ RSpec.describe 'GraphQL Search Integration', type: :request do
       end
     end
 
-    context 'faceted search' do
+    context 'with faceted search' do
       let(:facet_query) do
         <<~GQL
           query {
@@ -404,7 +416,7 @@ RSpec.describe 'GraphQL Search Integration', type: :request do
       end
     end
 
-    context 'complex search scenarios' do
+    context 'with complex search scenarios' do
       it 'handles multiple filters combined' do
         variables = {
           query: 'photography',
@@ -455,7 +467,7 @@ RSpec.describe 'GraphQL Search Integration', type: :request do
         expect(search_result['totalCount']).to eq(1)
 
         service = search_result['services'].first
-        expect(service['name']).to eq('Wedding Photography Package')
+        expect(service['name']).to eq(wedding_service.name)
         expect(service.dig('serviceCategory', 'slug')).to eq('photography')
         expect(service['basePrice']).to be >= 300
         expect(service['basePrice']).to be <= 3000
@@ -497,7 +509,7 @@ RSpec.describe 'GraphQL Search Integration', type: :request do
       end
     end
 
-    context 'error handling and security' do
+    context 'with error handling and security' do
       it 'handles malformed GraphQL queries' do
         malformed_query = 'query { invalid syntax }'
 

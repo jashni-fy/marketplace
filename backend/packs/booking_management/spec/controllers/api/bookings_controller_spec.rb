@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Api::BookingsController, type: :controller do
+RSpec.describe Api::BookingsController do
   let(:customer) { create(:user, :customer) }
   let(:vendor) { create(:user, :vendor) }
   let(:service) { create(:service, vendor_profile: vendor.vendor_profile) }
@@ -183,7 +183,7 @@ RSpec.describe Api::BookingsController, type: :controller do
           post :create, params: invalid_params
         end.not_to change(Booking, :count)
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         json_response = JSON.parse(response.body)
         expect(json_response['errors']).to be_an(Array)
         expect(json_response['error']).to eq('Failed to create booking')
@@ -198,7 +198,7 @@ RSpec.describe Api::BookingsController, type: :controller do
           post :create, params: valid_params
         end.not_to change(Booking, :count)
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         json_response = JSON.parse(response.body)
         expect(json_response['errors']).to include('Event date is not available for this vendor')
       end
@@ -283,7 +283,7 @@ RSpec.describe Api::BookingsController, type: :controller do
       it 'returns unprocessable entity' do
         delete :destroy, params: { id: booking.id }
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         json_response = JSON.parse(response.body)
         expect(json_response['error']).to eq('Booking cannot be cancelled')
       end
@@ -421,7 +421,7 @@ RSpec.describe Api::BookingsController, type: :controller do
           post :send_message, params: { id: booking.id, message: '' }
         end.not_to change(BookingMessage, :count)
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         json_response = JSON.parse(response.body)
         expect(json_response['errors']).to be_an(Array)
       end
@@ -486,6 +486,14 @@ RSpec.describe Api::BookingsController, type: :controller do
     before do
       token = JwtService.encode(user_id: customer.id)
       request.headers['Authorization'] = "Bearer #{token}"
+
+      create(:booking,
+             customer: create(:user, :customer),
+             vendor: vendor,
+             service: service,
+             event_date: 1.week.from_now.change(hour: 10),
+             event_end_date: 1.week.from_now.change(hour: 12),
+             status: :accepted)
     end
 
     let!(:availability_slot) do
@@ -495,16 +503,6 @@ RSpec.describe Api::BookingsController, type: :controller do
              start_time: '09:00',
              end_time: '17:00',
              is_available: true)
-    end
-
-    let!(:conflicting_booking) do
-      create(:booking,
-             customer: create(:user, :customer),
-             vendor: vendor,
-             service: service,
-             event_date: 1.week.from_now.change(hour: 10),
-             event_end_date: 1.week.from_now.change(hour: 12),
-             status: :accepted)
     end
 
     let(:valid_params) do

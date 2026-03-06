@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe 'Authentication API', type: :request do
+RSpec.describe 'Authentication API' do
   let(:user) { create(:user, confirmed_at: Time.current) }
   let(:unconfirmed_user) { create(:user, confirmed_at: nil) }
 
@@ -70,7 +70,9 @@ RSpec.describe 'Authentication API', type: :request do
       expect(response).to have_http_status(:created)
 
       json_response = JSON.parse(response.body)
-      expect(json_response['message']).to eq('Registration successful. Please check your email to confirm your account.')
+      expect(json_response['message']).to eq(
+        'Registration successful. Please check your email to confirm your account.'
+      )
       expect(json_response['user']['email']).to eq('newuser@example.com')
       expect(json_response['user']['confirmed']).to be false
     end
@@ -126,7 +128,7 @@ RSpec.describe 'Authentication API', type: :request do
 
       # This should not return a missing token error
       # The actual response depends on whether the endpoint exists and is implemented
-      expect(response.status).not_to eq(422) # Should not be "Missing token"
+      expect(response).not_to have_http_status(:unprocessable_content) # Should not be "Missing token"
     end
   end
 end

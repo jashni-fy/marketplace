@@ -21,11 +21,11 @@ class ConflictResolutionService
   end
 
   def call
-    { has_conflict: has_conflict?, conflicting_bookings: conflicting_bookings,
+    { has_conflict: conflict?, conflicting_bookings: conflicting_bookings,
       suggested_times: suggest_alternative_times }
   end
 
-  def has_conflict?
+  def conflict?
     return false unless valid?
 
     conflicting_bookings.exists?
@@ -51,7 +51,7 @@ class ConflictResolutionService
   end
 
   def suggest_alternative_times
-    return [] unless has_conflict?
+    return [] unless conflict?
 
     # Get vendor's availability for the requested date
     availability_slots = vendor_profile.availability_slots
@@ -83,48 +83,67 @@ class ConflictResolutionService
   end
 
   def find_free_slots_in_availability(availability_slot, duration)
-    free_slots = []
+    slot_start, slot_end = availability_slot_bounds(availability_slot)
+    existing_bookings = bookings_for_date(availability_slot.date)
+
+    build_free_slots(existing_bookings, duration, slot_start, slot_end)
+  end
+end
+
+module ConflictResolutionService::FreeSlotCalculator
+  private
+
+  def availability_slot_bounds(availability_slot)
     slot_start = availability_slot.date.beginning_of_day +
                  availability_slot.start_time.seconds_since_midnight.seconds
     slot_end = availability_slot.date.beginning_of_day +
                availability_slot.end_time.seconds_since_midnight.seconds
-
-    # Handle overnight slots
     slot_end += 1.day if availability_slot.end_time < availability_slot.start_time
 
-    # Get all bookings for this date that might conflict
-    existing_bookings = Booking.where(vendor_profile: vendor_profile)
-                               .where(status: %i[pending accepted])
-                               .where('DATE(event_date) = ?', availability_slot.date)
-                               .order(:event_date)
+    [slot_start, slot_end]
+  end
 
+  def bookings_for_date(date)
+    Booking.where(vendor_profile: vendor_profile)
+           .where(status: %i[pending accepted])
+           .where('DATE(event_date) = ?', date)
+           .order(:event_date)
+  end
+
+  def build_free_slots(existing_bookings, duration, slot_start, slot_end)
+    free_slots = []
     current_time = slot_start
 
     existing_bookings.each do |booking|
-      booking_start = booking.event_date
-      booking_end = booking.event_end_date || (booking.event_date + 2.hours)
-
-      # If there's enough time before this booking
-      if booking_start - current_time >= duration
-        free_slots << {
-          start_time: current_time.strftime('%H:%M'),
-          end_time: (current_time + duration).strftime('%H:%M'),
-          duration_hours: (duration / 1.hour).round(2)
-        }
-      end
-
-      current_time = [current_time, booking_end].max
+      current_time = append_free_slot_before_booking(free_slots, booking, duration, current_time)
     end
 
-    # Check if there's time after the last booking
-    if slot_end - current_time >= duration
-      free_slots << {
-        start_time: current_time.strftime('%H:%M'),
-        end_time: (current_time + duration).strftime('%H:%M'),
-        duration_hours: (duration / 1.hour).round(2)
-      }
-    end
-
+    append_final_slot(free_slots, current_time, slot_end, duration)
     free_slots
   end
+
+  def append_free_slot_before_booking(free_slots, booking, duration, current_time)
+    booking_start = booking.event_date
+    booking_end = booking.event_end_date || (booking.event_date + 2.hours)
+
+    add_free_slot(free_slots, current_time, duration) if booking_start - current_time >= duration
+
+    [current_time, booking_end].max
+  end
+
+  def append_final_slot(free_slots, current_time, slot_end, duration)
+    return if slot_end - current_time < duration
+
+    add_free_slot(free_slots, current_time, duration)
+  end
+
+  def add_free_slot(free_slots, start_time, duration)
+    free_slots << {
+      start_time: start_time.strftime('%H:%M'),
+      end_time: (start_time + duration).strftime('%H:%M'),
+      duration_hours: (duration / 1.hour).round(2)
+    }
+  end
 end
+
+ConflictResolutionService.include(ConflictResolutionService::FreeSlotCalculator)

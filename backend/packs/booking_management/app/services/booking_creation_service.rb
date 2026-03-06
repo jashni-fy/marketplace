@@ -83,7 +83,7 @@ class BookingCreationService
       exclude_booking_id: nil
     )
 
-    return unless conflict_resolver.has_conflict?
+    return unless conflict_resolver.conflict?
 
     @errors.add(:event_date, 'conflicts with another booking')
     raise ActiveRecord::RecordInvalid, @booking

@@ -2,7 +2,7 @@
 
 FactoryBot.define do
   factory :portfolio_item do
-    association :vendor_profile
+    vendor_profile
     title { Faker::Lorem.words(number: 3).join(' ').titleize }
     description { Faker::Lorem.paragraph(sentence_count: 3) }
     category { %w[photography videography event_planning catering music].sample }

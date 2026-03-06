@@ -3,7 +3,7 @@
 class SetFeaturedPortfolioItems
   include Callable
 
-  def initialize(vendor_profile, item_ids, featured_status = true)
+  def initialize(vendor_profile, item_ids, featured_status: true)
     @vendor_profile = vendor_profile
     @item_ids = item_ids
     @featured_status = featured_status

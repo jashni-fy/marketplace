@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe 'Email Confirmation Flow', type: :request do
+RSpec.describe 'Email Confirmation Flow' do
   describe 'User registration and confirmation' do
     it 'creates unconfirmed user and allows confirmation' do
       # Register a new user

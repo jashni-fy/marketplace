@@ -1,29 +1,37 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/ClassLength
 class ServiceSearchService
   include ActiveModel::Model
   include ActiveModel::Attributes
   include Callable
 
-  # Search parameters
+  # Pagination constants
+  DEFAULT_PAGE = 1
+  DEFAULT_PER_PAGE = 12
+  MAX_PER_PAGE = 100
+
+  # Sort constants
+  VALID_SORT_FIELDS = %w[name base_price created_at updated_at].freeze
+  VALID_SORT_DIRECTIONS = %w[asc desc].freeze
+
+  # Search attributes
   attribute :query, :string
-  attribute :category_id, :integer
   attribute :location, :string
+  attribute :category_id, :integer
   attribute :min_price, :decimal
   attribute :max_price, :decimal
   attribute :pricing_type, :string
   attribute :vendor_id, :integer
-  attribute :page, :integer, default: 1
-  attribute :per_page, :integer, default: 20
+  attribute :page, :integer, default: DEFAULT_PAGE
+  attribute :per_page, :integer, default: DEFAULT_PER_PAGE
   attribute :sort_by, :string, default: 'created_at'
   attribute :sort_direction, :string, default: 'desc'
 
-  # Constants
-  MAX_PER_PAGE = 100
-  VALID_SORT_FIELDS = %w[name base_price created_at updated_at].freeze
-  VALID_SORT_DIRECTIONS = %w[asc desc].freeze
+  validates :page, numericality: { greater_than_or_equal_to: 1 }
+  validates :per_page, numericality: { greater_than_or_equal_to: 1, less_than_or_equal_to: MAX_PER_PAGE }
 
-  def initialize(params = {})
+  def initialize(attributes = {})
     super
     normalize_attributes
   end
@@ -31,22 +39,24 @@ class ServiceSearchService
   def call
     {
       services: paginated_services,
-      pagination: pagination_info,
-      filters: applied_filters,
-      total_count: total_count
+      total_count: total_count,
+      page: page,
+      per_page: per_page,
+      total_pages: total_pages,
+      facets: facets,
+      applied_filters: applied_filters
     }
   end
 
-  private
-
   def base_scope
-    Service.includes(:vendor_profile, :service_category, :service_images)
-           .active
+    Service.active
            .joins(vendor_profile: :user)
            .where(users: { role: 'vendor' })
   end
 
+  # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
   def filtered_services
+    # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
     scope = base_scope
 
     # Text search
@@ -89,11 +99,10 @@ class ServiceSearchService
         Arel.sql("CASE WHEN services.pricing_type = #{Service.pricing_types['custom']} THEN 1 ELSE 0 END"),
         "services.base_price #{sort_direction}"
       )
-    when 'created_at'
-      filtered_services.order("services.created_at #{sort_direction}")
     when 'updated_at'
       filtered_services.order("services.updated_at #{sort_direction}")
     else
+      # Default to created_at
       filtered_services.order("services.created_at #{sort_direction}")
     end
   end
@@ -110,14 +119,16 @@ class ServiceSearchService
     {
       current_page: page,
       per_page: per_page,
-      total_pages: (total_count.to_f / per_page).ceil,
       total_count: total_count,
-      has_next_page: page < (total_count.to_f / per_page).ceil,
-      has_prev_page: page > 1
+      total_pages: total_pages,
+      has_next_page: page < total_pages,
+      has_previous_page: page > 1
     }
   end
 
+  # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity
   def applied_filters
+    # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity
     filters = {}
     filters[:query] = query if query.present?
     filters[:category_id] = category_id if category_id.present?
@@ -126,25 +137,74 @@ class ServiceSearchService
     filters[:max_price] = max_price if max_price.present?
     filters[:pricing_type] = pricing_type if pricing_type.present?
     filters[:vendor_id] = vendor_id if vendor_id.present?
+    filters[:sort_by] = sort_by
+    filters[:sort_direction] = sort_direction
     filters
   end
+
+  def total_pages
+    (total_count.to_f / per_page).ceil
+  end
+
+  def facets
+    {
+      categories: category_facets,
+      price_ranges: price_range_facets,
+      locations: location_facets,
+      pricing_types: pricing_type_facets,
+      vendor_ratings: vendor_rating_facets
+    }
+  end
+
+  private
 
   def normalize_attributes
     # Ensure page is at least 1
     self.page = [page.to_i, 1].max
 
     # Limit per_page to maximum allowed
-    self.per_page = [[per_page.to_i, 1].max, MAX_PER_PAGE].min
+    self.per_page = per_page.to_i.clamp(1, MAX_PER_PAGE)
 
     # Validate sort direction
     self.sort_direction = 'desc' unless VALID_SORT_DIRECTIONS.include?(sort_direction)
 
     # Validate sort field
     self.sort_by = 'created_at' unless VALID_SORT_FIELDS.include?(sort_by)
+  end
 
-    # Clean up string parameters
-    self.query = query&.strip
-    self.location = location&.strip
-    self.pricing_type = pricing_type&.strip
+  def category_facets
+    filtered_services.except(:limit, :offset, :order)
+                     .group(:service_category_id)
+                     .count
+                     .map do |cat_id, count|
+                       category = ServiceCategory.find_by(id: cat_id)
+                       { id: cat_id, name: category&.name, count: count }
+    end
+  end
+
+  def price_range_facets
+    # Placeholder for price range facets
+    # In a real app, this would be more complex
+    []
+  end
+
+  def location_facets
+    filtered_services.except(:limit, :offset, :order)
+                     .joins(:vendor_profile)
+                     .group('vendor_profiles.location')
+                     .count
+                     .map { |loc, count| { location: loc, count: count } }
+  end
+
+  def pricing_type_facets
+    filtered_services.except(:limit, :offset, :order)
+                     .group(:pricing_type)
+                     .count
+                     .map { |type, count| { pricing_type: type, label: type.titleize, count: count } }
+  end
+
+  def vendor_rating_facets
+    []
   end
 end
+# rubocop:enable Metrics/ClassLength

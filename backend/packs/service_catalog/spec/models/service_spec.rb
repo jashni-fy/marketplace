@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Service, type: :model do
+RSpec.describe Service do
   describe 'associations' do
     it { is_expected.to belong_to(:vendor_profile) }
     it { is_expected.to belong_to(:service_category) }
@@ -294,11 +294,17 @@ RSpec.describe Service, type: :model do
       let(:search_category) { create(:service_category) }
       let!(:photo_service) do
         create(:service, name: 'Photography',
-                         description: 'Wedding photos and more details to meet minimum length requirement', vendor_profile: search_vendor_user.vendor_profile, service_category: search_category)
+                         description: 'Wedding photos and more details to meet minimum ' \
+                                      'length requirement',
+                         vendor_profile: search_vendor_user.vendor_profile,
+                         service_category: search_category)
       end
       let!(:video_service) do
-        create(:service, name: 'Videography', description: 'Event videos and more details to meet minimum length requirement',
-                         vendor_profile: search_vendor_user.vendor_profile, service_category: search_category)
+        create(:service, name: 'Videography',
+                         description: 'Event videos and more details to meet minimum ' \
+                                      'length requirement',
+                         vendor_profile: search_vendor_user.vendor_profile,
+                         service_category: search_category)
       end
 
       it 'searches by name and description' do

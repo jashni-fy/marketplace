@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe ServicesController, type: :controller do
+RSpec.describe ServicesController do
   let(:vendor_user) { create(:user, :vendor) }
   let(:customer_user) { create(:user, :customer) }
   let(:service_category) { create(:service_category) }
@@ -10,8 +10,13 @@ RSpec.describe ServicesController, type: :controller do
   let(:other_service) { create(:service, service_category: service_category) }
 
   describe 'GET #index' do
-    let!(:active_service) { create(:service, status: :active, service_category: service_category) }
-    let!(:inactive_service) { create(:service, status: :inactive, service_category: service_category) }
+    let(:active_service) { create(:service, status: :active, service_category: service_category) }
+    let(:inactive_service) { create(:service, status: :inactive, service_category: service_category) }
+
+    before do
+      active_service
+      inactive_service
+    end
 
     context 'without authentication' do
       it 'returns only active services' do
@@ -69,8 +74,13 @@ RSpec.describe ServicesController, type: :controller do
     end
 
     context 'with sorting' do
-      let!(:service_a) { create(:service, name: 'A Service', base_price: 100, status: :active) }
-      let!(:service_b) { create(:service, name: 'B Service', base_price: 50, status: :active) }
+      let(:service_a) { create(:service, name: 'A Service', base_price: 100, status: :active) }
+      let(:service_b) { create(:service, name: 'B Service', base_price: 50, status: :active) }
+
+      before do
+        service_a
+        service_b
+      end
 
       it 'sorts by name' do
         get :index, params: { sort: 'name' }
@@ -158,7 +168,7 @@ RSpec.describe ServicesController, type: :controller do
             post :create, params: invalid_params
           end.not_to change(Service, :count)
 
-          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response).to have_http_status(:unprocessable_content)
           json_response = JSON.parse(response.body)
           expect(json_response['error']).to eq('Service creation failed')
           expect(json_response['details']).to be_an(Array)
@@ -242,7 +252,10 @@ RSpec.describe ServicesController, type: :controller do
 
   describe 'GET #search' do
     let!(:matching_service) { create(:service, name: 'Photography Service', status: :active) }
-    let!(:non_matching_service) { create(:service, name: 'Catering Service', status: :active) }
+
+    before do
+      create(:service, name: 'Catering Service', status: :active)
+    end
 
     it 'searches services by query' do
       get :search, params: { q: 'photography' }

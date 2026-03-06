@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/ClassLength
 class Service < ApplicationRecord
   # Associations
   belongs_to :vendor_profile
@@ -95,7 +96,7 @@ class Service < ApplicationRecord
 
   delegate :count, to: :bookings, prefix: true
 
-  def has_images?
+  def images?
     images.attached? || service_images.any?
   end
 
@@ -128,7 +129,9 @@ class Service < ApplicationRecord
     count = stats[0].to_i
     avg = stats[1].to_f.round(2)
 
+    # rubocop:disable Rails/SkipsModelValidations
     update_columns(average_rating: avg, total_reviews: count)
+    # rubocop:enable Rails/SkipsModelValidations
   end
 
   def rating_distribution
@@ -199,3 +202,4 @@ class Service < ApplicationRecord
     errors.add(:vendor_profile, 'must belong to a vendor user')
   end
 end
+# rubocop:enable Metrics/ClassLength

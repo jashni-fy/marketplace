@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe ServiceCategory, type: :model do
+RSpec.describe ServiceCategory do
   describe 'associations' do
     it { is_expected.to have_many(:services).dependent(:destroy) }
   end
@@ -46,8 +46,10 @@ RSpec.describe ServiceCategory, type: :model do
     end
 
     describe '.ordered' do
-      let!(:category_z) { create(:service_category, name: 'Z Category') }
-      let!(:category_a) { create(:service_category, name: 'A Category') }
+      before do
+        create(:service_category, name: 'Z Category')
+        create(:service_category, name: 'A Category')
+      end
 
       it 'returns categories ordered by name' do
         ordered_categories = described_class.ordered

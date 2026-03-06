@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe 'JWT Authentication Integration', type: :request do
+RSpec.describe 'JWT Authentication Integration' do
   let(:user) { create(:user, confirmed_at: Time.current) }
   let(:token) { JwtService.encode(user_id: user.id) }
   let(:headers) { { 'Authorization' => "Bearer #{token}" } }

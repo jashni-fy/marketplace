@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe VendorBookingMailer, type: :mailer do
+RSpec.describe VendorBookingMailer do
   let(:vendor_user) { create(:user, :vendor) }
   let(:customer_user) { create(:user, :customer) }
   let(:vendor_profile) { vendor_user.vendor_profile }

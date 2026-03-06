@@ -4,9 +4,10 @@ FactoryBot.define do
   factory :service do
     sequence(:name) { |n| "Service #{n}" }
     description do
-      'This is a comprehensive description of the service that provides detailed information about what is offered and meets the minimum length requirement for validation.'
+      'This is a comprehensive description of the service that provides detailed ' \
+        'information about what is offered and meets the minimum length requirement for validation.'
     end
-    association :service_category
+    service_category
     base_price { 150.00 }
     pricing_type { :hourly }
     status { :active }
@@ -49,9 +50,11 @@ FactoryBot.define do
     trait :photography do
       name { 'Wedding Photography' }
       description do
-        'Professional wedding photography service capturing your special moments with artistic flair and attention to detail. Includes pre-wedding consultation, full day coverage, and edited high-resolution images.'
+        'Professional wedding photography service capturing your special moments with artistic flair ' \
+          'and attention to detail. Includes pre-wedding consultation, full day coverage, ' \
+          'and edited high-resolution images.'
       end
-      association :service_category, :photography
+      service_category factory: %i[service_category photography]
       base_price { 1200.00 }
       pricing_type { :package }
     end
@@ -59,9 +62,10 @@ FactoryBot.define do
     trait :videography do
       name { 'Event Videography' }
       description do
-        'Complete event videography service including multi-camera setup, professional audio recording, and post-production editing to create a memorable video of your special event.'
+        'Complete event videography service including multi-camera setup, professional audio recording, ' \
+          'and post-production editing to create a memorable video of your special event.'
       end
-      association :service_category, :videography
+      service_category factory: %i[service_category videography]
       base_price { 80.00 }
       pricing_type { :hourly }
     end

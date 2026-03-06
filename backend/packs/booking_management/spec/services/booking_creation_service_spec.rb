@@ -94,7 +94,7 @@ RSpec.describe BookingCreationService, type: :service do
       end
     end
 
-    context 'availability checking' do
+    context 'with availability checking' do
       it 'fails when vendor has no availability for the date' do
         # Remove the availability slot
         availability_slot.destroy
@@ -116,7 +116,7 @@ RSpec.describe BookingCreationService, type: :service do
       end
     end
 
-    context 'conflict prevention' do
+    context 'with conflict prevention' do
       let!(:existing_booking) do
         create(:booking,
                customer: create(:user, :customer),
@@ -151,10 +151,10 @@ RSpec.describe BookingCreationService, type: :service do
       end
     end
 
-    context 'transaction rollback' do
+    context 'when transaction rollback' do
       it 'rolls back when booking save fails' do
         # Make the booking invalid by stubbing save to return false
-        booking_double = double('Booking')
+        booking_double = instance_double(Booking)
         allow(booking_double).to receive_messages(save: false, errors: double(full_messages: ['Some error']))
         allow(Booking).to receive(:new).and_return(booking_double)
 

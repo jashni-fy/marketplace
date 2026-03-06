@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe 'Vendor Profile Management API', type: :request do
+RSpec.describe 'Vendor Profile Management API' do
   let(:vendor_user) { create(:user, :vendor) }
   let(:customer_user) { create(:user, :customer) }
   let(:vendor_profile) { vendor_user.vendor_profile }
@@ -13,9 +13,11 @@ RSpec.describe 'Vendor Profile Management API', type: :request do
   end
 
   describe 'GET /api/profiles/service_categories' do
-    let!(:photography_category) { create(:service_category, :photography) }
-    let!(:videography_category) { create(:service_category, :videography) }
-    let!(:inactive_category) { create(:service_category, name: 'Inactive', active: false) }
+    before do
+      create(:service_category, :photography)
+      create(:service_category, :videography)
+      create(:service_category, name: 'Inactive', active: false)
+    end
 
     it 'returns active service categories without authentication' do
       get '/api/profiles/service_categories'

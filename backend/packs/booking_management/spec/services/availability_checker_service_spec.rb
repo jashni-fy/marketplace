@@ -9,7 +9,7 @@ RSpec.describe AvailabilityCheckerService, type: :service do
 
   describe '#available?' do
     context 'when vendor has availability slots' do
-      let!(:availability_slot) do
+      before do
         create(:availability_slot,
                vendor_profile: vendor_profile,
                date: date,
@@ -64,7 +64,7 @@ RSpec.describe AvailabilityCheckerService, type: :service do
     end
 
     context 'when vendor has overnight availability slots' do
-      let!(:overnight_slot) do
+      before do
         slot = build(:availability_slot,
                      vendor_profile: vendor_profile,
                      date: date,
@@ -72,7 +72,6 @@ RSpec.describe AvailabilityCheckerService, type: :service do
                      end_time: '06:00',
                      is_available: true)
         slot.save(validate: false) # Skip validation for overnight slot
-        slot
       end
 
       it 'returns false for time within overnight slot (late night) - not yet supported' do
@@ -123,7 +122,7 @@ RSpec.describe AvailabilityCheckerService, type: :service do
     end
 
     context 'when vendor has unavailable slots' do
-      let!(:unavailable_slot) do
+      before do
         create(:availability_slot,
                vendor_profile: vendor_profile,
                date: date,
@@ -213,7 +212,7 @@ RSpec.describe AvailabilityCheckerService, type: :service do
   end
 
   describe '#suggested_times' do
-    let!(:morning_slot) do
+    let(:morning_slot) do
       create(:availability_slot,
              vendor_profile: vendor_profile,
              date: date,
@@ -222,13 +221,18 @@ RSpec.describe AvailabilityCheckerService, type: :service do
              is_available: true)
     end
 
-    let!(:afternoon_slot) do
+    let(:afternoon_slot) do
       create(:availability_slot,
              vendor_profile: vendor_profile,
              date: date,
              start_time: '14:00',
              end_time: '18:00',
              is_available: true)
+    end
+
+    before do
+      morning_slot
+      afternoon_slot
     end
 
     it 'returns suggested time slots' do
@@ -240,7 +244,6 @@ RSpec.describe AvailabilityCheckerService, type: :service do
       )
 
       suggestions = service.suggested_times
-      expect(suggestions).to be_an(Array)
       expect(suggestions.length).to eq(2)
 
       expect(suggestions[0]).to include(

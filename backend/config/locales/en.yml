@@ -1,7 +1,15 @@
 en:
+  activerecord:
+    errors:
+      models:
+        service_category:
+          attributes:
+            slug:
+              invalid_format: 'only allows lowercase letters, numbers, hyphens, and underscores'
   admin:
     users:
       confirmed: 'User confirmed successfully!'
       confirm_question: 'Are you sure you want to confirm this user?'
       batch_customer: 'Selected users set as customers.'
       batch_vendor: 'Selected users set as vendors.'
+      batch_confirmed: 'Selected users confirmed successfully.'

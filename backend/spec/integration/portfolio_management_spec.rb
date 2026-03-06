@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe 'Portfolio Management Integration', type: :request do
+RSpec.describe 'Portfolio Management Integration' do
   let(:vendor_user) { create(:user, :vendor) }
   let(:customer_user) { create(:user, :customer) }
   let(:vendor_profile) { vendor_user.vendor_profile }
@@ -116,13 +116,20 @@ RSpec.describe 'Portfolio Management Integration', type: :request do
     let!(:featured_item) { create(:portfolio_item, :featured, vendor_profile: vendor_profile) }
 
     it 'filters portfolio items by category' do
+      # Test photography category
       get "/api/vendors/#{vendor_profile.id}/portfolio_items",
           params: { category: 'photography' }, headers: auth_headers(customer_user), as: :json
 
       expect(response).to have_http_status(:success)
       json_response = JSON.parse(response.body)
       expect(json_response['portfolio_items'].length).to eq(1)
-      expect(json_response['portfolio_items'].first['category']).to eq('photography')
+      expect(json_response['portfolio_items'].first['id']).to eq(photo_item.id)
+
+      # Test videography category to reference video_item
+      get "/api/vendors/#{vendor_profile.id}/portfolio_items",
+          params: { category: 'videography' }, headers: auth_headers(customer_user), as: :json
+      json_response = JSON.parse(response.body)
+      expect(json_response['portfolio_items'].first['id']).to eq(video_item.id)
     end
 
     it 'filters featured portfolio items' do
@@ -131,6 +138,7 @@ RSpec.describe 'Portfolio Management Integration', type: :request do
 
       expect(response).to have_http_status(:success)
       json_response = JSON.parse(response.body)
+      expect(json_response['portfolio_items'].pluck('id')).to include(featured_item.id)
       featured_items = json_response['portfolio_items'].select { |item| item['is_featured'] }
       expect(featured_items.length).to be >= 1
     end

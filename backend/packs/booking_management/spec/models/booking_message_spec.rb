@@ -2,20 +2,21 @@
 
 require 'rails_helper'
 
-RSpec.describe BookingMessage, type: :model do
+RSpec.describe BookingMessage do
   let(:customer) { create(:user, :customer) }
+  let(:booking) do
+    create(:booking, customer: customer, vendor: vendor, service: service, event_date: 1.week.from_now.change(hour: 10))
+  end
   let(:vendor) { create(:user, :vendor) }
   let(:service) { create(:service, vendor_profile: vendor.vendor_profile) }
-  let!(:availability_slot) do
+
+  before do
     create(:availability_slot,
            vendor_profile: vendor.vendor_profile,
            date: 1.week.from_now.to_date,
            start_time: '09:00',
            end_time: '17:00',
            is_available: true)
-  end
-  let(:booking) do
-    create(:booking, customer: customer, vendor: vendor, service: service, event_date: 1.week.from_now.change(hour: 10))
   end
 
   describe 'associations' do

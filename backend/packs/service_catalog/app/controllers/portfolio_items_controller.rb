@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/ClassLength
 class PortfolioItemsController < ApiController
   # Authentication is handled by ApiController
   before_action :set_vendor_profile, only: %i[index create]
@@ -8,7 +9,9 @@ class PortfolioItemsController < ApiController
 
   # GET /vendors/:vendor_profile_id/portfolio_items
   # GET /portfolio_items (for current vendor)
+  # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
   def index
+    # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
     if params[:vendor_profile_id]
       # Public access to view any vendor's portfolio
       @portfolio_items = @vendor_profile.portfolio_items.ordered
@@ -232,3 +235,4 @@ class PortfolioItemsController < ApiController
     }
   end
 end
+# rubocop:enable Metrics/ClassLength

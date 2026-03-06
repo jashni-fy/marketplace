@@ -53,12 +53,12 @@ class PortfolioItem < ApplicationRecord
     is_featured
   end
 
-  def has_images?
+  def images?
     images.attached?
   end
 
   def primary_image
-    images.first if has_images?
+    images.first if images?
   end
 
   def image_count

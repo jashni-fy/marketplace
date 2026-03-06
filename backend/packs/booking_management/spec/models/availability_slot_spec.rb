@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe AvailabilitySlot, type: :model do
+RSpec.describe AvailabilitySlot do
   let(:vendor) { create(:user, :vendor) }
   let(:vendor_profile) { vendor.vendor_profile }
 
@@ -151,7 +151,7 @@ RSpec.describe AvailabilitySlot, type: :model do
       let(:service) { create(:service, vendor_profile: vendor_profile) }
 
       context 'when there are conflicting bookings' do
-        let!(:booking) do
+        before do
           create(:booking,
                  customer: customer,
                  vendor: vendor,
@@ -173,7 +173,7 @@ RSpec.describe AvailabilitySlot, type: :model do
       end
 
       context 'when bookings are declined or cancelled' do
-        let!(:declined_booking) do
+        before do
           create(:booking,
                  customer: customer,
                  vendor: vendor,

@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Booking, type: :model do
+RSpec.describe Booking do
   let(:customer) { create(:user, :customer) }
   let(:vendor) { create(:user, :vendor) }
   let(:service) { create(:service, vendor_profile: vendor.vendor_profile) }
@@ -31,8 +31,10 @@ RSpec.describe Booking, type: :model do
   end
 
   describe 'enums' do
-    it {
-      expect(subject).to define_enum_for(:status).with_values(
+    subject(:booking) { described_class.new }
+
+    it 'defines the status enum' do
+      expect(booking).to define_enum_for(:status).with_values(
         pending: 0,
         accepted: 1,
         declined: 2,
@@ -40,11 +42,11 @@ RSpec.describe Booking, type: :model do
         cancelled: 4,
         counter_offered: 5
       )
-    }
+    end
   end
 
   describe 'scopes' do
-    let!(:upcoming_availability) do
+    before do
       create(:availability_slot,
              vendor_profile: vendor.vendor_profile,
              date: 1.week.from_now.to_date,
@@ -52,6 +54,7 @@ RSpec.describe Booking, type: :model do
              end_time: '17:00',
              is_available: true)
     end
+
     let!(:upcoming_booking) do
       create(:booking, customer: customer, vendor: vendor, service: service,
                        event_date: 1.week.from_now.change(hour: 10))
@@ -99,7 +102,7 @@ RSpec.describe Booking, type: :model do
   end
 
   describe 'instance methods' do
-    let!(:availability_slot) do
+    before do
       create(:availability_slot,
              vendor_profile: vendor.vendor_profile,
              date: 1.week.from_now.to_date,
@@ -107,6 +110,7 @@ RSpec.describe Booking, type: :model do
              end_time: '17:00',
              is_available: true)
     end
+
     let(:booking) do
       create(:booking, customer: customer, vendor: vendor, service: service,
                        event_date: 1.week.from_now.change(hour: 10))
@@ -181,7 +185,7 @@ RSpec.describe Booking, type: :model do
   end
 
   describe 'availability validation' do
-    let!(:availability_slot) do
+    before do
       create(:availability_slot,
              vendor_profile: vendor.vendor_profile,
              date: 1.week.from_now.to_date,
@@ -211,16 +215,14 @@ RSpec.describe Booking, type: :model do
   end
 
   describe 'booking conflict validation' do
-    let!(:availability_slot) do
+    before do
       create(:availability_slot,
              vendor_profile: vendor.vendor_profile,
              date: 1.week.from_now.to_date,
              start_time: '09:00',
              end_time: '17:00',
              is_available: true)
-    end
 
-    let!(:existing_booking) do
       create(:booking,
              customer: customer,
              vendor: vendor,

@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe ProfilesController, type: :controller do
+RSpec.describe ProfilesController do
   let(:vendor_user) { create(:user, :vendor) }
   let(:customer_user) { create(:user, :customer) }
   let(:vendor_profile) { vendor_user.vendor_profile }
@@ -207,8 +207,10 @@ RSpec.describe ProfilesController, type: :controller do
   end
 
   describe 'GET #service_categories' do
-    let!(:active_category) { create(:service_category, name: 'Active Category', active: true) }
-    let!(:inactive_category) { create(:service_category, name: 'Inactive Category', active: false) }
+    before do
+      create(:service_category, name: 'Active Category', active: true)
+      create(:service_category, name: 'Inactive Category', active: false)
+    end
 
     it 'returns active service categories without authentication' do
       get :service_categories, format: :json

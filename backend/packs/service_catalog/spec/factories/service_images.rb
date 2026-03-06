@@ -2,7 +2,7 @@
 
 FactoryBot.define do
   factory :service_image do
-    association :service
+    service
     title { 'Sample Service Image' }
     description { 'A beautiful image showcasing our service quality and attention to detail.' }
     alt_text { 'Service portfolio image' }

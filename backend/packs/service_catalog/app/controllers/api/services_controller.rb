@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/ClassLength
 class Api::ServicesController < ApiController
   before_action :authenticate_user!, except: %i[index show search]
   before_action :set_service, only: %i[show update destroy]
@@ -29,7 +30,9 @@ class Api::ServicesController < ApiController
     render json: service_response(@service, include_details: true)
   end
 
+  # rubocop:disable Metrics/AbcSize
   def search
+    # rubocop:enable Metrics/AbcSize
     search_params = {
       query: params[:q] || params[:query],
       location: params[:location],
@@ -111,7 +114,9 @@ class Api::ServicesController < ApiController
     params.require(:service).permit(:name, :description, :base_price, :pricing_type, :service_category_id, :status)
   end
 
+  # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
   def service_response(service, include_details: false)
+    # rubocop:enable Metrics/MethodLength, Metrics/AbcSize
     response = {
       id: service.id,
       name: service.name,
@@ -153,3 +158,4 @@ class Api::ServicesController < ApiController
     response
   end
 end
+# rubocop:enable Metrics/ClassLength

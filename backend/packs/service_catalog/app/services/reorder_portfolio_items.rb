@@ -9,6 +9,7 @@ class ReorderPortfolioItems
     @item_orders = item_orders
   end
 
+  # rubocop:disable Metrics/MethodLength
   def call
     # item_orders should be an array of { id: portfolio_item_id, display_order: new_order }
     success_count = 0
@@ -38,3 +39,4 @@ class ReorderPortfolioItems
     }
   end
 end
+# rubocop:enable Metrics/MethodLength

@@ -2,9 +2,9 @@
 
 FactoryBot.define do
   factory :booking do
-    association :customer, factory: %i[user customer]
-    association :vendor, factory: %i[user vendor]
-    association :service
+    customer factory: %i[user customer]
+    vendor factory: %i[user vendor]
+    service
 
     event_date { 1.week.from_now }
     event_location { Faker::Address.full_address }

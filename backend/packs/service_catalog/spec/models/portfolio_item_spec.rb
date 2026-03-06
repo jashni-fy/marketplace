@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe PortfolioItem, type: :model do
+RSpec.describe PortfolioItem do
   let(:vendor_profile) { create(:vendor_profile) }
 
   describe 'associations' do
@@ -87,15 +87,15 @@ RSpec.describe PortfolioItem, type: :model do
       end
     end
 
-    describe '#has_images?' do
+    describe '#images?' do
       it 'returns true when images are attached' do
         # Mock image attachment
         allow(portfolio_item.images).to receive(:attached?).and_return(true)
-        expect(portfolio_item.has_images?).to be true
+        expect(portfolio_item.images?).to be true
       end
 
       it 'returns false when no images are attached' do
-        expect(portfolio_item.has_images?).to be false
+        expect(portfolio_item.images?).to be false
       end
     end
 
@@ -109,9 +109,11 @@ RSpec.describe PortfolioItem, type: :model do
 
   describe 'class methods' do
     describe '.categories_for_vendor' do
-      let!(:photo_item) { create(:portfolio_item, vendor_profile: vendor_profile, category: 'photography') }
-      let!(:video_item) { create(:portfolio_item, vendor_profile: vendor_profile, category: 'videography') }
-      let!(:duplicate_item) { create(:portfolio_item, vendor_profile: vendor_profile, category: 'photography') }
+      before do
+        create(:portfolio_item, vendor_profile: vendor_profile, category: 'photography')
+        create(:portfolio_item, vendor_profile: vendor_profile, category: 'videography')
+        create(:portfolio_item, vendor_profile: vendor_profile, category: 'photography')
+      end
 
       it 'returns unique categories for a vendor' do
         categories = described_class.categories_for_vendor(vendor_profile)
@@ -125,24 +127,24 @@ RSpec.describe PortfolioItem, type: :model do
     end
 
     describe '.featured_for_vendor' do
-      let!(:featured_item1) do
+      let!(:higher_order_featured_item) do
         create(:portfolio_item, vendor_profile: vendor_profile, is_featured: true, display_order: 2)
       end
-      let!(:featured_item2) do
+      let!(:lower_order_featured_item) do
         create(:portfolio_item, vendor_profile: vendor_profile, is_featured: true, display_order: 1)
       end
       let!(:regular_item) { create(:portfolio_item, vendor_profile: vendor_profile, is_featured: false) }
 
       it 'returns only featured items for the vendor' do
         featured_items = described_class.featured_for_vendor(vendor_profile)
-        expect(featured_items).to include(featured_item1, featured_item2)
+        expect(featured_items).to include(higher_order_featured_item, lower_order_featured_item)
         expect(featured_items).not_to include(regular_item)
       end
 
       it 'returns items in display order' do
         featured_items = described_class.featured_for_vendor(vendor_profile)
-        expect(featured_items.first).to eq(featured_item2)
-        expect(featured_items.second).to eq(featured_item1)
+        expect(featured_items.first).to eq(lower_order_featured_item)
+        expect(featured_items.second).to eq(higher_order_featured_item)
       end
     end
   end
@@ -153,7 +155,7 @@ RSpec.describe PortfolioItem, type: :model do
     describe 'images_count_limit' do
       it 'allows up to 10 images' do
         # Mock 10 images
-        images = double('images', count: 10, attached?: true)
+        images = instance_double(ActiveStorage::Attached::Many, count: 10, attached?: true)
         allow(portfolio_item).to receive(:images).and_return(images)
 
         portfolio_item.valid?
@@ -162,7 +164,7 @@ RSpec.describe PortfolioItem, type: :model do
 
       it 'rejects more than 10 images' do
         # Mock 11 images
-        images = double('images', count: 11, attached?: true)
+        images = instance_double(ActiveStorage::Attached::Many, count: 11, attached?: true)
         allow(portfolio_item).to receive(:images).and_return(images)
 
         portfolio_item.valid?

@@ -40,14 +40,18 @@ class AvailabilitySlot < ApplicationRecord
     start_time < other_slot.end_time && end_time > other_slot.start_time
   end
 
-  def has_booking_conflict?
+  def booking_conflict?
+    conflict_sql = <<~SQL.squish
+      (EXTRACT(HOUR FROM bookings.event_date) * 60 + EXTRACT(MINUTE FROM bookings.event_date) < ? AND
+      EXTRACT(HOUR FROM COALESCE(bookings.event_end_date, bookings.event_date + INTERVAL '2 hours')) * 60 +
+      EXTRACT(MINUTE FROM COALESCE(bookings.event_end_date, bookings.event_date + INTERVAL '2 hours')) > ?)
+    SQL
+
     Booking.joins(vendor: :vendor_profile)
            .where(vendor_profiles: { id: vendor_profile_id })
            .where(status: %i[pending accepted])
            .where('DATE(bookings.event_date) = ?', date)
-           .exists?(['(EXTRACT(HOUR FROM bookings.event_date) * 60 + EXTRACT(MINUTE FROM bookings.event_date) < ? AND ' \
-                     'EXTRACT(HOUR FROM COALESCE(bookings.event_end_date, bookings.event_date + INTERVAL \'2 hours\')) * 60 + ' \
-                     'EXTRACT(MINUTE FROM COALESCE(bookings.event_end_date, bookings.event_date + INTERVAL \'2 hours\')) > ?)', (end_time.hour * 60) + end_time.min, (start_time.hour * 60) + start_time.min])
+           .exists?([conflict_sql, (end_time.hour * 60) + end_time.min, (start_time.hour * 60) + start_time.min])
   end
 
   private
