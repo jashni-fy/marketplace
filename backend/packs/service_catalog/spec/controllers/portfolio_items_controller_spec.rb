@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe PortfolioItemsController, type: :controller do
@@ -31,8 +33,8 @@ RSpec.describe PortfolioItemsController, type: :controller do
       end
 
       it 'filters by featured items' do
-        featured_item = create(:portfolio_item, vendor_profile: vendor_profile, is_featured: true)
-        
+        create(:portfolio_item, vendor_profile: vendor_profile, is_featured: true)
+
         get :index, params: { vendor_profile_id: vendor_profile.id, featured: 'true' }
 
         expect(response).to have_http_status(:ok)
@@ -59,7 +61,7 @@ RSpec.describe PortfolioItemsController, type: :controller do
 
     context 'when vendor profile does not exist' do
       it 'returns not found' do
-        get :index, params: { vendor_profile_id: 999999 }
+        get :index, params: { vendor_profile_id: 999_999 }
 
         expect(response).to have_http_status(:not_found)
         json_response = JSON.parse(response.body)
@@ -80,7 +82,7 @@ RSpec.describe PortfolioItemsController, type: :controller do
 
     context 'when portfolio item does not exist' do
       it 'returns not found' do
-        get :show, params: { id: 999999 }
+        get :show, params: { id: 999_999 }
 
         expect(response).to have_http_status(:not_found)
         json_response = JSON.parse(response.body)
@@ -106,9 +108,9 @@ RSpec.describe PortfolioItemsController, type: :controller do
       end
 
       it 'creates a new portfolio item' do
-        expect {
+        expect do
           post :create, params: valid_params
-        }.to change(PortfolioItem, :count).by(1)
+        end.to change(PortfolioItem, :count).by(1)
 
         expect(response).to have_http_status(:created)
         json_response = JSON.parse(response.body)
@@ -127,9 +129,9 @@ RSpec.describe PortfolioItemsController, type: :controller do
         end
 
         it 'returns unprocessable entity' do
-          expect {
+          expect do
             post :create, params: invalid_params
-          }.not_to change(PortfolioItem, :count)
+          end.not_to change(PortfolioItem, :count)
 
           expect(response).to have_http_status(:unprocessable_entity)
           json_response = JSON.parse(response.body)
@@ -179,9 +181,9 @@ RSpec.describe PortfolioItemsController, type: :controller do
       before { sign_in other_vendor_user }
 
       it 'returns forbidden' do
-        put :update, params: { 
-          id: portfolio_item.id, 
-          portfolio_item: { title: 'Hacked' } 
+        put :update, params: {
+          id: portfolio_item.id,
+          portfolio_item: { title: 'Hacked' }
         }
 
         expect(response).to have_http_status(:forbidden)
@@ -197,10 +199,10 @@ RSpec.describe PortfolioItemsController, type: :controller do
 
       it 'deletes the portfolio item' do
         item_to_delete = create(:portfolio_item, vendor_profile: vendor_profile)
-        
-        expect {
+
+        expect do
           delete :destroy, params: { id: item_to_delete.id }
-        }.to change(PortfolioItem, :count).by(-1)
+        end.to change(PortfolioItem, :count).by(-1)
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
@@ -249,7 +251,7 @@ RSpec.describe PortfolioItemsController, type: :controller do
     let(:portfolio_item_with_image) do
       item = create(:portfolio_item, vendor_profile: vendor_profile)
       item.images.attach(
-        io: File.open(Rails.root.join('spec', 'fixtures', 'files', 'test_image.jpg')),
+        io: Rails.root.join('spec/fixtures/files/test_image.jpg').open,
         filename: 'test_image.jpg',
         content_type: 'image/jpeg'
       )
@@ -258,10 +260,10 @@ RSpec.describe PortfolioItemsController, type: :controller do
 
     it 'removes image from portfolio item' do
       image_id = portfolio_item_with_image.images.first.id
-      
-      delete :remove_image, params: { 
-        id: portfolio_item_with_image.id, 
-        image_id: image_id 
+
+      delete :remove_image, params: {
+        id: portfolio_item_with_image.id,
+        image_id: image_id
       }
 
       expect(response).to have_http_status(:ok)
@@ -271,9 +273,9 @@ RSpec.describe PortfolioItemsController, type: :controller do
 
     context 'when image does not exist' do
       it 'returns not found' do
-        delete :remove_image, params: { 
-          id: portfolio_item.id, 
-          image_id: 999999 
+        delete :remove_image, params: {
+          id: portfolio_item.id,
+          image_id: 999_999
         }
 
         expect(response).to have_http_status(:not_found)
@@ -288,7 +290,7 @@ RSpec.describe PortfolioItemsController, type: :controller do
 
     it 'returns portfolio summary' do
       create_list(:portfolio_item, 3, vendor_profile: vendor_profile)
-      
+
       get :summary
 
       expect(response).to have_http_status(:ok)
@@ -304,7 +306,7 @@ RSpec.describe PortfolioItemsController, type: :controller do
     let!(:item2) { create(:portfolio_item, vendor_profile: vendor_profile, category: 'weddings', display_order: 1) }
 
     it 'reorders portfolio items' do
-      post :reorder, params: { 
+      post :reorder, params: {
         category: 'weddings',
         item_orders: [
           { id: item2.id, display_order: 0 },
@@ -322,9 +324,9 @@ RSpec.describe PortfolioItemsController, type: :controller do
     before { sign_in vendor_user }
 
     it 'duplicates a portfolio item' do
-      expect {
+      expect do
         post :duplicate, params: { id: portfolio_item.id }
-      }.to change(PortfolioItem, :count).by(1)
+      end.to change(PortfolioItem, :count).by(1)
 
       expect(response).to have_http_status(:created)
       json_response = JSON.parse(response.body)
@@ -339,7 +341,7 @@ RSpec.describe PortfolioItemsController, type: :controller do
     let!(:item2) { create(:portfolio_item, vendor_profile: vendor_profile, is_featured: false) }
 
     it 'sets items as featured' do
-      patch :set_featured, params: { 
+      patch :set_featured, params: {
         item_ids: [item1.id, item2.id],
         featured: true
       }

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: vendor_profiles
@@ -7,7 +9,6 @@
 #  business_license    :string
 #  business_name       :string           not null
 #  description         :text
-#  is_verified         :boolean          default(FALSE)
 #  latitude            :decimal(10, 6)
 #  location            :string
 #  longitude           :decimal(10, 6)
@@ -27,7 +28,6 @@
 #
 #  index_vendor_profiles_on_business_name        (business_name)
 #  index_vendor_profiles_on_coordinates          (latitude,longitude)
-#  index_vendor_profiles_on_is_verified          (is_verified)
 #  index_vendor_profiles_on_location             (location)
 #  index_vendor_profiles_on_user_id              (user_id)
 #  index_vendor_profiles_on_verification_status  (verification_status)
@@ -40,13 +40,13 @@ FactoryBot.define do
   factory :vendor_profile do
     # Use the auto-created vendor profile from User model
     initialize_with { create(:user, role: :vendor).vendor_profile }
-    
+
     business_name { Faker::Company.name }
     description { Faker::Lorem.paragraph(sentence_count: 5) }
     location { "#{Faker::Address.city}, #{Faker::Address.state}" }
     phone { '+1-555-123-4567' }
     website { Faker::Internet.url }
-    service_categories { ['Photography', 'Videography'].sample(2).join(', ') }
+    service_categories { %w[Photography Videography].sample(2).join(', ') }
     business_license { Faker::Alphanumeric.alphanumeric(number: 10).upcase }
     years_experience { rand(0..20) }
     is_verified { false }

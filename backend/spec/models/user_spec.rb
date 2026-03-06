@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: users
@@ -30,13 +32,13 @@ RSpec.describe User, type: :model do
   describe 'validations' do
     subject { build(:user) }
 
-    it { should validate_presence_of(:email) }
-    it { should validate_uniqueness_of(:email).case_insensitive }
-    it { should validate_presence_of(:role) }
-    it { should validate_presence_of(:first_name) }
-    it { should validate_length_of(:first_name).is_at_most(50) }
-    it { should validate_presence_of(:last_name) }
-    it { should validate_length_of(:last_name).is_at_most(50) }
+    it { is_expected.to validate_presence_of(:email) }
+    it { is_expected.to validate_uniqueness_of(:email).case_insensitive }
+    it { is_expected.to validate_presence_of(:role) }
+    it { is_expected.to validate_presence_of(:first_name) }
+    it { is_expected.to validate_length_of(:first_name).is_at_most(50) }
+    it { is_expected.to validate_presence_of(:last_name) }
+    it { is_expected.to validate_length_of(:last_name).is_at_most(50) }
 
     context 'password validation' do
       it 'validates password length on creation' do
@@ -62,21 +64,21 @@ RSpec.describe User, type: :model do
   end
 
   describe 'associations' do
-    it { should have_one(:vendor_profile).dependent(:destroy) }
-    it { should have_one(:customer_profile).dependent(:destroy) }
+    it { is_expected.to have_one(:vendor_profile).dependent(:destroy) }
+    it { is_expected.to have_one(:customer_profile).dependent(:destroy) }
     # TODO: Add these tests when models are created in future tasks
     # it { should have_many(:bookings).dependent(:destroy) }
     # it { should have_many(:reviews).dependent(:destroy) }
   end
 
   describe 'enums' do
-    it { should define_enum_for(:role).with_values(customer: 0, vendor: 1, admin: 2) }
+    it { is_expected.to define_enum_for(:role).with_values(customer: 0, vendor: 1, admin: 2) }
   end
 
   describe 'scopes' do
     before do
       # Clean up any existing users
-      User.destroy_all
+      described_class.destroy_all
     end
 
     let!(:customer) { create(:user, :customer) }
@@ -87,7 +89,7 @@ RSpec.describe User, type: :model do
 
     describe '.customers' do
       it 'returns only customer users' do
-        customers = User.customers
+        customers = described_class.customers
         expect(customers).to include(customer, confirmed_user)
         expect(customers).not_to include(vendor, admin)
       end
@@ -95,7 +97,7 @@ RSpec.describe User, type: :model do
 
     describe '.vendors' do
       it 'returns only vendor users' do
-        vendors = User.vendors
+        vendors = described_class.vendors
         expect(vendors).to include(vendor)
         expect(vendors).not_to include(customer, admin, confirmed_user, unconfirmed_user)
       end
@@ -103,7 +105,7 @@ RSpec.describe User, type: :model do
 
     describe '.admins' do
       it 'returns only admin users' do
-        admins = User.admins
+        admins = described_class.admins
         expect(admins).to include(admin)
         expect(admins).not_to include(customer, vendor, confirmed_user, unconfirmed_user)
       end
@@ -111,7 +113,7 @@ RSpec.describe User, type: :model do
 
     describe '.confirmed' do
       it 'returns only confirmed users' do
-        confirmed_users = User.confirmed
+        confirmed_users = described_class.confirmed
         expect(confirmed_users).to include(customer, vendor, admin, confirmed_user)
         expect(confirmed_users).not_to include(unconfirmed_user)
       end
@@ -238,27 +240,27 @@ RSpec.describe User, type: :model do
 
   describe 'Devise modules' do
     it 'includes database_authenticatable' do
-      expect(User.devise_modules).to include(:database_authenticatable)
+      expect(described_class.devise_modules).to include(:database_authenticatable)
     end
 
     it 'includes registerable' do
-      expect(User.devise_modules).to include(:registerable)
+      expect(described_class.devise_modules).to include(:registerable)
     end
 
     it 'includes recoverable' do
-      expect(User.devise_modules).to include(:recoverable)
+      expect(described_class.devise_modules).to include(:recoverable)
     end
 
     it 'includes rememberable' do
-      expect(User.devise_modules).to include(:rememberable)
+      expect(described_class.devise_modules).to include(:rememberable)
     end
 
     it 'includes validatable' do
-      expect(User.devise_modules).to include(:validatable)
+      expect(described_class.devise_modules).to include(:validatable)
     end
 
     it 'includes confirmable' do
-      expect(User.devise_modules).to include(:confirmable)
+      expect(described_class.devise_modules).to include(:confirmable)
     end
   end
 
@@ -280,7 +282,7 @@ RSpec.describe User, type: :model do
     it 'can be found using AuthorizeApiRequest service' do
       token = JwtService.encode(user_id: user.id)
       headers = { 'Authorization' => "Bearer #{token}" }
-      
+
       result = AuthorizeApiRequest.new(headers).call
       expect(result[:user]).to eq(user)
     end
@@ -289,12 +291,12 @@ RSpec.describe User, type: :model do
   describe 'error handling in profile creation' do
     it 'logs error when profile creation fails' do
       user = build(:user, :vendor)
-      
+
       # Mock the vendor_profile creation to fail
       allow(user).to receive(:create_vendor_profile!).and_raise(ActiveRecord::RecordInvalid.new(user))
-      
+
       expect(Rails.logger).to receive(:error).with(/Failed to create profile/)
-      
+
       user.save!
     end
   end

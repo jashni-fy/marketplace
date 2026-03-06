@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ReorderPortfolioItems
   include Callable
 
@@ -11,13 +13,13 @@ class ReorderPortfolioItems
     # item_orders should be an array of { id: portfolio_item_id, display_order: new_order }
     success_count = 0
     errors = []
-    
+
     @item_orders.each do |item_order|
       portfolio_item = @vendor_profile.portfolio_items.find_by(
-        id: item_order[:id], 
+        id: item_order[:id],
         category: @category
       )
-      
+
       if portfolio_item
         if portfolio_item.update(display_order: item_order[:display_order])
           success_count += 1
@@ -28,7 +30,7 @@ class ReorderPortfolioItems
         errors << "Portfolio item with ID #{item_order[:id]} not found in category #{@category}"
       end
     end
-    
+
     {
       success: errors.empty?,
       updated_count: success_count,

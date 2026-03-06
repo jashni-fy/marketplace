@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ServiceSearchService
   include ActiveModel::Model
   include ActiveModel::Attributes
@@ -22,7 +24,7 @@ class ServiceSearchService
   VALID_SORT_DIRECTIONS = %w[asc desc].freeze
 
   def initialize(params = {})
-    super(params)
+    super
     normalize_attributes
   end
 
@@ -56,33 +58,21 @@ class ServiceSearchService
     end
 
     # Category filter
-    if category_id.present?
-      scope = scope.where(service_category_id: category_id)
-    end
+    scope = scope.where(service_category_id: category_id) if category_id.present?
 
     # Location filter
-    if location.present?
-      scope = scope.where('vendor_profiles.location ILIKE ?', "%#{location}%")
-    end
+    scope = scope.where('vendor_profiles.location ILIKE ?', "%#{location}%") if location.present?
 
     # Price range filter
-    if min_price.present?
-      scope = scope.where('services.base_price >= ?', min_price)
-    end
+    scope = scope.where(services: { base_price: min_price.. }) if min_price.present?
 
-    if max_price.present?
-      scope = scope.where('services.base_price <= ?', max_price)
-    end
+    scope = scope.where(services: { base_price: ..max_price }) if max_price.present?
 
     # Pricing type filter
-    if pricing_type.present? && Service.pricing_types.key?(pricing_type)
-      scope = scope.where(pricing_type: pricing_type)
-    end
+    scope = scope.where(pricing_type: pricing_type) if pricing_type.present? && Service.pricing_types.key?(pricing_type)
 
     # Vendor filter
-    if vendor_id.present?
-      scope = scope.where(vendor_profile_id: vendor_id)
-    end
+    scope = scope.where(vendor_profile_id: vendor_id) if vendor_id.present?
 
     scope
   end

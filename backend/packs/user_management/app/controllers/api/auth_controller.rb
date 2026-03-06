@@ -1,11 +1,13 @@
+# frozen_string_literal: true
+
 class Api::AuthController < ApiController
-  before_action :validate_auth_params, only: [:login, :register]
+  before_action :validate_auth_params, only: %i[login register]
 
   def login
     return render_missing_params_error unless auth_params[:email].present? && auth_params[:password].present?
-    
+
     user = User.find_by(email: auth_params[:email])
-    
+
     if user&.valid_password?(auth_params[:password])
       if user.confirmed?
         token = generate_jwt_token(user)
@@ -24,7 +26,7 @@ class Api::AuthController < ApiController
 
   def register
     user = User.new(auth_params)
-    
+
     if user.save
       token = generate_jwt_token(user)
       render json: {
@@ -36,7 +38,7 @@ class Api::AuthController < ApiController
       render json: {
         error: 'Registration failed',
         details: user.errors.full_messages
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
     end
   end
 
@@ -49,6 +51,7 @@ class Api::AuthController < ApiController
 
   def validate_auth_params
     return if params[:auth].present?
+
     render json: { error: 'Authentication parameters are required' }, status: :bad_request
   end
 
@@ -57,11 +60,10 @@ class Api::AuthController < ApiController
   end
 
   def auth_params
-    permitted_params = params.require(:auth).permit(
+    params.require(:auth).permit(
       :email, :password, :password_confirmation, :first_name, :last_name, :role,
-      vendor_profile_attributes: [:business_name, :location, :description, :phone, :website]
+      vendor_profile_attributes: %i[business_name location description phone website]
     )
-    permitted_params
   end
 
   def user_response(user)

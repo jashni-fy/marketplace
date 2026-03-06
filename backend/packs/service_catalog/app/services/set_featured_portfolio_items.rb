@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class SetFeaturedPortfolioItems
   include Callable
 
@@ -11,7 +13,7 @@ class SetFeaturedPortfolioItems
     items = @vendor_profile.portfolio_items.where(id: @item_ids)
     updated_count = 0
     errors = []
-    
+
     items.each do |item|
       if item.update(is_featured: @featured_status)
         updated_count += 1
@@ -19,7 +21,7 @@ class SetFeaturedPortfolioItems
         errors << "Failed to update #{item.title}: #{item.errors.full_messages.join(', ')}"
       end
     end
-    
+
     {
       success: errors.empty?,
       updated_count: updated_count,

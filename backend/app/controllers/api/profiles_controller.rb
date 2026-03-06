@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 class Api::ProfilesController < ApiController
   before_action :authenticate_user!, except: [:service_categories]
-  before_action :set_profile, only: [:show, :update, :destroy]
-  before_action :ensure_vendor_role, only: [:me, :create, :update, :destroy]
-  before_action :ensure_own_profile, only: [:update, :destroy]
+  before_action :set_profile, only: %i[show update destroy]
+  before_action :ensure_vendor_role, only: %i[me create update destroy]
+  before_action :ensure_own_profile, only: %i[update destroy]
 
   def show
     if params[:id]
@@ -25,7 +27,7 @@ class Api::ProfilesController < ApiController
 
   def create
     if current_user.vendor_profile.present?
-      render json: { error: 'Profile already exists' }, status: :unprocessable_entity
+      render json: { error: 'Profile already exists' }, status: :unprocessable_content
       return
     end
 
@@ -38,7 +40,7 @@ class Api::ProfilesController < ApiController
       render json: {
         error: 'Profile creation failed',
         details: @profile.errors.full_messages
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
     end
   end
 
@@ -49,7 +51,7 @@ class Api::ProfilesController < ApiController
       render json: {
         error: 'Profile update failed',
         details: @profile.errors.full_messages
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
     end
   end
 
@@ -63,13 +65,13 @@ class Api::ProfilesController < ApiController
     if @profile.request_verification!
       render json: { message: 'Verification request submitted successfully', status: @profile.verification_status }
     else
-      render json: { error: 'Failed to submit verification request' }, status: :unprocessable_entity
+      render json: { error: 'Failed to submit verification request' }, status: :unprocessable_content
     end
   end
 
   def service_categories
     categories = ServiceCategory.where(active: true)
-    render json: { 
+    render json: {
       service_categories: categories.map { |cat| { id: cat.id, name: cat.name, description: cat.description } }
     }
   end
@@ -77,29 +79,30 @@ class Api::ProfilesController < ApiController
   private
 
   def set_profile
-    if params[:id]
-      @profile = VendorProfile.find(params[:id])
-    else
-      @profile = current_user.vendor_profile
-    end
+    @profile = if params[:id]
+                 VendorProfile.find(params[:id])
+               else
+                 current_user.vendor_profile
+               end
   rescue ActiveRecord::RecordNotFound
     render json: { error: 'Vendor profile not found' }, status: :not_found
   end
 
   def ensure_vendor_role
-    unless current_user.vendor?
-      render json: { error: 'Access denied. Vendor role required.' }, status: :forbidden
-    end
+    return if current_user.vendor?
+
+    render json: { error: 'Access denied. Vendor role required.' }, status: :forbidden
   end
 
   def ensure_own_profile
-    unless @profile.user == current_user
-      render json: { error: 'Access denied. You can only manage your own profile.' }, status: :forbidden
-    end
+    return if @profile.user == current_user
+
+    render json: { error: 'Access denied. You can only manage your own profile.' }, status: :forbidden
   end
 
   def profile_params
-    params.require(:vendor_profile).permit(:business_name, :description, :location, :phone, :website, :years_experience, service_categories_list: [])
+    params.require(:vendor_profile).permit(:business_name, :description, :location, :phone, :website,
+                                           :years_experience, service_categories_list: [])
   end
 
   def profile_response(profile)

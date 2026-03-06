@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe GraphqlController, type: :controller do
@@ -17,10 +19,10 @@ RSpec.describe GraphqlController, type: :controller do
     context 'with valid GraphQL query' do
       it 'executes the query successfully' do
         post :execute, params: { query: query }
-        
+
         expect(response).to have_http_status(:ok)
-        
-        json_response = JSON.parse(response.body)
+
+        json_response = response.parsed_body
         expect(json_response['data']).to be_present
         expect(json_response['data']['serviceCategories']).to be_an(Array)
       end
@@ -31,10 +33,10 @@ RSpec.describe GraphqlController, type: :controller do
 
       it 'returns error response' do
         post :execute, params: { query: invalid_query }
-        
+
         expect(response).to have_http_status(:ok) # GraphQL returns 200 even for errors
-        
-        json_response = JSON.parse(response.body)
+
+        json_response = response.parsed_body
         expect(json_response['errors']).to be_present
       end
     end
@@ -66,10 +68,10 @@ RSpec.describe GraphqlController, type: :controller do
 
       it 'rejects queries exceeding depth limit' do
         post :execute, params: { query: complex_query }
-        
-        json_response = JSON.parse(response.body)
+
+        json_response = response.parsed_body
         expect(json_response['errors']).to be_present
-        
+
         error_message = json_response['errors'].first['message']
         expect(error_message).to include('exceeds max depth')
       end
@@ -91,17 +93,17 @@ RSpec.describe GraphqlController, type: :controller do
         category = create(:service_category)
         vendor = create(:vendor_profile)
         service = create(:service, vendor_profile: vendor, service_category: category)
-        
+
         variables = { id: service.id }
-        
-        post :execute, params: { 
-          query: query_with_variables, 
-          variables: variables 
+
+        post :execute, params: {
+          query: query_with_variables,
+          variables: variables
         }
-        
+
         expect(response).to have_http_status(:ok)
-        
-        json_response = JSON.parse(response.body)
+
+        json_response = response.parsed_body
         expect(json_response.dig('data', 'service', 'id')).to eq(service.id.to_s)
       end
     end
@@ -115,7 +117,7 @@ RSpec.describe GraphqlController, type: :controller do
               name
             }
           }
-          
+
           query GetServices {
             services {
               id
@@ -126,14 +128,14 @@ RSpec.describe GraphqlController, type: :controller do
       end
 
       it 'executes specific operation when operation name is provided' do
-        post :execute, params: { 
+        post :execute, params: {
           query: multi_operation_query,
           operationName: 'GetCategories'
         }
-        
+
         expect(response).to have_http_status(:ok)
-        
-        json_response = JSON.parse(response.body)
+
+        json_response = response.parsed_body
         expect(json_response['data']).to have_key('serviceCategories')
         expect(json_response['data']).not_to have_key('services')
       end
@@ -142,22 +144,22 @@ RSpec.describe GraphqlController, type: :controller do
     context 'error handling' do
       it 'handles missing query parameter' do
         post :execute, params: {}
-        
+
         expect(response).to have_http_status(:ok)
-        
-        json_response = JSON.parse(response.body)
+
+        json_response = response.parsed_body
         expect(json_response['errors']).to be_present
       end
 
       it 'handles malformed JSON in variables' do
-        post :execute, params: { 
+        post :execute, params: {
           query: query,
           variables: 'invalid json'
         }
-        
+
         expect(response).to have_http_status(:ok)
-        
-        json_response = JSON.parse(response.body)
+
+        json_response = response.parsed_body
         expect(json_response['errors']).to be_present
       end
     end
@@ -167,20 +169,20 @@ RSpec.describe GraphqlController, type: :controller do
         # This test ensures our complexity analysis is working
         # The actual complexity calculation is tested in the resolver specs
         post :execute, params: { query: query }
-        
+
         expect(response).to have_http_status(:ok)
         # If complexity analysis is working, the query should execute successfully
       end
 
       it 'limits query string tokens' do
         # Create a very long query that exceeds token limit
-        long_query = "query { " + "serviceCategories { id name slug } " * 1000 + " }"
-        
+        long_query = "query { #{'serviceCategories { id name slug } ' * 1000} }"
+
         post :execute, params: { query: long_query }
-        
-        json_response = JSON.parse(response.body)
+
+        json_response = response.parsed_body
         expect(json_response['errors']).to be_present
-        
+
         error_message = json_response['errors'].first['message']
         expect(error_message).to include('too many tokens')
       end

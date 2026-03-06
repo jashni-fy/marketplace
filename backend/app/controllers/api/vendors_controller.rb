@@ -1,28 +1,30 @@
+# frozen_string_literal: true
+
 class Api::VendorsController < ApiController
   # Public endpoints don't require authentication
-  before_action :set_vendor_profile, only: [:show, :services, :availability, :portfolio, :reviews]
+  before_action :set_vendor_profile, only: %i[show services availability portfolio reviews]
 
   def index
     @vendors = VendorProfile.includes(:user, :services)
-    
+
     # Apply filters
     @vendors = @vendors.by_location(params[:location]) if params[:location].present?
     @vendors = @vendors.with_rating_above(params[:min_rating].to_f) if params[:min_rating].present?
     @vendors = @vendors.by_experience(params[:min_experience].to_i) if params[:min_experience].present?
     @vendors = @vendors.verified if params[:verified] == 'true'
-    
+
     # Location-based search
     if params[:latitude].present? && params[:longitude].present?
       radius = params[:radius]&.to_f || 50 # Default 50km radius
       @vendors = @vendors.within_radius(params[:latitude].to_f, params[:longitude].to_f, radius)
     end
-    
+
     # Pagination
     page = params[:page]&.to_i || 1
     per_page = [params[:per_page]&.to_i || 20, 50].min # Max 50 per page
-    
+
     @vendors = @vendors.offset((page - 1) * per_page).limit(per_page)
-    
+
     render json: {
       vendors: @vendors.map { |vendor| vendor_summary_json(vendor) },
       pagination: {
@@ -39,7 +41,7 @@ class Api::VendorsController < ApiController
 
   def services
     services = @vendor_profile.services.active.includes(:service_category, :service_images)
-    
+
     render json: {
       services: services.map { |service| service_json(service) }
     }
@@ -48,13 +50,13 @@ class Api::VendorsController < ApiController
   def availability
     # Get availability for the next 30 days by default
     start_date = params[:start_date]&.to_date || Date.current
-    end_date = params[:end_date]&.to_date || start_date + 30.days
-    
+    end_date = params[:end_date]&.to_date || (start_date + 30.days)
+
     availability_slots = @vendor_profile.availability_slots
-                                       .where(date: start_date..end_date)
-                                       .where(is_available: true)
-                                       .order(:date, :start_time)
-    
+                                        .where(date: start_date..end_date)
+                                        .where(is_available: true)
+                                        .order(:date, :start_time)
+
     render json: {
       availability: availability_slots.map { |slot| availability_slot_json(slot) },
       date_range: {
@@ -68,7 +70,7 @@ class Api::VendorsController < ApiController
     portfolio_items = @vendor_profile.portfolio_items.ordered
     portfolio_items = portfolio_items.by_category(params[:category]) if params[:category].present?
     portfolio_items = portfolio_items.featured if params[:featured] == 'true'
-    
+
     render json: {
       portfolio_items: portfolio_items.map { |item| portfolio_item_json(item) },
       categories: @vendor_profile.portfolio_categories

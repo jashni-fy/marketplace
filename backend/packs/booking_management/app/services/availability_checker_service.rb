@@ -6,6 +6,7 @@ class AvailabilityCheckerService
   include Callable
 
   attr_accessor :vendor_profile
+
   attribute :date, :date
   attribute :start_time, :string
   attribute :end_time, :string
@@ -21,8 +22,8 @@ class AvailabilityCheckerService
   end
 
   def call
-    { 
-      available: available?, 
+    {
+      available: available?,
       errors: errors.full_messages,
       suggested_times: suggested_times
     }
@@ -39,14 +40,12 @@ class AvailabilityCheckerService
     time_within_slot?(availability_slot)
   end
 
-  def errors
-    @errors
-  end
+  attr_reader :errors
 
   def availability_slots
     @availability_slots ||= vendor_profile.availability_slots
-                                         .available
-                                         .for_date(date)
+                                          .available
+                                          .for_date(date)
   end
 
   def suggested_times
@@ -72,8 +71,8 @@ class AvailabilityCheckerService
   def time_within_slot?(slot)
     requested_start_minutes = parse_time_to_minutes(start_time)
     requested_end_minutes = parse_time_to_minutes(end_time)
-    slot_start_minutes = slot.start_time.hour * 60 + slot.start_time.min
-    slot_end_minutes = slot.end_time.hour * 60 + slot.end_time.min
+    slot_start_minutes = (slot.start_time.hour * 60) + slot.start_time.min
+    slot_end_minutes = (slot.end_time.hour * 60) + slot.end_time.min
 
     # For now, only handle same-day slots to get basic functionality working
     # TODO: Add proper overnight slot support later
@@ -87,7 +86,7 @@ class AvailabilityCheckerService
   end
 
   def parse_time_to_minutes(time_string)
-    time = Time.parse("#{Date.current} #{time_string}")
-    time.hour * 60 + time.min
+    time = Time.zone.parse("#{Date.current} #{time_string}")
+    (time.hour * 60) + time.min
   end
 end

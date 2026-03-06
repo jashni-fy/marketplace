@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class DuplicatePortfolioItem
   include Callable
 
@@ -10,7 +12,7 @@ class DuplicatePortfolioItem
     new_item.title = "#{@portfolio_item.title} (Copy)"
     new_item.is_featured = false
     new_item.display_order = get_next_display_order(@portfolio_item.category)
-    
+
     if new_item.save
       # Copy images if they exist
       if @portfolio_item.images.attached?
@@ -22,7 +24,7 @@ class DuplicatePortfolioItem
           )
         end
       end
-      
+
       { success: true, portfolio_item: new_item }
     else
       { success: false, errors: new_item.errors.full_messages }

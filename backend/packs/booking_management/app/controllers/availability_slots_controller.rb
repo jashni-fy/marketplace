@@ -3,7 +3,7 @@
 class AvailabilitySlotsController < ApiController
   # Authentication is handled by ApiController
   before_action :ensure_vendor!
-  before_action :set_availability_slot, only: [:show, :update, :destroy]
+  before_action :set_availability_slot, only: %i[show update destroy]
 
   def index
     @slots = current_user.vendor_profile
@@ -11,14 +11,14 @@ class AvailabilitySlotsController < ApiController
                          .includes(:vendor_profile)
 
     # Filter by date range if provided
-    if params[:start_date].present? && params[:end_date].present?
-      @slots = @slots.where(date: params[:start_date]..params[:end_date])
-    elsif params[:date].present?
-      @slots = @slots.for_date(params[:date])
-    else
-      # Default to upcoming slots
-      @slots = @slots.upcoming
-    end
+    @slots = if params[:start_date].present? && params[:end_date].present?
+               @slots.where(date: params[:start_date]..params[:end_date])
+             elsif params[:date].present?
+               @slots.for_date(params[:date])
+             else
+               # Default to upcoming slots
+               @slots.upcoming
+             end
 
     @slots = @slots.order(:date, :start_time)
                    .page(params[:page])
@@ -40,7 +40,7 @@ class AvailabilitySlotsController < ApiController
     if @slot.save
       render json: { availability_slot: availability_slot_json(@slot) }, status: :created
     else
-      render json: { errors: @slot.errors.full_messages }, status: :unprocessable_entity
+      render json: { errors: @slot.errors.full_messages }, status: :unprocessable_content
     end
   end
 
@@ -48,13 +48,13 @@ class AvailabilitySlotsController < ApiController
     if @slot.update(availability_slot_params)
       render json: { availability_slot: availability_slot_json(@slot) }
     else
-      render json: { errors: @slot.errors.full_messages }, status: :unprocessable_entity
+      render json: { errors: @slot.errors.full_messages }, status: :unprocessable_content
     end
   end
 
   def destroy
     if @slot.has_booking_conflict?
-      render json: { error: 'Cannot delete availability slot with existing bookings' }, status: :unprocessable_entity
+      render json: { error: 'Cannot delete availability slot with existing bookings' }, status: :unprocessable_content
     else
       @slot.destroy
       render json: { message: 'Availability slot deleted successfully' }
@@ -67,8 +67,9 @@ class AvailabilitySlotsController < ApiController
     errors = []
 
     slots_params.each_with_index do |slot_params, index|
-      slot = current_user.vendor_profile.availability_slots.build(slot_params.permit(:date, :start_time, :end_time, :is_available))
-      
+      slot = current_user.vendor_profile.availability_slots.build(slot_params.permit(:date, :start_time, :end_time,
+                                                                                     :is_available))
+
       if slot.save
         created_slots << availability_slot_json(slot)
       else
@@ -77,10 +78,11 @@ class AvailabilitySlotsController < ApiController
     end
 
     if errors.empty?
-      render json: { availability_slots: created_slots, message: "#{created_slots.count} slots created successfully" }, status: :created
+      render json: { availability_slots: created_slots, message: "#{created_slots.count} slots created successfully" },
+             status: :created
     else
-      render json: { 
-        created_slots: created_slots, 
+      render json: {
+        created_slots: created_slots,
         errors: errors,
         message: "#{created_slots.count} slots created, #{errors.count} failed"
       }, status: :partial_content
@@ -93,29 +95,32 @@ class AvailabilitySlotsController < ApiController
     end_time = params[:end_time]
     exclude_id = params[:exclude_id]
 
-    return render json: { error: 'Missing required parameters' }, status: :bad_request unless date && start_time && end_time
+    unless date && start_time && end_time
+      return render json: { error: 'Missing required parameters' },
+                    status: :bad_request
+    end
 
     # Check for overlapping availability slots
     overlapping_slots = current_user.vendor_profile
-                                   .availability_slots
-                                   .where(date: date)
-                                   .where(
-                                     '(start_time < ? AND end_time > ?) OR (start_time < ? AND end_time > ?)',
-                                     end_time, start_time, start_time, end_time
-                                   )
+                                    .availability_slots
+                                    .where(date: date)
+                                    .where(
+                                      '(start_time < ? AND end_time > ?) OR (start_time < ? AND end_time > ?)',
+                                      end_time, start_time, start_time, end_time
+                                    )
 
     overlapping_slots = overlapping_slots.where.not(id: exclude_id) if exclude_id.present?
 
     # Check for booking conflicts
     booking_conflicts = Booking.joins(:vendor)
-                              .joins('JOIN vendor_profiles ON vendor_profiles.user_id = users.id')
-                              .where(vendor_profiles: { id: current_user.vendor_profile.id })
-                              .where(status: [:pending, :accepted])
-                              .where('DATE(event_date) = ?', date)
-                              .where(
-                                '(TIME(event_date) < ? AND TIME(COALESCE(event_end_date, event_date + INTERVAL \'2 hours\')) > ?)',
-                                end_time, start_time
-                              )
+                               .joins('JOIN vendor_profiles ON vendor_profiles.user_id = users.id')
+                               .where(vendor_profiles: { id: current_user.vendor_profile.id })
+                               .where(status: %i[pending accepted])
+                               .where('DATE(event_date) = ?', date)
+                               .where(
+                                 '(TIME(event_date) < ? AND TIME(COALESCE(event_end_date, event_date + INTERVAL \'2 hours\')) > ?)',
+                                 end_time, start_time
+                               )
 
     render json: {
       has_conflicts: overlapping_slots.exists? || booking_conflicts.exists?,
@@ -133,9 +138,9 @@ class AvailabilitySlotsController < ApiController
   end
 
   def ensure_vendor!
-    unless current_user.vendor?
-      render json: { error: 'Access denied. Vendor account required.' }, status: :forbidden
-    end
+    return if current_user.vendor?
+
+    render json: { error: 'Access denied. Vendor account required.' }, status: :forbidden
   end
 
   def availability_slot_params

@@ -1,23 +1,25 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe PortfolioItem, type: :model do
   let(:vendor_profile) { create(:vendor_profile) }
-  
+
   describe 'associations' do
-    it { should belong_to(:vendor_profile) }
+    it { is_expected.to belong_to(:vendor_profile) }
   end
 
   describe 'validations' do
     subject { build(:portfolio_item, vendor_profile: vendor_profile) }
-    
-    it { should validate_presence_of(:title) }
-    it { should validate_length_of(:title).is_at_least(2).is_at_most(100) }
-    it { should validate_length_of(:description).is_at_most(1000) }
-    it { should validate_presence_of(:category) }
-    it { should validate_length_of(:category).is_at_most(50) }
-    it { should validate_presence_of(:display_order) }
-    it { should validate_numericality_of(:display_order).is_greater_than_or_equal_to(0) }
-    it { should validate_presence_of(:vendor_profile_id) }
+
+    it { is_expected.to validate_presence_of(:title) }
+    it { is_expected.to validate_length_of(:title).is_at_least(2).is_at_most(100) }
+    it { is_expected.to validate_length_of(:description).is_at_most(1000) }
+    it { is_expected.to validate_presence_of(:category) }
+    it { is_expected.to validate_length_of(:category).is_at_most(50) }
+    it { is_expected.to validate_presence_of(:display_order) }
+    it { is_expected.to validate_numericality_of(:display_order).is_greater_than_or_equal_to(0) }
+    it { is_expected.to validate_presence_of(:vendor_profile_id) }
   end
 
   describe 'scopes' do
@@ -28,15 +30,15 @@ RSpec.describe PortfolioItem, type: :model do
 
     describe '.featured' do
       it 'returns only featured items' do
-        expect(PortfolioItem.featured).to include(featured_item)
-        expect(PortfolioItem.featured).not_to include(regular_item)
+        expect(described_class.featured).to include(featured_item)
+        expect(described_class.featured).not_to include(regular_item)
       end
     end
 
     describe '.by_category' do
       it 'returns items in specified category' do
-        expect(PortfolioItem.by_category('photography')).to include(photography_item)
-        expect(PortfolioItem.by_category('photography')).not_to include(videography_item)
+        expect(described_class.by_category('photography')).to include(photography_item)
+        expect(described_class.by_category('photography')).not_to include(videography_item)
       end
     end
 
@@ -45,8 +47,8 @@ RSpec.describe PortfolioItem, type: :model do
       let!(:second_item) { create(:portfolio_item, vendor_profile: vendor_profile, display_order: 2) }
 
       it 'returns items ordered by display_order and created_at' do
-        expect(PortfolioItem.ordered.first).to eq(first_item)
-        expect(PortfolioItem.ordered.second).to eq(second_item)
+        expect(described_class.ordered.first).to eq(first_item)
+        expect(described_class.ordered.second).to eq(second_item)
       end
     end
 
@@ -55,8 +57,8 @@ RSpec.describe PortfolioItem, type: :model do
       let!(:other_item) { create(:portfolio_item, vendor_profile: other_vendor) }
 
       it 'returns items for specified vendor only' do
-        expect(PortfolioItem.for_vendor(vendor_profile)).to include(featured_item)
-        expect(PortfolioItem.for_vendor(vendor_profile)).not_to include(other_item)
+        expect(described_class.for_vendor(vendor_profile)).to include(featured_item)
+        expect(described_class.for_vendor(vendor_profile)).not_to include(other_item)
       end
     end
   end
@@ -112,29 +114,33 @@ RSpec.describe PortfolioItem, type: :model do
       let!(:duplicate_item) { create(:portfolio_item, vendor_profile: vendor_profile, category: 'photography') }
 
       it 'returns unique categories for a vendor' do
-        categories = PortfolioItem.categories_for_vendor(vendor_profile)
+        categories = described_class.categories_for_vendor(vendor_profile)
         expect(categories).to contain_exactly('photography', 'videography')
       end
 
       it 'returns sorted categories' do
-        categories = PortfolioItem.categories_for_vendor(vendor_profile)
-        expect(categories).to eq(['photography', 'videography'])
+        categories = described_class.categories_for_vendor(vendor_profile)
+        expect(categories).to eq(%w[photography videography])
       end
     end
 
     describe '.featured_for_vendor' do
-      let!(:featured_item1) { create(:portfolio_item, vendor_profile: vendor_profile, is_featured: true, display_order: 2) }
-      let!(:featured_item2) { create(:portfolio_item, vendor_profile: vendor_profile, is_featured: true, display_order: 1) }
+      let!(:featured_item1) do
+        create(:portfolio_item, vendor_profile: vendor_profile, is_featured: true, display_order: 2)
+      end
+      let!(:featured_item2) do
+        create(:portfolio_item, vendor_profile: vendor_profile, is_featured: true, display_order: 1)
+      end
       let!(:regular_item) { create(:portfolio_item, vendor_profile: vendor_profile, is_featured: false) }
 
       it 'returns only featured items for the vendor' do
-        featured_items = PortfolioItem.featured_for_vendor(vendor_profile)
+        featured_items = described_class.featured_for_vendor(vendor_profile)
         expect(featured_items).to include(featured_item1, featured_item2)
         expect(featured_items).not_to include(regular_item)
       end
 
       it 'returns items in display order' do
-        featured_items = PortfolioItem.featured_for_vendor(vendor_profile)
+        featured_items = described_class.featured_for_vendor(vendor_profile)
         expect(featured_items.first).to eq(featured_item2)
         expect(featured_items.second).to eq(featured_item1)
       end
@@ -149,7 +155,7 @@ RSpec.describe PortfolioItem, type: :model do
         # Mock 10 images
         images = double('images', count: 10, attached?: true)
         allow(portfolio_item).to receive(:images).and_return(images)
-        
+
         portfolio_item.valid?
         expect(portfolio_item.errors[:images]).to be_empty
       end
@@ -158,7 +164,7 @@ RSpec.describe PortfolioItem, type: :model do
         # Mock 11 images
         images = double('images', count: 11, attached?: true)
         allow(portfolio_item).to receive(:images).and_return(images)
-        
+
         portfolio_item.valid?
         expect(portfolio_item.errors[:images]).to include('cannot exceed 10 images per portfolio item')
       end

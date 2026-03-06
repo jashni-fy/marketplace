@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe 'Portfolio Management Integration', type: :request do
@@ -41,7 +43,7 @@ RSpec.describe 'Portfolio Management Integration', type: :request do
       end
 
       it 'allows vendor to view their portfolio items' do
-        portfolio_item = create(:portfolio_item, vendor_profile: vendor_profile)
+        create(:portfolio_item, vendor_profile: vendor_profile)
 
         get '/api/portfolio_items', headers: auth_headers(vendor_user), as: :json
 
@@ -60,7 +62,8 @@ RSpec.describe 'Portfolio Management Integration', type: :request do
           }
         }
 
-        patch "/api/portfolio_items/#{portfolio_item.id}", params: update_params, headers: auth_headers(vendor_user), as: :json
+        patch "/api/portfolio_items/#{portfolio_item.id}", params: update_params, headers: auth_headers(vendor_user),
+                                                           as: :json
 
         expect(response).to have_http_status(:success)
         json_response = JSON.parse(response.body)
@@ -96,7 +99,7 @@ RSpec.describe 'Portfolio Management Integration', type: :request do
       end
 
       it 'allows customer to view vendor portfolio items' do
-        portfolio_item = create(:portfolio_item, vendor_profile: vendor_profile)
+        create(:portfolio_item, vendor_profile: vendor_profile)
 
         get "/api/vendors/#{vendor_profile.id}/portfolio_items", headers: auth_headers(customer_user), as: :json
 
@@ -113,7 +116,7 @@ RSpec.describe 'Portfolio Management Integration', type: :request do
     let!(:featured_item) { create(:portfolio_item, :featured, vendor_profile: vendor_profile) }
 
     it 'filters portfolio items by category' do
-      get "/api/vendors/#{vendor_profile.id}/portfolio_items", 
+      get "/api/vendors/#{vendor_profile.id}/portfolio_items",
           params: { category: 'photography' }, headers: auth_headers(customer_user), as: :json
 
       expect(response).to have_http_status(:success)
@@ -123,7 +126,7 @@ RSpec.describe 'Portfolio Management Integration', type: :request do
     end
 
     it 'filters featured portfolio items' do
-      get "/api/vendors/#{vendor_profile.id}/portfolio_items", 
+      get "/api/vendors/#{vendor_profile.id}/portfolio_items",
           params: { featured: 'true' }, headers: auth_headers(customer_user), as: :json
 
       expect(response).to have_http_status(:success)
@@ -151,7 +154,7 @@ RSpec.describe 'Portfolio Management Integration', type: :request do
       items = create_list(:portfolio_item, 2, vendor_profile: vendor_profile, is_featured: false)
       item_ids = items.map(&:id)
 
-      patch '/api/portfolio_items/set_featured', 
+      patch '/api/portfolio_items/set_featured',
             params: { item_ids: item_ids, featured: true }, headers: auth_headers(vendor_user), as: :json
 
       expect(response).to have_http_status(:success)
@@ -164,7 +167,7 @@ RSpec.describe 'Portfolio Management Integration', type: :request do
     let(:portfolio_item) { create(:portfolio_item, vendor_profile: vendor_profile) }
 
     it 'prevents vendors from accessing other vendors portfolio items' do
-      patch "/api/portfolio_items/#{portfolio_item.id}", 
+      patch "/api/portfolio_items/#{portfolio_item.id}",
             params: { portfolio_item: { title: 'Hacked' } }, headers: auth_headers(other_vendor), as: :json
 
       expect(response).to have_http_status(:forbidden)
@@ -173,7 +176,7 @@ RSpec.describe 'Portfolio Management Integration', type: :request do
     end
 
     it 'requires authentication for portfolio management' do
-      post '/api/portfolio_items', 
+      post '/api/portfolio_items',
            params: { portfolio_item: { title: 'Test' } }, as: :json
 
       expect(response).to have_http_status(:unauthorized)

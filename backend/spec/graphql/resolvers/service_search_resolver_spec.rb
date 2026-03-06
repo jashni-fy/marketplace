@@ -1,25 +1,48 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
   let(:schema) { MarketplaceSchema }
   let(:context) { {} }
-  
+
   # Create test data
   let!(:photography_category) { create(:service_category, name: 'Photography', slug: 'photography') }
   let!(:videography_category) { create(:service_category, name: 'Videography', slug: 'videography') }
-  
+
   let!(:user1) { create(:user, email: 'vendor1@example.com', role: :vendor) }
   let!(:user2) { create(:user, email: 'vendor2@example.com', role: :vendor) }
   let!(:user3) { create(:user, email: 'vendor3@example.com', role: :vendor) }
-  
-  let!(:vendor1) { create(:vendor_profile, user: user1, business_name: 'Amazing Photos', location: 'New York, NY', average_rating: 4.5, latitude: 40.7128, longitude: -74.0060) }
-  let!(:vendor2) { create(:vendor_profile, user: user2, business_name: 'Video Masters', location: 'Los Angeles, CA', average_rating: 4.2, latitude: 34.0522, longitude: -118.2437) }
-  let!(:vendor3) { create(:vendor_profile, user: user3, business_name: 'Event Specialists', location: 'Chicago, IL', average_rating: 3.8, latitude: 41.8781, longitude: -87.6298) }
-  
-  let!(:service1) { create(:service, name: 'Wedding Photography', vendor_profile: vendor1, service_category: photography_category, base_price: 1500, status: :active) }
-  let!(:service2) { create(:service, name: 'Corporate Video', vendor_profile: vendor2, service_category: videography_category, base_price: 2500, status: :active) }
-  let!(:service3) { create(:service, name: 'Event Photography', vendor_profile: vendor3, service_category: photography_category, base_price: 800, status: :active) }
-  let!(:service4) { create(:service, name: 'Portrait Session', vendor_profile: vendor1, service_category: photography_category, base_price: 300, status: :inactive) }
+
+  let!(:vendor1) do
+    create(:vendor_profile, user: user1, business_name: 'Amazing Photos', location: 'New York, NY', average_rating: 4.5,
+                            latitude: 40.7128, longitude: -74.0060)
+  end
+  let!(:vendor2) do
+    create(:vendor_profile, user: user2, business_name: 'Video Masters', location: 'Los Angeles, CA', average_rating: 4.2,
+                            latitude: 34.0522, longitude: -118.2437)
+  end
+  let!(:vendor3) do
+    create(:vendor_profile, user: user3, business_name: 'Event Specialists', location: 'Chicago, IL', average_rating: 3.8,
+                            latitude: 41.8781, longitude: -87.6298)
+  end
+
+  let!(:service1) do
+    create(:service, name: 'Wedding Photography', vendor_profile: vendor1, service_category: photography_category,
+                     base_price: 1500, status: :active)
+  end
+  let!(:service2) do
+    create(:service, name: 'Corporate Video', vendor_profile: vendor2, service_category: videography_category,
+                     base_price: 2500, status: :active)
+  end
+  let!(:service3) do
+    create(:service, name: 'Event Photography', vendor_profile: vendor3, service_category: photography_category,
+                     base_price: 800, status: :active)
+  end
+  let!(:service4) do
+    create(:service, name: 'Portrait Session', vendor_profile: vendor1, service_category: photography_category,
+                     base_price: 300, status: :inactive)
+  end
 
   describe '#resolve' do
     let(:query) do
@@ -81,18 +104,18 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
     context 'without any filters' do
       it 'returns all active services' do
         result = schema.execute(query, context: context)
-        
+
         expect(result.dig('data', 'searchServices', 'totalCount')).to eq(3)
         expect(result.dig('data', 'searchServices', 'services').size).to eq(3)
-        
-        service_names = result.dig('data', 'searchServices', 'services').map { |s| s['name'] }
+
+        service_names = result.dig('data', 'searchServices', 'services').pluck('name')
         expect(service_names).to include('Wedding Photography', 'Corporate Video', 'Event Photography')
         expect(service_names).not_to include('Portrait Session') # inactive service
       end
 
       it 'includes facets in the response' do
         result = schema.execute(query, context: context)
-        
+
         facets = result.dig('data', 'searchServices', 'facets')
         expect(facets).to be_present
         expect(facets['categories']).to be_present
@@ -102,7 +125,7 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
 
       it 'includes search time' do
         result = schema.execute(query, context: context)
-        
+
         search_time = result.dig('data', 'searchServices', 'searchTime')
         expect(search_time).to be_a(Float)
         expect(search_time).to be > 0
@@ -114,10 +137,10 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
 
       it 'returns services matching the search query' do
         result = schema.execute(query, variables: variables, context: context)
-        
+
         expect(result.dig('data', 'searchServices', 'totalCount')).to eq(2)
-        
-        service_names = result.dig('data', 'searchServices', 'services').map { |s| s['name'] }
+
+        service_names = result.dig('data', 'searchServices', 'services').pluck('name')
         expect(service_names).to include('Wedding Photography', 'Event Photography')
         expect(service_names).not_to include('Corporate Video')
       end
@@ -128,9 +151,9 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
 
       it 'returns services in the specified category' do
         result = schema.execute(query, variables: variables, context: context)
-        
+
         expect(result.dig('data', 'searchServices', 'totalCount')).to eq(2)
-        
+
         services = result.dig('data', 'searchServices', 'services')
         services.each do |service|
           expect(service.dig('serviceCategory', 'slug')).to eq('photography')
@@ -143,9 +166,9 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
 
       it 'returns services within the price range' do
         result = schema.execute(query, variables: variables, context: context)
-        
+
         expect(result.dig('data', 'searchServices', 'totalCount')).to eq(1)
-        
+
         service = result.dig('data', 'searchServices', 'services').first
         expect(service['name']).to eq('Wedding Photography')
         expect(service['basePrice']).to eq(1500.0)
@@ -157,10 +180,10 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
 
       it 'returns services from vendors with rating above threshold' do
         result = schema.execute(query, variables: variables, context: context)
-        
+
         expect(result.dig('data', 'searchServices', 'totalCount')).to eq(2)
-        
-        service_names = result.dig('data', 'searchServices', 'services').map { |s| s['name'] }
+
+        service_names = result.dig('data', 'searchServices', 'services').pluck('name')
         expect(service_names).to include('Wedding Photography', 'Corporate Video')
         expect(service_names).not_to include('Event Photography') # vendor rating 3.8
       end
@@ -171,9 +194,9 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
 
       it 'returns services from vendors in the specified location' do
         result = schema.execute(query, variables: variables, context: context)
-        
+
         expect(result.dig('data', 'searchServices', 'totalCount')).to eq(1)
-        
+
         service = result.dig('data', 'searchServices', 'services').first
         expect(service['name']).to eq('Wedding Photography')
         expect(service['vendorLocation']).to include('New York')
@@ -184,18 +207,18 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
       let(:variables) do
         {
           location: {
-            latitude: 40.7128,  # New York coordinates
+            latitude: 40.7128, # New York coordinates
             longitude: -74.0060,
-            radius: 50  # 50km radius
+            radius: 50 # 50km radius
           }
         }
       end
 
       it 'returns services from vendors within the specified radius' do
         result = schema.execute(query, variables: variables, context: context)
-        
+
         expect(result.dig('data', 'searchServices', 'totalCount')).to eq(1)
-        
+
         service = result.dig('data', 'searchServices', 'services').first
         expect(service['name']).to eq('Wedding Photography')
         expect(service['vendorLocation']).to include('New York')
@@ -220,7 +243,7 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
 
       it 'returns paginated results' do
         result = schema.execute(query, variables: variables, context: context)
-        
+
         expect(result.dig('data', 'searchServices', 'services').size).to eq(2)
         expect(result.dig('data', 'searchServices', 'currentPage')).to eq(1)
         expect(result.dig('data', 'searchServices', 'perPage')).to eq(2)
@@ -235,9 +258,9 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
 
       it 'returns results sorted by price ascending' do
         result = schema.execute(query, variables: variables, context: context)
-        
+
         services = result.dig('data', 'searchServices', 'services')
-        prices = services.map { |s| s['basePrice'] }
+        prices = services.pluck('basePrice')
         expect(prices).to eq(prices.sort)
       end
     end
@@ -257,9 +280,9 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
 
       it 'applies all filters correctly' do
         result = schema.execute(query, variables: variables, context: context)
-        
+
         expect(result.dig('data', 'searchServices', 'totalCount')).to eq(1)
-        
+
         service = result.dig('data', 'searchServices', 'services').first
         expect(service['name']).to eq('Wedding Photography')
         expect(service.dig('serviceCategory', 'slug')).to eq('photography')
@@ -270,13 +293,13 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
     context 'facet generation' do
       it 'generates category facets correctly' do
         result = schema.execute(query, context: context)
-        
+
         category_facets = result.dig('data', 'searchServices', 'facets', 'categories')
         expect(category_facets.size).to eq(2)
-        
+
         photography_facet = category_facets.find { |f| f['slug'] == 'photography' }
         videography_facet = category_facets.find { |f| f['slug'] == 'videography' }
-        
+
         expect(photography_facet['count']).to eq(2)
         expect(videography_facet['count']).to eq(1)
       end
@@ -285,20 +308,20 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
         # Filter by price > 1000
         variables = { filters: { priceMin: 1000 } }
         result = schema.execute(query, variables: variables, context: context)
-        
+
         category_facets = result.dig('data', 'searchServices', 'facets', 'categories')
         photography_facet = category_facets.find { |f| f['slug'] == 'photography' }
-        
+
         # Should only include "Wedding Photography" (1500), excluding "Event Photography" (800)
         expect(photography_facet['count']).to eq(1)
       end
 
       it 'generates price range facets correctly' do
         result = schema.execute(query, context: context)
-        
+
         price_facets = result.dig('data', 'searchServices', 'facets', 'priceRanges')
         expect(price_facets).to be_present
-        
+
         # Should have facets for different price ranges with counts
         price_facets.each do |facet|
           expect(facet['count']).to be > 0
@@ -308,11 +331,11 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
 
       it 'generates location facets correctly' do
         result = schema.execute(query, context: context)
-        
+
         location_facets = result.dig('data', 'searchServices', 'facets', 'locations')
         expect(location_facets.size).to eq(3)
-        
-        locations = location_facets.map { |f| f['location'] }
+
+        locations = location_facets.pluck('location')
         expect(locations).to include('New York, NY', 'Los Angeles, CA', 'Chicago, IL')
       end
     end
@@ -321,7 +344,7 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
       it 'handles invalid pagination gracefully' do
         variables = { pagination: { page: -1, perPage: 1000 } }
         result = schema.execute(query, variables: variables, context: context)
-        
+
         # Should normalize invalid values
         expect(result.dig('data', 'searchServices', 'currentPage')).to eq(1)
         expect(result.dig('data', 'searchServices', 'perPage')).to eq(100) # max limit
@@ -330,7 +353,7 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
       it 'handles empty results gracefully' do
         variables = { query: 'nonexistent service' }
         result = schema.execute(query, variables: variables, context: context)
-        
+
         expect(result.dig('data', 'searchServices', 'totalCount')).to eq(0)
         expect(result.dig('data', 'searchServices', 'services')).to eq([])
         expect(result.dig('data', 'searchServices', 'facets')).to be_present
@@ -384,7 +407,7 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
     it 'calculates query complexity correctly' do
       # This test ensures our complexity values are working
       result = schema.execute(complex_query, context: context)
-      
+
       # Should execute successfully but with reasonable complexity
       expect(result['errors']).to be_nil
       expect(result.dig('data', 'searchServices')).to be_present

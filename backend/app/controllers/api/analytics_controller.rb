@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Api::AnalyticsController < ApiController
   before_action :authenticate_user!
   before_action :ensure_vendor
@@ -9,8 +11,8 @@ class Api::AnalyticsController < ApiController
   private
 
   def ensure_vendor
-    unless current_user&.vendor? && current_user.vendor_profile
-      render json: { error: 'Only vendors with profiles can access analytics' }, status: :forbidden
-    end
+    return if current_user&.vendor? && current_user.vendor_profile
+
+    render json: { error: 'Only vendors with profiles can access analytics' }, status: :forbidden
   end
 end

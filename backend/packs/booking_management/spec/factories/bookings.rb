@@ -2,10 +2,10 @@
 
 FactoryBot.define do
   factory :booking do
-    association :customer, factory: [:user, :customer]
-    association :vendor, factory: [:user, :vendor]
+    association :customer, factory: %i[user customer]
+    association :vendor, factory: %i[user vendor]
     association :service
-    
+
     event_date { 1.week.from_now }
     event_location { Faker::Address.full_address }
     total_amount { Faker::Number.decimal(l_digits: 3, r_digits: 2) }

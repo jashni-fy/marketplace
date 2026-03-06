@@ -1,41 +1,5 @@
-# == Schema Information
-#
-# Table name: vendor_profiles
-#
-#  id                  :bigint           not null, primary key
-#  average_rating      :decimal(3, 2)    default(0.0)
-#  business_license    :string
-#  business_name       :string           not null
-#  description         :text
-#  is_verified         :boolean          default(FALSE)
-#  latitude            :decimal(10, 6)
-#  location            :string
-#  longitude           :decimal(10, 6)
-#  phone               :string
-#  rejection_reason    :text
-#  service_categories  :text
-#  total_reviews       :integer          default(0)
-#  verification_status :integer          default("unverified")
-#  verified_at         :datetime
-#  website             :string
-#  years_experience    :integer          default(0)
-#  created_at          :datetime         not null
-#  updated_at          :datetime         not null
-#  user_id             :bigint           not null
-#
-# Indexes
-#
-#  index_vendor_profiles_on_business_name        (business_name)
-#  index_vendor_profiles_on_coordinates          (latitude,longitude)
-#  index_vendor_profiles_on_is_verified          (is_verified)
-#  index_vendor_profiles_on_location             (location)
-#  index_vendor_profiles_on_user_id              (user_id)
-#  index_vendor_profiles_on_verification_status  (verification_status)
-#
-# Foreign Keys
-#
-#  fk_rails_...  (user_id => users.id)
-#
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe VendorProfile, type: :model do
@@ -43,22 +7,27 @@ RSpec.describe VendorProfile, type: :model do
   let(:vendor_profile) { vendor_user.vendor_profile }
 
   describe 'associations' do
-    it { should belong_to(:user) }
+    it { is_expected.to belong_to(:user) }
+    it { is_expected.to have_many(:bookings).dependent(:destroy) }
   end
 
   describe 'validations' do
     subject { vendor_profile }
 
-    it { should validate_presence_of(:user_id) }
-    it { should validate_uniqueness_of(:user_id) }
-    it { should validate_presence_of(:business_name) }
-    it { should validate_length_of(:business_name).is_at_least(2).is_at_most(100) }
-    it { should validate_length_of(:description).is_at_least(50).is_at_most(2000) }
-    it { should validate_presence_of(:location) }
-    it { should validate_length_of(:location).is_at_most(255) }
-    it { should validate_numericality_of(:years_experience).is_greater_than_or_equal_to(0).is_less_than(100) }
-    it { should validate_numericality_of(:average_rating).is_greater_than_or_equal_to(0.0).is_less_than_or_equal_to(5.0) }
-    it { should validate_numericality_of(:total_reviews).is_greater_than_or_equal_to(0) }
+    it { is_expected.to validate_presence_of(:user_id) }
+    it { is_expected.to validate_uniqueness_of(:user_id) }
+    it { is_expected.to validate_presence_of(:business_name) }
+    it { is_expected.to validate_length_of(:business_name).is_at_least(2).is_at_most(100) }
+    it { is_expected.to validate_length_of(:description).is_at_least(50).is_at_most(2000) }
+    it { is_expected.to validate_presence_of(:location) }
+    it { is_expected.to validate_length_of(:location).is_at_most(255) }
+    it { is_expected.to validate_numericality_of(:years_experience).is_greater_than_or_equal_to(0).is_less_than(100) }
+
+    it {
+      expect(subject).to validate_numericality_of(:average_rating).is_greater_than_or_equal_to(0.0).is_less_than_or_equal_to(5.0)
+    }
+
+    it { is_expected.to validate_numericality_of(:total_reviews).is_greater_than_or_equal_to(0) }
 
     describe 'phone validation' do
       it 'accepts valid phone numbers' do
@@ -70,7 +39,7 @@ RSpec.describe VendorProfile, type: :model do
       end
 
       it 'rejects invalid phone numbers' do
-        invalid_phones = ['123', 'abc-def-ghij', '555-12-34567890123456']
+        invalid_phones = %w[123 abc-def-ghij 555-12-34567890123456]
         invalid_phones.each do |phone|
           vendor_profile.phone = phone
           expect(vendor_profile).not_to be_valid, "#{phone} should be invalid"
@@ -108,44 +77,55 @@ RSpec.describe VendorProfile, type: :model do
   end
 
   describe 'scopes' do
-    let!(:verified_vendor) { create(:user, :vendor).vendor_profile.tap { |vp| vp.update!(is_verified: true) } }
-    let!(:unverified_vendor) { create(:user, :vendor).vendor_profile }
-    let!(:high_rated_vendor) { create(:user, :vendor).vendor_profile.tap { |vp| vp.update!(average_rating: 4.5, total_reviews: 10) } }
+    let!(:verified_vendor) do
+      create(:user, :vendor).vendor_profile.tap do |vp|
+        vp.update!(verification_status: :verified)
+      end
+    end
+    let!(:unverified_vendor) do
+      create(:user, :vendor).vendor_profile.tap do |vp|
+        vp.update!(verification_status: :unverified)
+      end
+    end
+    let!(:high_rated_vendor) do
+      create(:user, :vendor).vendor_profile.tap do |vp|
+        vp.update!(average_rating: 4.5, total_reviews: 10)
+      end
+    end
     let!(:experienced_vendor) { create(:user, :vendor).vendor_profile.tap { |vp| vp.update!(years_experience: 15) } }
 
     describe '.verified' do
       it 'returns only verified vendors' do
-        expect(VendorProfile.verified).to include(verified_vendor)
-        expect(VendorProfile.verified).not_to include(unverified_vendor)
+        expect(described_class.verified).to include(verified_vendor)
+        expect(described_class.verified).not_to include(unverified_vendor)
       end
     end
 
     describe '.unverified' do
       it 'returns only unverified vendors' do
-        expect(VendorProfile.unverified).to include(unverified_vendor)
-        expect(VendorProfile.unverified).not_to include(verified_vendor)
+        expect(described_class.unverified).to include(unverified_vendor)
+        expect(described_class.unverified).not_to include(verified_vendor)
       end
     end
 
     describe '.by_location' do
       it 'finds vendors by location' do
         vendor = create(:user, :vendor).vendor_profile.tap { |vp| vp.update!(location: 'New York, NY') }
-        expect(VendorProfile.by_location('New York')).to include(vendor)
-        expect(VendorProfile.by_location('Los Angeles')).not_to include(vendor)
+        expect(described_class.by_location('New York')).to include(vendor)
+        expect(described_class.by_location('Los Angeles')).not_to include(vendor)
       end
     end
 
     describe '.with_rating_above' do
       it 'returns vendors with rating above threshold' do
-        expect(VendorProfile.with_rating_above(4.0)).to include(high_rated_vendor)
-        expect(VendorProfile.with_rating_above(4.0)).not_to include(unverified_vendor)
+        expect(described_class.with_rating_above(4.0)).to include(high_rated_vendor)
       end
     end
 
     describe '.by_experience' do
       it 'returns vendors with minimum years of experience' do
-        expect(VendorProfile.by_experience(10)).to include(experienced_vendor)
-        expect(VendorProfile.by_experience(20)).not_to include(experienced_vendor)
+        expect(described_class.by_experience(10)).to include(experienced_vendor)
+        expect(described_class.by_experience(20)).not_to include(experienced_vendor)
       end
     end
   end
@@ -164,12 +144,12 @@ RSpec.describe VendorProfile, type: :model do
 
     describe '#verified?' do
       it 'returns true for verified vendors' do
-        complete_vendor_profile.update(is_verified: true)
+        complete_vendor_profile.update(verification_status: :verified)
         expect(complete_vendor_profile.verified?).to be true
       end
 
       it 'returns false for unverified vendors' do
-        complete_vendor_profile.update(is_verified: false)
+        complete_vendor_profile.update(verification_status: :unverified)
         expect(complete_vendor_profile.verified?).to be false
       end
     end
@@ -205,7 +185,7 @@ RSpec.describe VendorProfile, type: :model do
 
     describe '#service_categories_list=' do
       it 'sets categories from array' do
-        complete_vendor_profile.service_categories_list = ['Photography', 'Videography']
+        complete_vendor_profile.service_categories_list = %w[Photography Videography]
         expect(complete_vendor_profile.service_categories).to eq('Photography, Videography')
       end
 
@@ -242,6 +222,38 @@ RSpec.describe VendorProfile, type: :model do
       end
     end
 
+    describe '#request_verification!' do
+      it 'delegates to VendorProfiles::HandleVerification' do
+        expect(VendorProfiles::HandleVerification).to receive(:call).with(vendor_profile: complete_vendor_profile,
+                                                                          action: :request)
+        complete_vendor_profile.request_verification!
+      end
+    end
+
+    describe '#approve_verification!' do
+      it 'delegates to VendorProfiles::HandleVerification' do
+        expect(VendorProfiles::HandleVerification).to receive(:call).with(vendor_profile: complete_vendor_profile,
+                                                                          action: :approve)
+        complete_vendor_profile.approve_verification!
+      end
+    end
+
+    describe '#reject_verification!' do
+      it 'delegates to VendorProfiles::HandleVerification' do
+        reason = 'Invalid data'
+        expect(VendorProfiles::HandleVerification).to receive(:call).with(vendor_profile: complete_vendor_profile,
+                                                                          action: :reject, reason: reason)
+        complete_vendor_profile.reject_verification!(reason)
+      end
+    end
+
+    describe '#update_rating_stats!' do
+      it 'delegates to VendorProfiles::UpdateRatingStats' do
+        expect(VendorProfiles::UpdateRatingStats).to receive(:call).with(vendor_profile: complete_vendor_profile)
+        complete_vendor_profile.update_rating_stats!
+      end
+    end
+
     describe '#rating_display' do
       it 'returns formatted rating with reviews count' do
         complete_vendor_profile.update(average_rating: 4.3, total_reviews: 15)
@@ -262,29 +274,42 @@ RSpec.describe VendorProfile, type: :model do
 
   describe 'class methods' do
     describe '.search_by_name_or_location' do
-      let!(:vendor1) { create(:user, :vendor).vendor_profile.tap { |vp| vp.update!(business_name: 'Amazing Photography', location: 'New York') } }
-      let!(:vendor2) { create(:user, :vendor).vendor_profile.tap { |vp| vp.update!(business_name: 'Best Events', location: 'Los Angeles') } }
-      let!(:vendor3) { create(:user, :vendor).vendor_profile.tap { |vp| vp.update!(business_name: 'Creative Studio', description: 'Wedding photography specialists in the city providing amazing services for all your special events and occasions') } }
+      let!(:vendor1) do
+        create(:user, :vendor).vendor_profile.tap do |vp|
+          vp.update!(business_name: 'Amazing Photography', location: 'New York')
+        end
+      end
+      let!(:vendor2) do
+        create(:user, :vendor).vendor_profile.tap do |vp|
+          vp.update!(business_name: 'Best Events', location: 'Los Angeles')
+        end
+      end
+      let!(:vendor3) do
+        create(:user, :vendor).vendor_profile.tap do |vp|
+          vp.update!(business_name: 'Creative Studio',
+                     description: 'Wedding photography specialists in the city providing amazing services for all your special events and occasions')
+        end
+      end
 
       it 'finds vendors by business name' do
-        results = VendorProfile.search_by_name_or_location('Amazing')
+        results = described_class.search_by_name_or_location('Amazing')
         expect(results).to include(vendor1)
         expect(results).not_to include(vendor2)
       end
 
       it 'finds vendors by location' do
-        results = VendorProfile.search_by_name_or_location('Los Angeles')
+        results = described_class.search_by_name_or_location('Los Angeles')
         expect(results).to include(vendor2)
         expect(results).not_to include(vendor1)
       end
 
       it 'finds vendors by description' do
-        results = VendorProfile.search_by_name_or_location('Wedding')
+        results = described_class.search_by_name_or_location('Wedding')
         expect(results).to include(vendor3)
       end
 
       it 'returns all vendors when query is blank' do
-        results = VendorProfile.search_by_name_or_location('')
+        results = described_class.search_by_name_or_location('')
         expect(results.count).to eq(3)
       end
     end

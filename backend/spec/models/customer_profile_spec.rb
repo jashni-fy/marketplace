@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: customer_profiles
@@ -31,18 +33,18 @@ RSpec.describe CustomerProfile, type: :model do
   let(:customer_profile) { customer_user.customer_profile }
 
   describe 'associations' do
-    it { should belong_to(:user) }
+    it { is_expected.to belong_to(:user) }
   end
 
   describe 'validations' do
     subject { customer_profile }
 
-    it { should validate_presence_of(:user_id) }
-    it { should validate_uniqueness_of(:user_id) }
-    it { should validate_length_of(:preferences).is_at_most(1000) }
-    it { should validate_length_of(:location).is_at_most(255) }
-    it { should validate_length_of(:company_name).is_at_most(100) }
-    it { should validate_numericality_of(:total_bookings).is_greater_than_or_equal_to(0) }
+    it { is_expected.to validate_presence_of(:user_id) }
+    it { is_expected.to validate_uniqueness_of(:user_id) }
+    it { is_expected.to validate_length_of(:preferences).is_at_most(1000) }
+    it { is_expected.to validate_length_of(:location).is_at_most(255) }
+    it { is_expected.to validate_length_of(:company_name).is_at_most(100) }
+    it { is_expected.to validate_numericality_of(:total_bookings).is_greater_than_or_equal_to(0) }
 
     describe 'phone validation' do
       it 'accepts valid phone numbers' do
@@ -54,7 +56,7 @@ RSpec.describe CustomerProfile, type: :model do
       end
 
       it 'rejects invalid phone numbers' do
-        invalid_phones = ['123', 'abc-def-ghij', '555-12-34567890123456']
+        invalid_phones = %w[123 abc-def-ghij 555-12-34567890123456]
         invalid_phones.each do |phone|
           customer_profile.phone = phone
           expect(customer_profile).not_to be_valid, "#{phone} should be invalid"
@@ -70,8 +72,8 @@ RSpec.describe CustomerProfile, type: :model do
 
   describe 'enums' do
     it 'defines budget_range enum' do
-      expect(CustomerProfile.budget_ranges.keys).to include(
-        'under_500', 'between_500_1000', 'between_1000_2500', 
+      expect(described_class.budget_ranges.keys).to include(
+        'under_500', 'between_500_1000', 'between_1000_2500',
         'between_2500_5000', 'over_5000', 'custom'
       )
     end
@@ -86,36 +88,48 @@ RSpec.describe CustomerProfile, type: :model do
 
   describe 'scopes' do
     let!(:ny_customer) { create(:user, :customer).customer_profile.tap { |cp| cp.update!(location: 'New York, NY') } }
-    let!(:la_customer) { create(:user, :customer).customer_profile.tap { |cp| cp.update!(location: 'Los Angeles, CA') } }
-    let!(:high_budget_customer) { create(:user, :customer).customer_profile.tap { |cp| cp.update!(budget_range: 'over_5000') } }
-    let!(:company_customer) { create(:user, :customer).customer_profile.tap { |cp| cp.update!(company_name: 'Test Company') } }
+    let!(:la_customer) do
+      create(:user, :customer).customer_profile.tap do |cp|
+        cp.update!(location: 'Los Angeles, CA')
+      end
+    end
+    let!(:high_budget_customer) do
+      create(:user, :customer).customer_profile.tap do |cp|
+        cp.update!(budget_range: 'over_5000')
+      end
+    end
+    let!(:company_customer) do
+      create(:user, :customer).customer_profile.tap do |cp|
+        cp.update!(company_name: 'Test Company')
+      end
+    end
     let!(:frequent_customer) { create(:user, :customer).customer_profile.tap { |cp| cp.update!(total_bookings: 10) } }
 
     describe '.by_location' do
       it 'finds customers by location' do
-        expect(CustomerProfile.by_location('New York')).to include(ny_customer)
-        expect(CustomerProfile.by_location('New York')).not_to include(la_customer)
+        expect(described_class.by_location('New York')).to include(ny_customer)
+        expect(described_class.by_location('New York')).not_to include(la_customer)
       end
     end
 
     describe '.by_budget_range' do
       it 'finds customers by budget range' do
-        expect(CustomerProfile.by_budget_range('over_5000')).to include(high_budget_customer)
-        expect(CustomerProfile.by_budget_range('under_500')).not_to include(high_budget_customer)
+        expect(described_class.by_budget_range('over_5000')).to include(high_budget_customer)
+        expect(described_class.by_budget_range('under_500')).not_to include(high_budget_customer)
       end
     end
 
     describe '.with_company' do
       it 'returns customers with company names' do
-        expect(CustomerProfile.with_company).to include(company_customer)
-        expect(CustomerProfile.with_company).not_to include(ny_customer)
+        expect(described_class.with_company).to include(company_customer)
+        expect(described_class.with_company).not_to include(ny_customer)
       end
     end
 
     describe '.frequent_customers' do
       it 'returns customers with 5 or more bookings' do
-        expect(CustomerProfile.frequent_customers).to include(frequent_customer)
-        expect(CustomerProfile.frequent_customers).not_to include(ny_customer)
+        expect(described_class.frequent_customers).to include(frequent_customer)
+        expect(described_class.frequent_customers).not_to include(ny_customer)
       end
     end
   end
@@ -245,35 +259,39 @@ RSpec.describe CustomerProfile, type: :model do
     describe '.search_by_name_or_location' do
       let!(:user1) { create(:user, :customer, first_name: 'John', last_name: 'Smith') }
       let!(:user2) { create(:user, :customer, first_name: 'Jane', last_name: 'Doe') }
-      let!(:customer1) { user1.customer_profile.tap { |cp| cp.update!(location: 'New York', company_name: 'Smith Corp') } }
+      let!(:customer1) do
+        user1.customer_profile.tap do |cp|
+          cp.update!(location: 'New York', company_name: 'Smith Corp')
+        end
+      end
       let!(:customer2) { user2.customer_profile.tap { |cp| cp.update!(location: 'Los Angeles', company_name: '') } }
 
       it 'finds customers by first name' do
-        results = CustomerProfile.search_by_name_or_location('John')
+        results = described_class.search_by_name_or_location('John')
         expect(results).to include(customer1)
         expect(results).not_to include(customer2)
       end
 
       it 'finds customers by last name' do
-        results = CustomerProfile.search_by_name_or_location('Doe')
+        results = described_class.search_by_name_or_location('Doe')
         expect(results).to include(customer2)
         expect(results).not_to include(customer1)
       end
 
       it 'finds customers by company name' do
-        results = CustomerProfile.search_by_name_or_location('Smith Corp')
+        results = described_class.search_by_name_or_location('Smith Corp')
         expect(results).to include(customer1)
         expect(results).not_to include(customer2)
       end
 
       it 'finds customers by location' do
-        results = CustomerProfile.search_by_name_or_location('Los Angeles')
+        results = described_class.search_by_name_or_location('Los Angeles')
         expect(results).to include(customer2)
         expect(results).not_to include(customer1)
       end
 
       it 'returns all customers when query is blank' do
-        results = CustomerProfile.search_by_name_or_location('')
+        results = described_class.search_by_name_or_location('')
         expect(results.count).to eq(2)
       end
     end

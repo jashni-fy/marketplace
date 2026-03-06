@@ -1,9 +1,11 @@
+# frozen_string_literal: true
+
 FactoryBot.define do
   factory :portfolio_item do
     association :vendor_profile
     title { Faker::Lorem.words(number: 3).join(' ').titleize }
     description { Faker::Lorem.paragraph(sentence_count: 3) }
-    category { ['photography', 'videography', 'event_planning', 'catering', 'music'].sample }
+    category { %w[photography videography event_planning catering music].sample }
     display_order { rand(0..10) }
     is_featured { [true, false].sample }
 

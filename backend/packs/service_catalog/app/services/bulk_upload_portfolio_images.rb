@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class BulkUploadPortfolioImages
   include Callable
 
@@ -8,11 +10,11 @@ class BulkUploadPortfolioImages
 
   def call
     return { success: false, errors: ['No images provided'] } if @images.blank?
-    
+
     @images.each do |image|
       @portfolio_item.images.attach(image)
     end
-    
+
     if @portfolio_item.save
       { success: true, portfolio_item: @portfolio_item, images_count: @images.count }
     else

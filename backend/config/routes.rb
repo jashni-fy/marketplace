@@ -1,10 +1,10 @@
 Rails.application.routes.draw do
-  root to: "rails/health#show"
+  root to: 'rails/health#show'
 
-  post "/graphql", to: "graphql#execute"
+  post '/graphql', to: 'graphql#execute'
   if Rails.env.development?
     begin
-      mount GraphiQL::Rails::Engine, at: "/graphiql", graphql_path: "/graphql"
+      mount GraphiQL::Rails::Engine, at: '/graphiql', graphql_path: '/graphql'
     rescue NameError
       # GraphiQL not available, skip mounting
     end
@@ -14,10 +14,10 @@ Rails.application.routes.draw do
     ActiveAdmin.routes(self)
   end
   devise_for :users
-  
+
   # Health check endpoints
-  get "up" => "rails/health#show", as: :rails_health_check
-  get "health" => "health#show"
+  get 'up' => 'rails/health#show', as: :rails_health_check
+  get 'health' => 'health#show'
 
   # API routes namespace
   namespace :api do
@@ -29,14 +29,14 @@ Rails.application.routes.draw do
     end
 
     # User routes (user_management pack)
-    resources :users, only: [:show, :update] do
+    resources :users, only: %i[show update] do
       member do
         post :upload_avatar
       end
     end
 
     # Vendor profile routes (user_management pack)
-    resources :profiles, only: [:show, :create, :update, :destroy] do
+    resources :profiles, only: %i[show create update destroy] do
       collection do
         get :me
         get :service_categories
@@ -52,13 +52,13 @@ Rails.application.routes.draw do
       collection do
         get :search
       end
-      
+
       member do
         get :reviews, to: 'reviews#service_reviews'
       end
 
       # Service images nested routes
-      resources :images, controller: 'service_images', except: [:new, :edit] do
+      resources :images, controller: 'service_images', except: %i[new edit] do
         member do
           post :set_primary
         end
@@ -70,21 +70,20 @@ Rails.application.routes.draw do
     end
 
     # Vendor routes (service_catalog pack)
-    resources :vendors, only: [:index, :show] do
+    resources :vendors, only: %i[index show] do
       member do
         get :services
         get :availability
         get :portfolio
         get :reviews, to: 'reviews#vendor_reviews'
       end
-      
+
       # Portfolio items nested under vendors for public viewing
-      resources :portfolio_items, only: [:index, :show], controller: 'portfolio_items'
+      resources :portfolio_items, only: %i[index show], controller: 'portfolio_items'
     end
 
     # Review routes (reviews pack)
-    resources :reviews, only: [:index, :show, :create, :update, :destroy]
-
+    resources :reviews, only: %i[index show create update destroy]
 
     # Portfolio items routes (service_catalog pack)
     resources :portfolio_items do

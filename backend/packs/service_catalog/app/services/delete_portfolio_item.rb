@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class DeletePortfolioItem
   include Callable
 
@@ -8,7 +10,7 @@ class DeletePortfolioItem
 
   def call
     category = @portfolio_item.category
-    
+
     if @portfolio_item.destroy
       reorder_items_in_category(category)
       { success: true }
@@ -21,7 +23,7 @@ class DeletePortfolioItem
 
   def reorder_items_in_category(category)
     items = @vendor_profile.portfolio_items.where(category: category).order(:display_order, :created_at)
-    
+
     items.each_with_index do |item, index|
       item.update_column(:display_order, index + 1) if item.display_order != (index + 1)
     end

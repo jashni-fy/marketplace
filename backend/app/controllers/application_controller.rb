@@ -1,9 +1,11 @@
+# frozen_string_literal: true
+
 class ApplicationController < ActionController::Base
   include ExceptionHandler
-  
+
   # Protect from forgery attacks in web requests, but skip for API requests
   protect_from_forgery with: :exception, unless: -> { request.format.json? }
-  
+
   # Skip CSRF protection for API requests
   skip_before_action :verify_authenticity_token, if: -> { request.format.json? }
 
@@ -14,8 +16,6 @@ class ApplicationController < ActionController::Base
   private
 
   def authenticate_request
-    @current_user = (AuthorizeApiRequest.new(request.headers).call)[:user]
+    @current_user = AuthorizeApiRequest.new(request.headers).call[:user]
   end
-
-
 end

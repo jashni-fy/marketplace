@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: vendor_profiles
@@ -7,7 +9,6 @@
 #  business_license    :string
 #  business_name       :string           not null
 #  description         :text
-#  is_verified         :boolean          default(FALSE)
 #  latitude            :decimal(10, 6)
 #  location            :string
 #  longitude           :decimal(10, 6)
@@ -27,7 +28,6 @@
 #
 #  index_vendor_profiles_on_business_name        (business_name)
 #  index_vendor_profiles_on_coordinates          (latitude,longitude)
-#  index_vendor_profiles_on_is_verified          (is_verified)
 #  index_vendor_profiles_on_location             (location)
 #  index_vendor_profiles_on_user_id              (user_id)
 #  index_vendor_profiles_on_verification_status  (verification_status)
@@ -38,24 +38,24 @@
 #
 class VendorProfile < ApplicationRecord
   belongs_to :user
-  
+
   # Service associations
   has_many :services, dependent: :destroy
   has_many :portfolio_items, dependent: :destroy
   has_many :availability_slots, dependent: :destroy
-  has_many :bookings, through: :user, source: :vendor_bookings
+  has_many :bookings, dependent: :destroy # Updated to direct association
   has_many :reviews, dependent: :destroy
 
   # Enums
-  enum verification_status: {
+  enum :verification_status, {
     unverified: 0,
     pending_verification: 1,
     verified: 2,
     rejected: 3
-  }
+  }, prefix: :verification
 
   # Validations
-  validates :user_id, presence: true, uniqueness: true
+  validates :user_id, uniqueness: true
   validates :business_name, presence: true, length: { minimum: 2, maximum: 100 }
   validates :description, length: { minimum: 50, maximum: 2000 }, allow_blank: true
   validates :location, presence: true, length: { maximum: 255 }
@@ -68,35 +68,35 @@ class VendorProfile < ApplicationRecord
   validates :longitude, numericality: { greater_than_or_equal_to: -180, less_than_or_equal_to: 180 }, allow_nil: true
 
   # Scopes
-  scope :verified, -> { where(is_verified: true) }
-  scope :unverified, -> { where(is_verified: false) }
+  scope :verified, -> { where(verification_status: :verified) } # Updated to use enum
+  scope :unverified, -> { where.not(verification_status: :verified) } # Updated to use enum
   scope :by_location, ->(location) { where('location ILIKE ?', "%#{location}%") }
-  scope :with_rating_above, ->(rating) { where('average_rating >= ?', rating) }
-  scope :by_experience, ->(min_years) { where('years_experience >= ?', min_years) }
+  scope :with_rating_above, ->(rating) { where(average_rating: rating..) }
+  scope :by_experience, ->(min_years) { where(years_experience: min_years..) }
   scope :with_coordinates, -> { where.not(latitude: nil, longitude: nil) }
-  scope :within_radius, ->(lat, lng, radius_km) {
+  scope :within_radius, lambda { |lat, lng, radius_km|
     where('latitude IS NOT NULL AND longitude IS NOT NULL')
       .where(
-        "6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude))) <= ?",
+        '6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude))) <= ?',
         lat, lng, lat, radius_km
       )
   }
 
   # Instance methods
   def verified?
-    is_verified || verified_verification_status?
+    verification_verified?
   end
 
   def request_verification!
-    update(verification_status: :pending_verification)
+    VendorProfiles::HandleVerification.call(vendor_profile: self, action: :request)
   end
 
   def approve_verification!
-    update(verification_status: :verified, is_verified: true, verified_at: Time.current, rejection_reason: nil)
+    VendorProfiles::HandleVerification.call(vendor_profile: self, action: :approve)
   end
 
   def reject_verification!(reason)
-    update(verification_status: :rejected, is_verified: false, rejection_reason: reason)
+    VendorProfiles::HandleVerification.call(vendor_profile: self, action: :reject, reason: reason)
   end
 
   def has_description?
@@ -105,6 +105,7 @@ class VendorProfile < ApplicationRecord
 
   def service_categories_list
     return [] if service_categories.blank?
+
     service_categories.split(',').map(&:strip)
   end
 
@@ -113,10 +114,10 @@ class VendorProfile < ApplicationRecord
   end
 
   def profile_complete?
-    business_name.present? && 
-    description.present? && 
-    location.present? && 
-    has_description?
+    business_name.present? &&
+      description.present? &&
+      location.present? &&
+      has_description?
   end
 
   def display_name
@@ -124,29 +125,7 @@ class VendorProfile < ApplicationRecord
   end
 
   def update_rating_stats!
-    stats = reviews.published.pluck(
-      'COUNT(id)', 
-      'AVG(rating)',
-      'AVG(quality_rating)',
-      'AVG(communication_rating)',
-      'AVG(value_rating)',
-      'AVG(punctuality_rating)'
-    ).first
-    
-    count = stats[0].to_i
-    avg = stats[1].to_f.round(2)
-    
-    update_columns(average_rating: avg, total_reviews: count)
-    
-    # Return detailed stats for immediate use if needed
-    {
-      count: count,
-      average: avg,
-      quality: stats[2].to_f.round(2),
-      communication: stats[3].to_f.round(2),
-      value: stats[4].to_f.round(2),
-      punctuality: stats[5].to_f.round(2)
-    }
+    VendorProfiles::UpdateRatingStats.call(vendor_profile: self)
   end
 
   def rating_distribution
@@ -161,13 +140,13 @@ class VendorProfile < ApplicationRecord
   end
 
   def rating_breakdown
-    stats = reviews.published.pluck(
+    stats = reviews.published.pick(
       'AVG(quality_rating)',
       'AVG(communication_rating)',
       'AVG(value_rating)',
       'AVG(punctuality_rating)'
-    ).first
-    
+    )
+
     {
       quality: stats[0].to_f.round(2),
       communication: stats[1].to_f.round(2),
@@ -178,6 +157,7 @@ class VendorProfile < ApplicationRecord
 
   def rating_display
     return 'No ratings yet' if total_reviews.zero?
+
     "#{average_rating.round(1)} (#{total_reviews} #{'review'.pluralize(total_reviews)})"
   end
 
@@ -199,6 +179,7 @@ class VendorProfile < ApplicationRecord
 
   def coordinates
     return nil unless has_coordinates?
+
     [latitude.to_f, longitude.to_f]
   end
 
@@ -227,7 +208,7 @@ class VendorProfile < ApplicationRecord
     lat1_rad = lat1 * rad_per_deg
     lat2_rad = lat2 * rad_per_deg
 
-    a = Math.sin(dlat_rad / 2)**2 + Math.cos(lat1_rad) * Math.cos(lat2_rad) * Math.sin(dlon_rad / 2)**2
+    a = (Math.sin(dlat_rad / 2)**2) + (Math.cos(lat1_rad) * Math.cos(lat2_rad) * (Math.sin(dlon_rad / 2)**2))
     c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
     distance_km = rkm * c
 
@@ -244,7 +225,7 @@ class VendorProfile < ApplicationRecord
   # Class methods
   def self.search_by_name_or_location(query)
     return all if query.blank?
-    
+
     where(
       'business_name ILIKE ? OR location ILIKE ? OR description ILIKE ?',
       "%#{query}%", "%#{query}%", "%#{query}%"
@@ -253,15 +234,15 @@ class VendorProfile < ApplicationRecord
 
   # == Ransackable Associations ==
   # Explicitly allowlist safe associations for Ransack/ActiveAdmin
-  def self.ransackable_associations(auth_object = nil)
+  def self.ransackable_associations(_auth_object = nil)
     %w[user services portfolio_items availability_slots bookings]
   end
 
   # == Ransackable Attributes ==
   # Explicitly allowlist safe searchable fields for Ransack/ActiveAdmin
-  def self.ransackable_attributes(auth_object = nil)
+  def self.ransackable_attributes(_auth_object = nil)
     %w[
-      id business_name description location phone website service_categories business_license years_experience is_verified average_rating total_reviews latitude longitude created_at updated_at user_id
+      id business_name description location phone website service_categories business_license years_experience average_rating total_reviews latitude longitude created_at updated_at user_id
     ]
   end
 
@@ -272,22 +253,21 @@ class VendorProfile < ApplicationRecord
 
   def normalize_website
     return if website.blank?
-    
-    unless website.match?(/\Ahttps?:\/\//)
-      self.website = "https://#{website}"
-    end
+
+    return if website.match?(%r{\Ahttps?://})
+
+    self.website = "https://#{website}"
   end
 
   def website_format
     return if website.blank?
+
     normalize_website
     begin
       uri = URI.parse(website)
-      unless uri.is_a?(URI::HTTP) || uri.is_a?(URI::HTTPS)
-        errors.add(:website, 'is not a valid URL')
-      end
+      errors.add(:website, 'is not a valid URL') unless uri.is_a?(URI::HTTP) || uri.is_a?(URI::HTTPS)
       # Additional validation for domain format
-      unless website.match?(/\A(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?\z/i)
+      unless website.match?(%r{\A(https?://)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*/?\z}i)
         errors.add(:website, 'is not a valid URL')
       end
     rescue URI::InvalidURIError

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: customer_profiles
@@ -28,7 +30,7 @@ FactoryBot.define do
   factory :customer_profile do
     # Don't create a user here - let the User model handle profile creation
     # or use the existing profile created by the User callback
-    
+
     phone { '+1-555-987-6543' }
     preferences { Faker::Lorem.paragraph(sentence_count: 3) }
     event_types { ['Wedding', 'Corporate Event', 'Birthday Party'].sample(2).join(', ') }

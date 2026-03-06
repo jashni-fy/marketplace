@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe ProfilesController, type: :controller do
@@ -29,7 +31,7 @@ RSpec.describe ProfilesController, type: :controller do
     context 'when vendor profile does not exist' do
       it 'returns not found' do
         request.headers.merge!(auth_headers(vendor_user))
-        get :show, params: { id: 999999 }, format: :json
+        get :show, params: { id: 999_999 }, format: :json
 
         expect(response).to have_http_status(:not_found)
         json_response = JSON.parse(response.body)
@@ -41,12 +43,6 @@ RSpec.describe ProfilesController, type: :controller do
   describe 'POST #create' do
     context 'when user is a vendor without existing profile' do
       let(:user_without_profile) { create(:user, :vendor) }
-      
-      before do
-        user_without_profile.vendor_profile&.destroy
-        user_without_profile.reload
-      end
-
       let(:valid_params) do
         {
           vendor_profile: {
@@ -60,12 +56,17 @@ RSpec.describe ProfilesController, type: :controller do
         }
       end
 
+      before do
+        user_without_profile.vendor_profile&.destroy
+        user_without_profile.reload
+      end
+
       it 'creates a new vendor profile' do
         request.headers.merge!(auth_headers(user_without_profile))
-        
-        expect {
+
+        expect do
           post :create, params: valid_params, format: :json
-        }.to change(VendorProfile, :count).by(1)
+        end.to change(VendorProfile, :count).by(1)
 
         expect(response).to have_http_status(:created)
         json_response = JSON.parse(response.body)
@@ -86,7 +87,7 @@ RSpec.describe ProfilesController, type: :controller do
 
       it 'returns unprocessable entity' do
         request.headers.merge!(auth_headers(vendor_user))
-        
+
         post :create, params: valid_params, format: :json
 
         expect(response).to have_http_status(:unprocessable_content)
@@ -98,7 +99,7 @@ RSpec.describe ProfilesController, type: :controller do
     context 'when user is not a vendor' do
       it 'returns forbidden' do
         request.headers.merge!(auth_headers(customer_user))
-        
+
         post :create, params: { vendor_profile: { business_name: 'Test' } }, format: :json
 
         expect(response).to have_http_status(:forbidden)
@@ -122,7 +123,7 @@ RSpec.describe ProfilesController, type: :controller do
     context 'when user owns the profile' do
       it 'updates the vendor profile' do
         request.headers.merge!(auth_headers(vendor_user))
-        
+
         put :update, params: update_params, format: :json
 
         expect(response).to have_http_status(:ok)
@@ -135,7 +136,7 @@ RSpec.describe ProfilesController, type: :controller do
     context 'when user does not own the profile' do
       it 'returns forbidden' do
         request.headers.merge!(auth_headers(other_vendor_user))
-        
+
         put :update, params: update_params, format: :json
 
         expect(response).to have_http_status(:forbidden)
@@ -149,10 +150,10 @@ RSpec.describe ProfilesController, type: :controller do
     context 'when user owns the profile' do
       it 'deletes the vendor profile' do
         request.headers.merge!(auth_headers(vendor_user))
-        
-        expect {
+
+        expect do
           delete :destroy, params: { id: vendor_profile.id }, format: :json
-        }.to change(VendorProfile, :count).by(-1)
+        end.to change(VendorProfile, :count).by(-1)
 
         expect(response).to have_http_status(:no_content)
       end
@@ -161,7 +162,7 @@ RSpec.describe ProfilesController, type: :controller do
     context 'when user does not own the profile' do
       it 'returns forbidden' do
         request.headers.merge!(auth_headers(other_vendor_user))
-        
+
         delete :destroy, params: { id: vendor_profile.id }, format: :json
 
         expect(response).to have_http_status(:forbidden)
@@ -175,7 +176,7 @@ RSpec.describe ProfilesController, type: :controller do
     context 'when user has a vendor profile' do
       it 'returns the current user vendor profile' do
         request.headers.merge!(auth_headers(vendor_user))
-        
+
         get :me, format: :json
 
         expect(response).to have_http_status(:ok)
@@ -187,7 +188,7 @@ RSpec.describe ProfilesController, type: :controller do
 
     context 'when user does not have a vendor profile' do
       let(:user_without_profile) { create(:user, :vendor) }
-      
+
       before do
         user_without_profile.vendor_profile&.destroy
         user_without_profile.reload
@@ -195,7 +196,7 @@ RSpec.describe ProfilesController, type: :controller do
 
       it 'returns not found' do
         request.headers.merge!(auth_headers(user_without_profile))
-        
+
         get :me, format: :json
 
         expect(response).to have_http_status(:not_found)

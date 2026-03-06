@@ -41,21 +41,21 @@ RSpec.describe AvailabilitySlotsController, type: :controller do
       json_response = JSON.parse(response.body)
       expect(json_response['availability_slots']).to be_an(Array)
       # Should include today and future slots, but not past slots
-      slot_ids = json_response['availability_slots'].map { |slot| slot['id'] }
+      slot_ids = json_response['availability_slots'].pluck('id')
       expect(slot_ids).to include(today_slot.id, future_slot.id)
       expect(slot_ids).not_to include(past_slot.id)
     end
 
     context 'with date range filter' do
       it 'filters by date range' do
-        get :index, params: { 
-          start_date: Date.current, 
-          end_date: Date.current + 3.days 
+        get :index, params: {
+          start_date: Date.current,
+          end_date: Date.current + 3.days
         }
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
-        slot_ids = json_response['availability_slots'].map { |slot| slot['id'] }
+        slot_ids = json_response['availability_slots'].pluck('id')
         expect(slot_ids).to include(today_slot.id)
         expect(slot_ids).not_to include(future_slot.id, past_slot.id)
       end
@@ -98,7 +98,7 @@ RSpec.describe AvailabilitySlotsController, type: :controller do
 
     context 'when slot does not exist' do
       it 'returns not found' do
-        get :show, params: { id: 999999 }
+        get :show, params: { id: 999_999 }
 
         expect(response).to have_http_status(:not_found)
         json_response = JSON.parse(response.body)
@@ -122,9 +122,9 @@ RSpec.describe AvailabilitySlotsController, type: :controller do
     end
 
     it 'creates a new availability slot' do
-      expect {
+      expect do
         post :create, params: valid_params
-      }.to change(AvailabilitySlot, :count).by(1)
+      end.to change(AvailabilitySlot, :count).by(1)
 
       expect(response).to have_http_status(:created)
       json_response = JSON.parse(response.body)
@@ -144,9 +144,9 @@ RSpec.describe AvailabilitySlotsController, type: :controller do
       end
 
       it 'returns unprocessable entity' do
-        expect {
+        expect do
           post :create, params: invalid_params
-        }.not_to change(AvailabilitySlot, :count)
+        end.not_to change(AvailabilitySlot, :count)
 
         expect(response).to have_http_status(:unprocessable_entity)
         json_response = JSON.parse(response.body)
@@ -188,10 +188,10 @@ RSpec.describe AvailabilitySlotsController, type: :controller do
 
       it 'deletes the availability slot' do
         slot_to_delete = create(:availability_slot, vendor_profile: vendor_user.vendor_profile)
-        
-        expect {
+
+        expect do
           delete :destroy, params: { id: slot_to_delete.id }
-        }.to change(AvailabilitySlot, :count).by(-1)
+        end.to change(AvailabilitySlot, :count).by(-1)
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
@@ -203,9 +203,9 @@ RSpec.describe AvailabilitySlotsController, type: :controller do
       before { allow_any_instance_of(AvailabilitySlot).to receive(:has_booking_conflict?).and_return(true) }
 
       it 'returns unprocessable entity' do
-        expect {
+        expect do
           delete :destroy, params: { id: availability_slot.id }
-        }.not_to change(AvailabilitySlot, :count)
+        end.not_to change(AvailabilitySlot, :count)
 
         expect(response).to have_http_status(:unprocessable_entity)
         json_response = JSON.parse(response.body)
@@ -237,9 +237,9 @@ RSpec.describe AvailabilitySlotsController, type: :controller do
     end
 
     it 'creates multiple availability slots' do
-      expect {
+      expect do
         post :bulk_create, params: bulk_params
-      }.to change(AvailabilitySlot, :count).by(2)
+      end.to change(AvailabilitySlot, :count).by(2)
 
       expect(response).to have_http_status(:created)
       json_response = JSON.parse(response.body)
@@ -268,9 +268,9 @@ RSpec.describe AvailabilitySlotsController, type: :controller do
       end
 
       it 'creates valid slots and reports errors' do
-        expect {
+        expect do
           post :bulk_create, params: mixed_params
-        }.to change(AvailabilitySlot, :count).by(1)
+        end.to change(AvailabilitySlot, :count).by(1)
 
         expect(response).to have_http_status(:partial_content)
         json_response = JSON.parse(response.body)
@@ -306,7 +306,7 @@ RSpec.describe AvailabilitySlotsController, type: :controller do
 
     context 'when overlapping slots exist' do
       let!(:overlapping_slot) do
-        create(:availability_slot, 
+        create(:availability_slot,
                vendor_profile: vendor_user.vendor_profile,
                date: Date.current,
                start_time: '09:00',
@@ -336,7 +336,7 @@ RSpec.describe AvailabilitySlotsController, type: :controller do
 
     context 'with exclude_id parameter' do
       let!(:existing_slot) do
-        create(:availability_slot, 
+        create(:availability_slot,
                vendor_profile: vendor_user.vendor_profile,
                date: Date.current,
                start_time: '09:00',

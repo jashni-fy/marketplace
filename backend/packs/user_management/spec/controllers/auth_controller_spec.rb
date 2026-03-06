@@ -1,9 +1,11 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe Api::AuthController, type: :controller do
   let(:user) { create(:user, confirmed_at: Time.current) }
   let(:unconfirmed_user) { create(:user, confirmed_at: nil) }
-  
+
   describe 'POST #login' do
     context 'with valid credentials' do
       let(:valid_params) do
@@ -17,10 +19,10 @@ RSpec.describe Api::AuthController, type: :controller do
 
       it 'returns success response with token and user data' do
         post :login, params: valid_params, format: :json
-        
+
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response['message']).to eq('Login successful')
         expect(json_response['token']).to be_present
         expect(json_response['user']['id']).to eq(user.id)
@@ -41,7 +43,7 @@ RSpec.describe Api::AuthController, type: :controller do
 
       it 'returns unauthorized response' do
         post :login, params: invalid_params, format: :json
-        
+
         expect(response).to have_http_status(:unauthorized)
         json_response = JSON.parse(response.body)
         expect(json_response['error']).to eq('Invalid credentials')
@@ -60,7 +62,7 @@ RSpec.describe Api::AuthController, type: :controller do
 
       it 'returns unauthorized response' do
         post :login, params: unconfirmed_params, format: :json
-        
+
         expect(response).to have_http_status(:unauthorized)
         json_response = JSON.parse(response.body)
         expect(json_response['error']).to eq('Please confirm your email address before logging in')
@@ -70,7 +72,7 @@ RSpec.describe Api::AuthController, type: :controller do
     context 'with missing parameters' do
       it 'returns bad request when email is missing' do
         post :login, params: { auth: { password: 'password' } }, format: :json
-        
+
         expect(response).to have_http_status(:bad_request)
         json_response = JSON.parse(response.body)
         expect(json_response['error']).to eq('Email and password are required')
@@ -78,7 +80,7 @@ RSpec.describe Api::AuthController, type: :controller do
 
       it 'returns bad request when password is missing' do
         post :login, params: { auth: { email: 'test@example.com' } }, format: :json
-        
+
         expect(response).to have_http_status(:bad_request)
         json_response = JSON.parse(response.body)
         expect(json_response['error']).to eq('Email and password are required')
@@ -102,13 +104,13 @@ RSpec.describe Api::AuthController, type: :controller do
       end
 
       it 'creates a new user and returns success response' do
-        expect {
+        expect do
           post :register, params: valid_params, format: :json
-        }.to change(User, :count).by(1)
-        
+        end.to change(User, :count).by(1)
+
         expect(response).to have_http_status(:created)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response['message']).to eq('Registration successful. Please check your email to confirm your account.')
         expect(json_response['user']['email']).to eq('newuser@example.com')
         expect(json_response['user']['first_name']).to eq('John')
@@ -133,13 +135,13 @@ RSpec.describe Api::AuthController, type: :controller do
       end
 
       it 'returns unprocessable entity with error details' do
-        expect {
+        expect do
           post :register, params: invalid_params, format: :json
-        }.not_to change(User, :count)
-        
+        end.not_to change(User, :count)
+
         expect(response).to have_http_status(:unprocessable_content)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response['error']).to eq('Registration failed')
         expect(json_response['details']).to be_an(Array)
         expect(json_response['details']).to include(match(/Email is invalid/))
@@ -163,14 +165,14 @@ RSpec.describe Api::AuthController, type: :controller do
       it 'returns unprocessable entity' do
         # Ensure the user exists before the test
         user.save! if user.new_record?
-        
-        expect {
+
+        expect do
           post :register, params: existing_email_params, format: :json
-        }.not_to change(User, :count)
-        
+        end.not_to change(User, :count)
+
         expect(response).to have_http_status(:unprocessable_content)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response['error']).to eq('Registration failed')
         expect(json_response['details']).to include(match(/Email has already been taken/))
       end
@@ -180,7 +182,7 @@ RSpec.describe Api::AuthController, type: :controller do
   describe 'DELETE #logout' do
     it 'returns success response' do
       delete :logout, format: :json
-      
+
       expect(response).to have_http_status(:ok)
       json_response = JSON.parse(response.body)
       expect(json_response['message']).to eq('Logout successful')

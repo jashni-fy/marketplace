@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 ActiveAdmin.register VendorProfile do
   # Permitted parameters
   permit_params :user_id, :business_name, :business_description, :business_address, :business_phone, :business_email
@@ -42,7 +44,7 @@ ActiveAdmin.register VendorProfile do
 
   # Form
   form do |f|
-    f.inputs "Vendor Profile Details" do
+    f.inputs 'Vendor Profile Details' do
       f.input :user, collection: User.vendors.map { |u| [u.full_name, u.id] }
       f.input :business_name
       f.input :business_description, as: :text

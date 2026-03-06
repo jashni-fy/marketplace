@@ -7,41 +7,38 @@ RSpec.describe AvailabilitySlot, type: :model do
   let(:vendor_profile) { vendor.vendor_profile }
 
   describe 'associations' do
-    it { should belong_to(:vendor_profile) }
+    it { is_expected.to belong_to(:vendor_profile) }
   end
 
   describe 'validations' do
     subject { build(:availability_slot, vendor_profile: vendor_profile) }
-    
-    it { should validate_presence_of(:date) }
-    it { should validate_presence_of(:start_time) }
-    it { should validate_presence_of(:end_time) }
-    it { should validate_inclusion_of(:is_available).in_array([true, false]) }
-    
+
+    it { is_expected.to validate_presence_of(:date) }
+    it { is_expected.to validate_presence_of(:start_time) }
+    it { is_expected.to validate_presence_of(:end_time) }
+    it { is_expected.to validate_inclusion_of(:is_available).in_array([true, false]) }
+
     it 'validates end_time is after start_time for same-day slots' do
-      slot = build(:availability_slot, 
-        vendor_profile: vendor_profile,
-        start_time: '14:00',
-        end_time: '14:00'  # Same time should be invalid
-      )
+      slot = build(:availability_slot,
+                   vendor_profile: vendor_profile,
+                   start_time: '14:00',
+                   end_time: '14:00')  # Same time should be invalid
       expect(slot).not_to be_valid
       expect(slot.errors[:end_time]).to include('must be after start time')
     end
 
     it 'allows overnight slots' do
-      slot = build(:availability_slot, 
-        vendor_profile: vendor_profile,
-        start_time: '22:00',
-        end_time: '06:00'  # Overnight slot should be valid
-      )
+      slot = build(:availability_slot,
+                   vendor_profile: vendor_profile,
+                   start_time: '22:00',
+                   end_time: '06:00')  # Overnight slot should be valid
       expect(slot).to be_valid
     end
 
     it 'validates date is not in the past on create' do
-      slot = build(:availability_slot, 
-        vendor_profile: vendor_profile,
-        date: 1.day.ago
-      )
+      slot = build(:availability_slot,
+                   vendor_profile: vendor_profile,
+                   date: 1.day.ago)
       expect(slot).not_to be_valid
       expect(slot.errors[:date]).to include('cannot be in the past')
     end
@@ -55,15 +52,15 @@ RSpec.describe AvailabilitySlot, type: :model do
 
     describe '.available' do
       it 'returns only available slots' do
-        expect(AvailabilitySlot.available).to include(available_slot)
-        expect(AvailabilitySlot.available).not_to include(unavailable_slot)
+        expect(described_class.available).to include(available_slot)
+        expect(described_class.available).not_to include(unavailable_slot)
       end
     end
 
     describe '.for_date' do
       it 'returns slots for specific date' do
-        expect(AvailabilitySlot.for_date(Date.current)).to include(today_slot)
-        expect(AvailabilitySlot.for_date(Date.current)).not_to include(future_slot)
+        expect(described_class.for_date(Date.current)).to include(today_slot)
+        expect(described_class.for_date(Date.current)).not_to include(future_slot)
       end
     end
 
@@ -72,24 +69,25 @@ RSpec.describe AvailabilitySlot, type: :model do
       let!(:other_slot) { create(:availability_slot, vendor_profile: other_vendor.vendor_profile) }
 
       it 'returns slots for specific vendor' do
-        expect(AvailabilitySlot.for_vendor(vendor_profile)).to include(available_slot)
-        expect(AvailabilitySlot.for_vendor(vendor_profile)).not_to include(other_slot)
+        expect(described_class.for_vendor(vendor_profile)).to include(available_slot)
+        expect(described_class.for_vendor(vendor_profile)).not_to include(other_slot)
       end
     end
 
     describe '.upcoming' do
       it 'returns slots from today onwards' do
-        expect(AvailabilitySlot.upcoming).to include(today_slot, future_slot)
+        expect(described_class.upcoming).to include(today_slot, future_slot)
       end
     end
   end
 
   describe 'instance methods' do
-    let(:slot) { create(:availability_slot, 
-      vendor_profile: vendor_profile,
-      start_time: '09:00',
-      end_time: '17:00'
-    ) }
+    let(:slot) do
+      create(:availability_slot,
+             vendor_profile: vendor_profile,
+             start_time: '09:00',
+             end_time: '17:00')
+    end
 
     describe '#duration_hours' do
       it 'calculates duration in hours' do
@@ -98,10 +96,9 @@ RSpec.describe AvailabilitySlot, type: :model do
 
       it 'handles overnight slots' do
         overnight_slot = build(:availability_slot,
-          vendor_profile: vendor_profile,
-          start_time: '22:00',
-          end_time: '06:00'
-        )
+                               vendor_profile: vendor_profile,
+                               start_time: '22:00',
+                               end_time: '06:00')
         # Skip validation for this test since we're testing the duration calculation
         overnight_slot.save(validate: false)
         expect(overnight_slot.duration_hours).to eq(8.0)
@@ -115,19 +112,21 @@ RSpec.describe AvailabilitySlot, type: :model do
     end
 
     describe '#overlaps_with?' do
-      let(:other_slot) { build(:availability_slot,
-        vendor_profile: vendor_profile,
-        date: slot.date,
-        start_time: '14:00',
-        end_time: '18:00'
-      ) }
+      let(:other_slot) do
+        build(:availability_slot,
+              vendor_profile: vendor_profile,
+              date: slot.date,
+              start_time: '14:00',
+              end_time: '18:00')
+      end
 
-      let(:non_overlapping_slot) { build(:availability_slot,
-        vendor_profile: vendor_profile,
-        date: slot.date,
-        start_time: '18:00',
-        end_time: '20:00'
-      ) }
+      let(:non_overlapping_slot) do
+        build(:availability_slot,
+              vendor_profile: vendor_profile,
+              date: slot.date,
+              start_time: '18:00',
+              end_time: '20:00')
+      end
 
       it 'detects overlapping slots' do
         expect(slot.overlaps_with?(other_slot)).to be true
@@ -143,7 +142,7 @@ RSpec.describe AvailabilitySlot, type: :model do
       end
 
       it 'returns false for non-AvailabilitySlot objects' do
-        expect(slot.overlaps_with?("not a slot")).to be false
+        expect(slot.overlaps_with?('not a slot')).to be false
       end
     end
 
@@ -152,14 +151,15 @@ RSpec.describe AvailabilitySlot, type: :model do
       let(:service) { create(:service, vendor_profile: vendor_profile) }
 
       context 'when there are conflicting bookings' do
-        let!(:booking) { create(:booking,
-          customer: customer,
-          vendor: vendor,
-          service: service,
-          event_date: slot.date.beginning_of_day + 10.hours,
-          event_end_date: slot.date.beginning_of_day + 12.hours,
-          status: :accepted
-        ) }
+        let!(:booking) do
+          create(:booking,
+                 customer: customer,
+                 vendor: vendor,
+                 service: service,
+                 event_date: slot.date.beginning_of_day + 10.hours,
+                 event_end_date: slot.date.beginning_of_day + 12.hours,
+                 status: :accepted)
+        end
 
         it 'returns true' do
           expect(slot.has_booking_conflict?).to be true
@@ -173,13 +173,14 @@ RSpec.describe AvailabilitySlot, type: :model do
       end
 
       context 'when bookings are declined or cancelled' do
-        let!(:declined_booking) { create(:booking,
-          customer: customer,
-          vendor: vendor,
-          service: service,
-          event_date: slot.date.beginning_of_day + 10.hours,
-          status: :declined
-        ) }
+        let!(:declined_booking) do
+          create(:booking,
+                 customer: customer,
+                 vendor: vendor,
+                 service: service,
+                 event_date: slot.date.beginning_of_day + 10.hours,
+                 status: :declined)
+        end
 
         it 'returns false' do
           expect(slot.has_booking_conflict?).to be false

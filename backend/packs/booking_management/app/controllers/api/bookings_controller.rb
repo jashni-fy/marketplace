@@ -1,10 +1,12 @@
+# frozen_string_literal: true
+
 class Api::BookingsController < ApiController
   before_action :authenticate_user!
-  before_action :set_booking, only: [:show, :update, :destroy, :respond, :messages, :send_message]
+  before_action :set_booking, only: %i[show update destroy respond messages send_message]
 
   def index
     @bookings = current_user.vendor? ? vendor_bookings : customer_bookings
-    @bookings = @bookings.includes(:customer, :vendor, :service, :booking_messages)
+    @bookings = @bookings.includes(:customer, :vendor_profile, :service, :booking_messages)
                          .order(created_at: :desc)
                          .page(params[:page])
                          .per(params[:per_page] || 20)
@@ -17,6 +19,7 @@ class Api::BookingsController < ApiController
 
   def show
     return unless authorize_booking_access!
+
     render json: { booking: detailed_booking_json(@booking) }
   end
 
@@ -26,15 +29,15 @@ class Api::BookingsController < ApiController
     )
 
     if result[:success]
-      render json: { 
+      render json: {
         booking: booking_json(result[:booking]),
         message: 'Booking created successfully'
       }, status: :created
     else
-      render json: { 
+      render json: {
         errors: result[:errors],
         error: 'Failed to create booking'
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
     end
   end
 
@@ -44,7 +47,7 @@ class Api::BookingsController < ApiController
     if @booking.update(booking_update_params)
       render json: { booking: booking_json(@booking) }
     else
-      render json: { errors: @booking.errors.full_messages }, status: :unprocessable_entity
+      render json: { errors: @booking.errors.full_messages }, status: :unprocessable_content
     end
   end
 
@@ -56,7 +59,7 @@ class Api::BookingsController < ApiController
       # TODO: Send cancellation notification
       render json: { message: 'Booking cancelled successfully' }
     else
-      render json: { error: 'Booking cannot be cancelled' }, status: :unprocessable_entity
+      render json: { error: 'Booking cannot be cancelled' }, status: :unprocessable_content
     end
   end
 
@@ -73,22 +76,22 @@ class Api::BookingsController < ApiController
                     end
 
     result = BookingResponseService.call(
-      @booking, 
-      current_user, 
-      response_type, 
+      @booking,
+      current_user,
+      response_type,
       params[:counter_message]
     )
 
     if result[:success]
       render json: { booking: booking_json(result[:booking]), message: "Booking #{response_action}ed successfully" }
     else
-      render json: { errors: result[:errors] }, status: :unprocessable_entity
+      render json: { errors: result[:errors] }, status: :unprocessable_content
     end
   end
 
   def messages
     return unless authorize_booking_access!
-    
+
     @messages = @booking.booking_messages
                         .includes(:sender)
                         .ordered
@@ -114,7 +117,7 @@ class Api::BookingsController < ApiController
       # TODO: Send real-time notification
       render json: { message: message_json(@message) }, status: :created
     else
-      render json: { errors: @message.errors.full_messages }, status: :unprocessable_entity
+      render json: { errors: @message.errors.full_messages }, status: :unprocessable_content
     end
   end
 
@@ -130,24 +133,24 @@ class Api::BookingsController < ApiController
     )
 
     if result[:available]
-      render json: { 
+      render json: {
         available: true,
         message: 'Time slot is available'
       }
     else
-      render json: { 
+      render json: {
         available: false,
         message: 'Time slot is not available',
         suggested_times: result[:suggested_times]
       }
     end
-  rescue Date::Error, ArgumentError => e
+  rescue Date::Error, ArgumentError
     render json: { error: 'Invalid date or time format' }, status: :bad_request
   end
 
   def suggest_alternatives
     result = ConflictResolutionService.call(
-      vendor: User.find(params[:vendor_id]),
+      vendor_profile: VendorProfile.find(params[:vendor_profile_id]),
       event_date: DateTime.parse("#{params[:date]} #{params[:start_time]}"),
       event_end_date: DateTime.parse("#{params[:date]} #{params[:end_time]}")
     )
@@ -156,7 +159,7 @@ class Api::BookingsController < ApiController
       has_conflict: result[:has_conflict],
       alternative_times: result[:suggested_times]
     }
-  rescue Date::Error, ArgumentError => e
+  rescue Date::Error, ArgumentError
     render json: { error: 'Invalid date or time format' }, status: :bad_request
   end
 
@@ -177,7 +180,7 @@ class Api::BookingsController < ApiController
   end
 
   def authorize_booking_access!
-    unless @booking.customer == current_user || @booking.vendor == current_user
+    unless @booking.customer == current_user || @booking.vendor_profile.user == current_user
       render json: { error: 'Access denied' }, status: :forbidden
       return false
     end
@@ -193,7 +196,7 @@ class Api::BookingsController < ApiController
   end
 
   def authorize_vendor_response!
-    unless @booking.vendor == current_user && @booking.pending?
+    unless @booking.vendor_profile.user == current_user && @booking.pending?
       render json: { error: 'Cannot respond to this booking' }, status: :forbidden
       return false
     end
@@ -241,9 +244,10 @@ class Api::BookingsController < ApiController
         email: booking.customer.email
       },
       vendor: {
-        id: booking.vendor.id,
-        name: booking.vendor.full_name,
-        business_name: booking.vendor_profile&.business_name
+        id: booking.vendor_profile.user_id,
+        name: booking.vendor_profile.user.full_name,
+        business_name: booking.vendor_profile.business_name,
+        profile_id: booking.vendor_profile_id
       }
     }
   end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 ActiveAdmin.register User do
   # Permitted parameters for creating and updating users
   permit_params :email, :password, :password_confirmation, :role, :first_name, :last_name, :confirmed_at
@@ -47,38 +49,42 @@ ActiveAdmin.register User do
       row :updated_at
     end
 
-    panel "Profile Information" do
+    panel 'Profile Information' do
       if resource.vendor?
-        attributes_table_for resource.vendor_profile do
-          row :business_name
-          row :business_description
-          row :business_address
-          row :business_phone
-          row :business_email
-          row :created_at
-        end if resource.vendor_profile
+        if resource.vendor_profile
+          attributes_table_for resource.vendor_profile do
+            row :business_name
+            row :business_description
+            row :business_address
+            row :business_phone
+            row :business_email
+            row :created_at
+          end
+        end
       elsif resource.customer?
-        attributes_table_for resource.customer_profile do
-          row :phone
-          row :address
-          row :date_of_birth
-          row :created_at
-        end if resource.customer_profile
+        if resource.customer_profile
+          attributes_table_for resource.customer_profile do
+            row :phone
+            row :address
+            row :date_of_birth
+            row :created_at
+          end
+        end
       end
     end
   end
 
   # Form configuration
   form do |f|
-    f.inputs "User Details" do
+    f.inputs 'User Details' do
       f.input :email
       f.input :first_name
       f.input :last_name
       f.input :role, as: :select, collection: User.roles.keys.map { |role| [role.humanize, role] }
-      f.input :confirmed_at, as: :datetime_picker, hint: "Leave blank to keep user unconfirmed"
+      f.input :confirmed_at, as: :datetime_picker, hint: 'Leave blank to keep user unconfirmed'
     end
 
-    f.inputs "Password" do
+    f.inputs 'Password' do
       f.input :password
       f.input :password_confirmation
     end
@@ -97,12 +103,12 @@ ActiveAdmin.register User do
   # Custom actions
   member_action :confirm, method: :put do
     resource.confirm
-    redirect_to admin_user_path(resource), notice: "User confirmed successfully!"
+    redirect_to admin_user_path(resource), notice: 'User confirmed successfully!'
   end
 
   action_item :confirm, only: :show, if: proc { !resource.confirmed? } do
-    link_to "Confirm User", confirm_admin_user_path(resource), method: :put, 
-            data: { confirm: "Are you sure you want to confirm this user?" }
+    link_to 'Confirm User', confirm_admin_user_path(resource), method: :put,
+                                                               data: { confirm: 'Are you sure you want to confirm this user?' }
   end
 
   # Batch actions

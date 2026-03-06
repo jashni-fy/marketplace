@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe 'Vendor Profile Management API', type: :request do
@@ -17,13 +19,13 @@ RSpec.describe 'Vendor Profile Management API', type: :request do
 
     it 'returns active service categories without authentication' do
       get '/api/profiles/service_categories'
-      
+
       expect(response).to have_http_status(:ok)
       json_response = JSON.parse(response.body)
       categories = json_response['service_categories']
-      
+
       expect(categories.length).to eq(2)
-      category_names = categories.map { |c| c['name'] }
+      category_names = categories.pluck('name')
       expect(category_names).to include('Photography', 'Videography')
       expect(category_names).not_to include('Inactive')
     end
@@ -33,7 +35,7 @@ RSpec.describe 'Vendor Profile Management API', type: :request do
     context 'when vendor is authenticated' do
       it 'returns the vendor profile' do
         get '/api/profiles/me', headers: auth_headers(vendor_user)
-        
+
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
         expect(json_response['id']).to eq(vendor_profile.id)
@@ -45,7 +47,7 @@ RSpec.describe 'Vendor Profile Management API', type: :request do
     context 'when customer tries to access' do
       it 'returns forbidden error' do
         get '/api/profiles/me', headers: auth_headers(customer_user)
-        
+
         expect(response).to have_http_status(:forbidden)
         json_response = JSON.parse(response.body)
         expect(json_response['error']).to eq('Access denied. Vendor role required.')
@@ -55,7 +57,7 @@ RSpec.describe 'Vendor Profile Management API', type: :request do
     context 'when not authenticated' do
       it 'returns unauthorized error' do
         get '/api/profiles/me'
-        
+
         expect(response).to have_http_status(:unauthorized)
       end
     end
@@ -64,7 +66,7 @@ RSpec.describe 'Vendor Profile Management API', type: :request do
   describe 'GET /api/profiles/:id' do
     it 'returns vendor profile for any authenticated user' do
       get "/api/profiles/#{vendor_profile.id}", headers: auth_headers(customer_user)
-      
+
       expect(response).to have_http_status(:ok)
       json_response = JSON.parse(response.body)
       expect(json_response['id']).to eq(vendor_profile.id)
@@ -73,7 +75,7 @@ RSpec.describe 'Vendor Profile Management API', type: :request do
 
     it 'returns not found for non-existent profile' do
       get '/api/profiles/99999', headers: auth_headers(vendor_user)
-      
+
       expect(response).to have_http_status(:not_found)
       json_response = JSON.parse(response.body)
       expect(json_response['error']).to eq('Vendor profile not found')
@@ -94,15 +96,15 @@ RSpec.describe 'Vendor Profile Management API', type: :request do
 
     context 'when vendor updates own profile' do
       it 'successfully updates the profile' do
-        put "/api/profiles/#{vendor_profile.id}", 
-            params: update_params, 
+        put "/api/profiles/#{vendor_profile.id}",
+            params: update_params,
             headers: auth_headers(vendor_user)
-        
+
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
         expect(json_response['business_name']).to eq('Updated Business Name')
         expect(json_response['years_experience']).to eq(10)
-        
+
         vendor_profile.reload
         expect(vendor_profile.business_name).to eq('Updated Business Name')
       end
@@ -110,12 +112,12 @@ RSpec.describe 'Vendor Profile Management API', type: :request do
 
     context 'when vendor tries to update another vendor profile' do
       let(:other_vendor) { create(:user, :vendor) }
-      
+
       it 'returns forbidden error' do
-        put "/api/profiles/#{vendor_profile.id}", 
-            params: update_params, 
+        put "/api/profiles/#{vendor_profile.id}",
+            params: update_params,
             headers: auth_headers(other_vendor)
-        
+
         expect(response).to have_http_status(:forbidden)
         json_response = JSON.parse(response.body)
         expect(json_response['error']).to eq('Access denied. You can only manage your own profile.')
@@ -143,12 +145,12 @@ RSpec.describe 'Vendor Profile Management API', type: :request do
       before { new_vendor.vendor_profile.destroy }
 
       it 'creates a new vendor profile' do
-        expect {
-          post '/api/profiles', 
-               params: create_params, 
+        expect do
+          post '/api/profiles',
+               params: create_params,
                headers: auth_headers(new_vendor)
-        }.to change(VendorProfile, :count).by(1)
-        
+        end.to change(VendorProfile, :count).by(1)
+
         expect(response).to have_http_status(:created)
         json_response = JSON.parse(response.body)
         expect(json_response['business_name']).to eq('New Photography Business')
@@ -158,10 +160,10 @@ RSpec.describe 'Vendor Profile Management API', type: :request do
 
     context 'when vendor already has a profile' do
       it 'returns error' do
-        post '/api/profiles', 
-             params: create_params, 
+        post '/api/profiles',
+             params: create_params,
              headers: auth_headers(vendor_user)
-        
+
         expect(response).to have_http_status(:unprocessable_content)
         json_response = JSON.parse(response.body)
         expect(json_response['error']).to eq('Profile already exists')
@@ -173,10 +175,10 @@ RSpec.describe 'Vendor Profile Management API', type: :request do
     context 'when vendor deletes own profile' do
       it 'successfully deletes the profile' do
         profile_id = vendor_profile.id
-        
-        delete "/api/profiles/#{profile_id}", 
+
+        delete "/api/profiles/#{profile_id}",
                headers: auth_headers(vendor_user)
-        
+
         expect(response).to have_http_status(:no_content)
         expect(VendorProfile.find_by(id: profile_id)).to be_nil
       end
@@ -184,11 +186,11 @@ RSpec.describe 'Vendor Profile Management API', type: :request do
 
     context 'when vendor tries to delete another vendor profile' do
       let(:other_vendor) { create(:user, :vendor) }
-      
+
       it 'returns forbidden error' do
-        delete "/api/profiles/#{vendor_profile.id}", 
+        delete "/api/profiles/#{vendor_profile.id}",
                headers: auth_headers(other_vendor)
-        
+
         expect(response).to have_http_status(:forbidden)
         json_response = JSON.parse(response.body)
         expect(json_response['error']).to eq('Access denied. You can only manage your own profile.')

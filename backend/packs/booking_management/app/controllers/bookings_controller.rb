@@ -2,7 +2,7 @@
 
 class BookingsController < ApiController
   # Authentication is handled by ApiController
-  before_action :set_booking, only: [:show, :update, :destroy, :respond, :messages, :send_message]
+  before_action :set_booking, only: %i[show update destroy respond messages send_message]
 
   def index
     @bookings = current_user.vendor? ? vendor_bookings : customer_bookings
@@ -28,15 +28,15 @@ class BookingsController < ApiController
     )
 
     if booking_service.call
-      render json: { 
+      render json: {
         booking: booking_json(booking_service.booking),
         message: 'Booking created successfully'
       }, status: :created
     else
-      render json: { 
+      render json: {
         errors: booking_service.errors.full_messages,
         error: 'Failed to create booking'
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
     end
   end
 
@@ -46,7 +46,7 @@ class BookingsController < ApiController
     if @booking.update(booking_update_params)
       render json: { booking: booking_json(@booking) }
     else
-      render json: { errors: @booking.errors.full_messages }, status: :unprocessable_entity
+      render json: { errors: @booking.errors.full_messages }, status: :unprocessable_content
     end
   end
 
@@ -58,7 +58,7 @@ class BookingsController < ApiController
       # TODO: Send cancellation notification
       render json: { message: 'Booking cancelled successfully' }
     else
-      render json: { error: 'Booking cannot be cancelled' }, status: :unprocessable_entity
+      render json: { error: 'Booking cannot be cancelled' }, status: :unprocessable_content
     end
   end
 
@@ -66,7 +66,7 @@ class BookingsController < ApiController
     authorize_vendor_response!
 
     response_action = params[:response_action]
-    
+
     case response_action
     when 'accept'
       @booking.update!(status: :accepted)
@@ -91,7 +91,7 @@ class BookingsController < ApiController
 
   def messages
     authorize_booking_access!
-    
+
     @messages = @booking.booking_messages
                         .includes(:sender)
                         .ordered
@@ -117,7 +117,7 @@ class BookingsController < ApiController
       # TODO: Send real-time notification
       render json: { message: message_json(@message) }, status: :created
     else
-      render json: { errors: @message.errors.full_messages }, status: :unprocessable_entity
+      render json: { errors: @message.errors.full_messages }, status: :unprocessable_content
     end
   end
 
@@ -133,18 +133,18 @@ class BookingsController < ApiController
     )
 
     if availability_checker.available?
-      render json: { 
+      render json: {
         available: true,
         message: 'Time slot is available'
       }
     else
-      render json: { 
+      render json: {
         available: false,
         message: 'Time slot is not available',
         suggested_times: availability_checker.suggested_times
       }
     end
-  rescue Date::Error, ArgumentError => e
+  rescue Date::Error, ArgumentError
     render json: { error: 'Invalid date or time format' }, status: :bad_request
   end
 
@@ -159,7 +159,7 @@ class BookingsController < ApiController
       has_conflict: conflict_resolver.has_conflict?,
       alternative_times: conflict_resolver.suggest_alternative_times
     }
-  rescue Date::Error, ArgumentError => e
+  rescue Date::Error, ArgumentError
     render json: { error: 'Invalid date or time format' }, status: :bad_request
   end
 
@@ -180,21 +180,21 @@ class BookingsController < ApiController
   end
 
   def authorize_booking_access!
-    unless @booking.customer == current_user || @booking.vendor == current_user
-      render json: { error: 'Access denied' }, status: :forbidden
-    end
+    return if @booking.customer == current_user || @booking.vendor == current_user
+
+    render json: { error: 'Access denied' }, status: :forbidden
   end
 
   def authorize_booking_modification!
-    unless @booking.customer == current_user && @booking.can_be_modified?
-      render json: { error: 'Cannot modify this booking' }, status: :forbidden
-    end
+    return if @booking.customer == current_user && @booking.can_be_modified?
+
+    render json: { error: 'Cannot modify this booking' }, status: :forbidden
   end
 
   def authorize_vendor_response!
-    unless @booking.vendor == current_user && @booking.pending?
-      render json: { error: 'Cannot respond to this booking' }, status: :forbidden
-    end
+    return if @booking.vendor == current_user && @booking.pending?
+
+    render json: { error: 'Cannot respond to this booking' }, status: :forbidden
   end
 
   def booking_params

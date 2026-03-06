@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 ActiveAdmin.register CustomerProfile do
   # Permitted parameters
   permit_params :user_id, :phone, :address, :date_of_birth
@@ -40,7 +42,7 @@ ActiveAdmin.register CustomerProfile do
 
   # Form
   form do |f|
-    f.inputs "Customer Profile Details" do
+    f.inputs 'Customer Profile Details' do
       f.input :user, collection: User.customers.map { |u| [u.full_name, u.id] }
       f.input :phone
       f.input :address, as: :text

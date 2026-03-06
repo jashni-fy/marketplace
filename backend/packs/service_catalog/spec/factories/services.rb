@@ -1,17 +1,21 @@
+# frozen_string_literal: true
+
 FactoryBot.define do
   factory :service do
     sequence(:name) { |n| "Service #{n}" }
-    description { "This is a comprehensive description of the service that provides detailed information about what is offered and meets the minimum length requirement for validation." }
+    description do
+      'This is a comprehensive description of the service that provides detailed information about what is offered and meets the minimum length requirement for validation.'
+    end
     association :service_category
     base_price { 150.00 }
     pricing_type { :hourly }
     status { :active }
-    
+
     # Create vendor_profile through association
     transient do
       vendor_user { nil }
     end
-    
+
     vendor_profile do
       if vendor_user
         vendor_user.vendor_profile
@@ -44,7 +48,9 @@ FactoryBot.define do
 
     trait :photography do
       name { 'Wedding Photography' }
-      description { 'Professional wedding photography service capturing your special moments with artistic flair and attention to detail. Includes pre-wedding consultation, full day coverage, and edited high-resolution images.' }
+      description do
+        'Professional wedding photography service capturing your special moments with artistic flair and attention to detail. Includes pre-wedding consultation, full day coverage, and edited high-resolution images.'
+      end
       association :service_category, :photography
       base_price { 1200.00 }
       pricing_type { :package }
@@ -52,7 +58,9 @@ FactoryBot.define do
 
     trait :videography do
       name { 'Event Videography' }
-      description { 'Complete event videography service including multi-camera setup, professional audio recording, and post-production editing to create a memorable video of your special event.' }
+      description do
+        'Complete event videography service including multi-camera setup, professional audio recording, and post-production editing to create a memorable video of your special event.'
+      end
       association :service_category, :videography
       base_price { 80.00 }
       pricing_type { :hourly }

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe ServiceImage, type: :model do
@@ -5,17 +7,17 @@ RSpec.describe ServiceImage, type: :model do
   let(:service_image) { build(:service_image, service: service) }
 
   describe 'associations' do
-    it { should belong_to(:service) }
-    it { should have_one_attached(:image) }
+    it { is_expected.to belong_to(:service) }
+    it { is_expected.to have_one_attached(:image) }
   end
 
   describe 'validations' do
-    it { should validate_presence_of(:service_id) }
-    it { should validate_presence_of(:display_order) }
-    it { should validate_numericality_of(:display_order).is_greater_than_or_equal_to(0) }
-    it { should validate_length_of(:title).is_at_most(255) }
-    it { should validate_length_of(:description).is_at_most(1000) }
-    it { should validate_length_of(:alt_text).is_at_most(255) }
+    it { is_expected.to validate_presence_of(:service_id) }
+    it { is_expected.to validate_presence_of(:display_order) }
+    it { is_expected.to validate_numericality_of(:display_order).is_greater_than_or_equal_to(0) }
+    it { is_expected.to validate_length_of(:title).is_at_most(255) }
+    it { is_expected.to validate_length_of(:description).is_at_most(1000) }
+    it { is_expected.to validate_length_of(:alt_text).is_at_most(255) }
 
     describe 'image_attached validation' do
       it 'is invalid without an attached image' do
@@ -59,7 +61,7 @@ RSpec.describe ServiceImage, type: :model do
       it 'prevents multiple primary images per service' do
         create(:service_image, :primary, service: service)
         second_primary = build(:service_image, :primary, service: service)
-        
+
         expect(second_primary).not_to be_valid
         expect(second_primary.errors[:is_primary]).to include('can only have one primary image per service')
       end
@@ -68,7 +70,7 @@ RSpec.describe ServiceImage, type: :model do
         other_service = create(:service)
         create(:service_image, :primary, service: service)
         second_primary = build(:service_image, :primary, service: other_service)
-        
+
         expect(second_primary).to be_valid
       end
     end
@@ -94,19 +96,21 @@ RSpec.describe ServiceImage, type: :model do
 
     describe '.ordered' do
       it 'returns images ordered by display_order and created_at' do
-        expect(ServiceImage.ordered).to eq([second_image, first_image, primary_image])
+        expect(described_class.ordered).to eq([second_image, first_image, primary_image])
       end
     end
 
     describe '.primary' do
       it 'returns only primary images' do
-        expect(ServiceImage.primary).to eq([primary_image])
+        expect(described_class.primary).to eq([primary_image])
       end
     end
 
     describe '.non_primary' do
       it 'returns only non-primary images' do
-        expect(ServiceImage.non_primary.where(service: [service, other_service])).to match_array([first_image, second_image])
+        expect(described_class.non_primary.where(service: [service,
+                                                           other_service])).to contain_exactly(first_image,
+                                                                                               second_image)
       end
     end
   end
@@ -129,7 +133,7 @@ RSpec.describe ServiceImage, type: :model do
       it 'reassigns primary to next image when primary is deleted' do
         primary_image = create(:service_image, :primary, service: service, display_order: 0)
         second_image = create(:service_image, service: service, display_order: 1)
-        
+
         primary_image.destroy
         expect(second_image.reload.is_primary).to be true
       end
@@ -137,7 +141,7 @@ RSpec.describe ServiceImage, type: :model do
       it 'does nothing when non-primary image is deleted' do
         primary_image = create(:service_image, :primary, service: service)
         second_image = create(:service_image, service: service)
-        
+
         second_image.destroy
         expect(primary_image.reload.is_primary).to be true
       end
@@ -197,8 +201,8 @@ RSpec.describe ServiceImage, type: :model do
 
     describe '.reorder_for_service' do
       it 'reorders images based on provided IDs' do
-        ServiceImage.reorder_for_service(service.id, [image1.id, image3.id, image2.id])
-        
+        described_class.reorder_for_service(service.id, [image1.id, image3.id, image2.id])
+
         expect(image1.reload.display_order).to eq(0)
         expect(image3.reload.display_order).to eq(1)
         expect(image2.reload.display_order).to eq(2)
@@ -210,9 +214,9 @@ RSpec.describe ServiceImage, type: :model do
         # Create first image which will be primary by default, then create another
         primary_img = create(:service_image, service: service, is_primary: false)
         primary_img.update_column(:is_primary, true)
-        
-        ServiceImage.set_primary_for_service(service.id, image2.id)
-        
+
+        described_class.set_primary_for_service(service.id, image2.id)
+
         expect(image2.reload.is_primary).to be true
         expect(service.service_images.where.not(id: image2.id).pluck(:is_primary)).to all(be false)
       end

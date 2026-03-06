@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe 'Authentication API', type: :request do
@@ -14,7 +16,7 @@ RSpec.describe 'Authentication API', type: :request do
       }, as: :json
 
       expect(response).to have_http_status(:ok)
-      
+
       json_response = JSON.parse(response.body)
       expect(json_response['message']).to eq('Login successful')
       expect(json_response['token']).to be_present
@@ -30,7 +32,7 @@ RSpec.describe 'Authentication API', type: :request do
       }, as: :json
 
       expect(response).to have_http_status(:unauthorized)
-      
+
       json_response = JSON.parse(response.body)
       expect(json_response['error']).to eq('Please confirm your email address before logging in')
     end
@@ -44,7 +46,7 @@ RSpec.describe 'Authentication API', type: :request do
       }, as: :json
 
       expect(response).to have_http_status(:unauthorized)
-      
+
       json_response = JSON.parse(response.body)
       expect(json_response['error']).to eq('Invalid credentials')
     end
@@ -52,7 +54,7 @@ RSpec.describe 'Authentication API', type: :request do
 
   describe 'POST /api/auth/register' do
     it 'successfully registers a new user' do
-      expect {
+      expect do
         post '/api/auth/register', params: {
           auth: {
             email: 'newuser@example.com',
@@ -63,10 +65,10 @@ RSpec.describe 'Authentication API', type: :request do
             role: 'customer'
           }
         }, as: :json
-      }.to change(User, :count).by(1)
+      end.to change(User, :count).by(1)
 
       expect(response).to have_http_status(:created)
-      
+
       json_response = JSON.parse(response.body)
       expect(json_response['message']).to eq('Registration successful. Please check your email to confirm your account.')
       expect(json_response['user']['email']).to eq('newuser@example.com')
@@ -86,7 +88,7 @@ RSpec.describe 'Authentication API', type: :request do
       }, as: :json
 
       expect(response).to have_http_status(:unprocessable_content)
-      
+
       json_response = JSON.parse(response.body)
       expect(json_response['error']).to eq('Registration failed')
       expect(json_response['details']).to be_an(Array)
@@ -99,7 +101,7 @@ RSpec.describe 'Authentication API', type: :request do
       delete '/api/auth/logout', as: :json
 
       expect(response).to have_http_status(:ok)
-      
+
       json_response = JSON.parse(response.body)
       expect(json_response['message']).to eq('Logout successful')
     end
