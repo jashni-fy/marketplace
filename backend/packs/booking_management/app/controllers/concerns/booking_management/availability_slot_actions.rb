@@ -1,5 +1,56 @@
 # frozen_string_literal: true
 
+module BookingManagement::AvailabilitySlotHelpers
+  extend ActiveSupport::Concern
+  include BookingManagement::PaginationHelper
+
+  private
+
+  def filtered_slots
+    scope = current_user.vendor_profile.availability_slots.includes(:vendor_profile)
+    if params[:start_date].present? && params[:end_date].present?
+      scope.where(date: params[:start_date]..params[:end_date])
+    elsif params[:date].present?
+      scope.for_date(params[:date])
+    else
+      scope.upcoming
+    end
+  end
+
+  def conflict_params
+    [params[:date], params[:start_time], params[:end_time], params[:exclude_id]]
+  end
+
+  def overlapping_availability_slots(date, start_time, end_time, exclude_id)
+    scope = current_user.vendor_profile.availability_slots
+    scope = scope.where(date: date)
+    scope = scope.where('(start_time < ? AND end_time > ?) OR (start_time < ? AND end_time > ?)',
+                        end_time, start_time, start_time, end_time)
+    scope = scope.where.not(id: exclude_id) if exclude_id.present?
+    scope
+  end
+
+  def booking_conflicts_for(date, start_time, end_time)
+    Booking.joins(:vendor)
+           .joins('JOIN vendor_profiles ON vendor_profiles.user_id = users.id')
+           .where(vendor_profiles: { id: current_user.vendor_profile.id })
+           .where(status: %i[pending accepted])
+           .where('DATE(event_date) = ?', date)
+           .where('(TIME(event_date) < ? AND TIME(COALESCE(event_end_date, event_date + INTERVAL \'2 hours\')) > ?)',
+                  end_time, start_time)
+  end
+
+  def set_availability_slot
+    @slot = current_user.vendor_profile.availability_slots.find(params[:id])
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: 'Availability slot not found' }, status: :not_found
+  end
+
+  def availability_slot_params
+    params.require(:availability_slot).permit(:date, :start_time, :end_time, :is_available)
+  end
+end
+
 module BookingManagement::AvailabilitySlotActions
   extend ActiveSupport::Concern
   include BookingManagement::AvailabilitySlotHelpers
@@ -112,56 +163,5 @@ module BookingManagement::AvailabilitySlotActions
         message: "#{created_slots.count} slots created, #{errors.count} failed"
       }, status: :partial_content
     end
-  end
-end
-
-module BookingManagement::AvailabilitySlotHelpers
-  extend ActiveSupport::Concern
-  include PaginationHelper
-
-  private
-
-  def filtered_slots
-    scope = current_user.vendor_profile.availability_slots.includes(:vendor_profile)
-    if params[:start_date].present? && params[:end_date].present?
-      scope.where(date: params[:start_date]..params[:end_date])
-    elsif params[:date].present?
-      scope.for_date(params[:date])
-    else
-      scope.upcoming
-    end
-  end
-
-  def conflict_params
-    [params[:date], params[:start_time], params[:end_time], params[:exclude_id]]
-  end
-
-  def overlapping_availability_slots(date, start_time, end_time, exclude_id)
-    scope = current_user.vendor_profile.availability_slots
-    scope = scope.where(date: date)
-    scope = scope.where('(start_time < ? AND end_time > ?) OR (start_time < ? AND end_time > ?)',
-                        end_time, start_time, start_time, end_time)
-    scope = scope.where.not(id: exclude_id) if exclude_id.present?
-    scope
-  end
-
-  def booking_conflicts_for(date, start_time, end_time)
-    Booking.joins(:vendor)
-           .joins('JOIN vendor_profiles ON vendor_profiles.user_id = users.id')
-           .where(vendor_profiles: { id: current_user.vendor_profile.id })
-           .where(status: %i[pending accepted])
-           .where('DATE(event_date) = ?', date)
-           .where('(TIME(event_date) < ? AND TIME(COALESCE(event_end_date, event_date + INTERVAL \'2 hours\')) > ?)',
-                  end_time, start_time)
-  end
-
-  def set_availability_slot
-    @slot = current_user.vendor_profile.availability_slots.find(params[:id])
-  rescue ActiveRecord::RecordNotFound
-    render json: { error: 'Availability slot not found' }, status: :not_found
-  end
-
-  def availability_slot_params
-    params.require(:availability_slot).permit(:date, :start_time, :end_time, :is_available)
   end
 end

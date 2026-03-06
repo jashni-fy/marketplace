@@ -2,7 +2,7 @@
 
 module BookingManagement::BookingActionHelpers
   extend ActiveSupport::Concern
-  include PaginationHelper
+  include BookingManagement::PaginationHelper
 
   private
 
@@ -76,6 +76,8 @@ module BookingManagement::BookingActionHelpers
     )
   end
 end
+
+module BookingManagement::BookingActions; end
 
 module BookingManagement::BookingActions::ListingActions
   def index
