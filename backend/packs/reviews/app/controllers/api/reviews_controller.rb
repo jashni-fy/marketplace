@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 class Api::ReviewsController < ApiController
-  before_action :authenticate_user!, except: [:index, :service_reviews, :vendor_reviews]
-  before_action :set_review, only: [:show, :update, :destroy]
+  before_action :authenticate_user!, except: %i[index service_reviews vendor_reviews]
+  before_action :set_review, only: %i[show update destroy]
   before_action :ensure_customer, only: [:create]
-  before_action :ensure_owner, only: [:update, :destroy]
+  before_action :ensure_owner, only: %i[update destroy]
 
   # GET /api/reviews
   def index
@@ -25,7 +27,7 @@ class Api::ReviewsController < ApiController
   # POST /api/reviews
   def create
     @booking = Booking.find(review_params[:booking_id])
-    
+
     # Validation is also in model, but early check here
     unless @booking.customer == current_user
       return render json: { error: 'You can only review your own bookings' }, status: :forbidden
@@ -39,7 +41,8 @@ class Api::ReviewsController < ApiController
     if @review.save
       render json: { message: 'Review submitted successfully', review: review_json(@review) }, status: :created
     else
-      render json: { error: 'Review submission failed', details: @review.errors.full_messages }, status: :unprocessable_entity
+      render json: { error: 'Review submission failed', details: @review.errors.full_messages },
+             status: :unprocessable_content
     end
   end
 
@@ -48,7 +51,8 @@ class Api::ReviewsController < ApiController
     if @review.update(review_update_params)
       render json: { message: 'Review updated successfully', review: review_json(@review) }
     else
-      render json: { error: 'Review update failed', details: @review.errors.full_messages }, status: :unprocessable_entity
+      render json: { error: 'Review update failed', details: @review.errors.full_messages },
+             status: :unprocessable_content
     end
   end
 
@@ -67,23 +71,25 @@ class Api::ReviewsController < ApiController
   end
 
   def ensure_customer
-    unless current_user.customer?
-      render json: { error: 'Only customers can submit reviews' }, status: :forbidden
-    end
+    return if current_user.customer?
+
+    render json: { error: 'Only customers can submit reviews' }, status: :forbidden
   end
 
   def ensure_owner
-    unless @review.customer == current_user
-      render json: { error: 'You can only manage your own reviews' }, status: :forbidden
-    end
+    return if @review.customer == current_user
+
+    render json: { error: 'You can only manage your own reviews' }, status: :forbidden
   end
 
   def review_params
-    params.require(:review).permit(:booking_id, :rating, :quality_rating, :communication_rating, :value_rating, :punctuality_rating, :comment)
+    params.require(:review).permit(:booking_id, :rating, :quality_rating, :communication_rating, :value_rating,
+                                   :punctuality_rating, :comment)
   end
 
   def review_update_params
-    params.require(:review).permit(:rating, :quality_rating, :communication_rating, :value_rating, :punctuality_rating, :comment)
+    params.require(:review).permit(:rating, :quality_rating, :communication_rating, :value_rating, :punctuality_rating,
+                                   :comment)
   end
 
   def review_json(review)

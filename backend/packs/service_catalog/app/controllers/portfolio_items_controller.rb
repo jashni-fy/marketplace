@@ -1,12 +1,17 @@
+# frozen_string_literal: true
+
+# rubocop:disable Metrics/ClassLength
 class PortfolioItemsController < ApiController
   # Authentication is handled by ApiController
-  before_action :set_vendor_profile, only: [:index, :create]
-  before_action :set_portfolio_item, only: [:show, :update, :destroy]
-  before_action :ensure_vendor_access, except: [:index, :show]
+  before_action :set_vendor_profile, only: %i[index create]
+  before_action :set_portfolio_item, only: %i[show update destroy]
+  before_action :ensure_vendor_access, except: %i[index show]
 
   # GET /vendors/:vendor_profile_id/portfolio_items
   # GET /portfolio_items (for current vendor)
+  # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
   def index
+    # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
     if params[:vendor_profile_id]
       # Public access to view any vendor's portfolio
       @portfolio_items = @vendor_profile.portfolio_items.ordered
@@ -37,14 +42,14 @@ class PortfolioItemsController < ApiController
     result = service.create_portfolio_item(portfolio_item_params)
 
     if result[:success]
-      render json: { 
+      render json: {
         portfolio_item: portfolio_item_json(result[:portfolio_item]),
         message: 'Portfolio item created successfully'
       }, status: :created
     else
-      render json: { 
+      render json: {
         errors: result[:errors]
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
     end
   end
 
@@ -54,14 +59,14 @@ class PortfolioItemsController < ApiController
     result = service.update_portfolio_item(@portfolio_item, portfolio_item_params)
 
     if result[:success]
-      render json: { 
+      render json: {
         portfolio_item: portfolio_item_json(result[:portfolio_item]),
         message: 'Portfolio item updated successfully'
       }
     else
-      render json: { 
+      render json: {
         errors: result[:errors]
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
     end
   end
 
@@ -76,28 +81,28 @@ class PortfolioItemsController < ApiController
     set_portfolio_item
     service = PortfolioManagementService.new(@portfolio_item.vendor_profile)
     result = service.bulk_upload_images(@portfolio_item, params[:images])
-    
+
     if result[:success]
-      render json: { 
+      render json: {
         portfolio_item: portfolio_item_json(result[:portfolio_item]),
         message: 'Images uploaded successfully',
         images_uploaded: result[:images_count]
       }
     else
-      render json: { 
+      render json: {
         errors: result[:errors]
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
     end
   end
 
   # DELETE /portfolio_items/:id/remove_image/:image_id
   def remove_image
     set_portfolio_item
-    
+
     image = @portfolio_item.images.find(params[:image_id])
     image.purge
-    
-    render json: { 
+
+    render json: {
       portfolio_item: portfolio_item_json(@portfolio_item),
       message: 'Image removed successfully'
     }
@@ -110,7 +115,7 @@ class PortfolioItemsController < ApiController
     ensure_vendor_role
     service = PortfolioManagementService.new(current_user.vendor_profile)
     summary = service.get_portfolio_summary
-    
+
     render json: { summary: summary }
   end
 
@@ -119,17 +124,17 @@ class PortfolioItemsController < ApiController
     ensure_vendor_role
     service = PortfolioManagementService.new(current_user.vendor_profile)
     result = service.reorder_portfolio_items(params[:category], params[:item_orders])
-    
+
     if result[:success]
-      render json: { 
+      render json: {
         message: "Successfully reordered #{result[:updated_count]} items",
         updated_count: result[:updated_count]
       }
     else
-      render json: { 
+      render json: {
         errors: result[:errors],
         updated_count: result[:updated_count]
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
     end
   end
 
@@ -138,16 +143,16 @@ class PortfolioItemsController < ApiController
     set_portfolio_item
     service = PortfolioManagementService.new(@portfolio_item.vendor_profile)
     result = service.duplicate_portfolio_item(@portfolio_item)
-    
+
     if result[:success]
-      render json: { 
+      render json: {
         portfolio_item: portfolio_item_json(result[:portfolio_item]),
         message: 'Portfolio item duplicated successfully'
       }, status: :created
     else
-      render json: { 
+      render json: {
         errors: result[:errors]
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
     end
   end
 
@@ -156,26 +161,24 @@ class PortfolioItemsController < ApiController
     ensure_vendor_role
     service = PortfolioManagementService.new(current_user.vendor_profile)
     result = service.set_featured_items(params[:item_ids], params[:featured])
-    
+
     if result[:success]
-      render json: { 
+      render json: {
         message: "Successfully updated #{result[:updated_count]} items",
         updated_count: result[:updated_count]
       }
     else
-      render json: { 
+      render json: {
         errors: result[:errors],
         updated_count: result[:updated_count]
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
     end
   end
 
   private
 
   def set_vendor_profile
-    if params[:vendor_profile_id]
-      @vendor_profile = VendorProfile.find(params[:vendor_profile_id])
-    end
+    @vendor_profile = VendorProfile.find(params[:vendor_profile_id]) if params[:vendor_profile_id]
   rescue ActiveRecord::RecordNotFound
     render json: { errors: ['Vendor profile not found'] }, status: :not_found
   end
@@ -187,15 +190,15 @@ class PortfolioItemsController < ApiController
   end
 
   def ensure_vendor_access
-    unless @portfolio_item.vendor_profile.user == current_user
-      render json: { errors: ['Access denied'] }, status: :forbidden
-    end
+    return if @portfolio_item.vendor_profile.user == current_user
+
+    render json: { errors: ['Access denied'] }, status: :forbidden
   end
 
   def ensure_vendor_role
-    unless current_user.vendor?
-      render json: { errors: ['Vendor access required'] }, status: :forbidden
-    end
+    return if current_user.vendor?
+
+    render json: { errors: ['Vendor access required'] }, status: :forbidden
   end
 
   def portfolio_item_params
@@ -232,3 +235,4 @@ class PortfolioItemsController < ApiController
     }
   end
 end
+# rubocop:enable Metrics/ClassLength

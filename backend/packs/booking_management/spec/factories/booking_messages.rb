@@ -2,18 +2,18 @@
 
 FactoryBot.define do
   factory :booking_message do
-    association :booking
-    association :sender, factory: :user
-    
+    booking
+    sender factory: %i[user]
+
     message { Faker::Lorem.sentence(word_count: rand(5..50)) }
     sent_at { rand(1..24).hours.ago }
 
     trait :from_customer do
-      association :sender, factory: [:user, :customer]
+      sender factory: %i[user customer]
     end
 
     trait :from_vendor do
-      association :sender, factory: [:user, :vendor]
+      sender factory: %i[user vendor]
     end
 
     trait :recent do

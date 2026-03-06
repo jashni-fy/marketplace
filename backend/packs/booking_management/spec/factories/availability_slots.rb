@@ -2,8 +2,8 @@
 
 FactoryBot.define do
   factory :availability_slot do
-    association :vendor_profile
-    
+    vendor_profile
+
     date { rand(1..30).days.from_now.to_date }
     start_time { '09:00' }
     end_time { '17:00' }

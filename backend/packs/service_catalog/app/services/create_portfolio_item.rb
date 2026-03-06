@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreatePortfolioItem
   include Callable
 
@@ -8,7 +10,7 @@ class CreatePortfolioItem
 
   def call
     portfolio_item = @vendor_profile.portfolio_items.build(@params)
-    
+
     if portfolio_item.save
       reorder_items_in_category(portfolio_item.category) if @params[:display_order].present?
       { success: true, portfolio_item: portfolio_item }
@@ -21,9 +23,11 @@ class CreatePortfolioItem
 
   def reorder_items_in_category(category)
     items = @vendor_profile.portfolio_items.where(category: category).order(:display_order, :created_at)
-    
+
     items.each_with_index do |item, index|
+      # rubocop:disable Rails/SkipsModelValidations
       item.update_column(:display_order, index + 1) if item.display_order != (index + 1)
+      # rubocop:enable Rails/SkipsModelValidations
     end
   end
 end

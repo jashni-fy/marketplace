@@ -1,8 +1,11 @@
+# frozen_string_literal: true
+
+# rubocop:disable Metrics/ClassLength
 class Api::ServicesController < ApiController
-  before_action :authenticate_user!, except: [:index, :show, :search]
-  before_action :set_service, only: [:show, :update, :destroy]
-  before_action :ensure_vendor, only: [:create, :update, :destroy]
-  before_action :ensure_service_owner, only: [:update, :destroy]
+  before_action :authenticate_user!, except: %i[index show search]
+  before_action :set_service, only: %i[show update destroy]
+  before_action :ensure_vendor, only: %i[create update destroy]
+  before_action :ensure_service_owner, only: %i[update destroy]
 
   def index
     search_params = {
@@ -15,7 +18,7 @@ class Api::ServicesController < ApiController
     }
 
     result = ServiceSearchService.call(search_params)
-    
+
     render json: {
       services: result[:services].map { |service| service_response(service) },
       pagination: result[:pagination],
@@ -27,7 +30,9 @@ class Api::ServicesController < ApiController
     render json: service_response(@service, include_details: true)
   end
 
+  # rubocop:disable Metrics/AbcSize
   def search
+    # rubocop:enable Metrics/AbcSize
     search_params = {
       query: params[:q] || params[:query],
       location: params[:location],
@@ -43,7 +48,7 @@ class Api::ServicesController < ApiController
     }
 
     result = ServiceSearchService.call(search_params)
-    
+
     render json: {
       services: result[:services].map { |service| service_response(service) },
       pagination: result[:pagination],
@@ -64,7 +69,7 @@ class Api::ServicesController < ApiController
       render json: {
         error: 'Service creation failed',
         details: @service.errors.full_messages
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
     end
   end
 
@@ -78,7 +83,7 @@ class Api::ServicesController < ApiController
       render json: {
         error: 'Service update failed',
         details: @service.errors.full_messages
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
     end
   end
 
@@ -94,22 +99,24 @@ class Api::ServicesController < ApiController
   end
 
   def ensure_service_owner
-    unless @service.vendor_profile.user == current_user
-      render json: { error: 'You can only manage your own services' }, status: :forbidden
-    end
+    return if @service.vendor_profile.user == current_user
+
+    render json: { error: 'You can only manage your own services' }, status: :forbidden
   end
 
   def ensure_vendor
-    unless current_user&.role == 'vendor'
-      render json: { error: 'Only vendors can manage services' }, status: :forbidden
-    end
+    return if current_user&.role == 'vendor'
+
+    render json: { error: 'Only vendors can manage services' }, status: :forbidden
   end
 
   def service_params
     params.require(:service).permit(:name, :description, :base_price, :pricing_type, :service_category_id, :status)
   end
 
+  # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
   def service_response(service, include_details: false)
+    # rubocop:enable Metrics/MethodLength, Metrics/AbcSize
     response = {
       id: service.id,
       name: service.name,
@@ -123,17 +130,19 @@ class Api::ServicesController < ApiController
         business_name: service.vendor_profile.business_name,
         location: service.vendor_profile.location
       },
-      category: service.service_category ? {
-        id: service.service_category.id,
-        name: service.service_category.name
-      } : nil,
-      images: service.service_images.map { |img| 
+      category: if service.service_category
+                  {
+                    id: service.service_category.id,
+                    name: service.service_category.name
+                  }
+                end,
+      images: service.service_images.map do |img|
         {
           id: img.id,
           url: img.image.attached? ? url_for(img.image) : nil,
           is_primary: img.is_primary
         }
-      },
+      end,
       created_at: service.created_at,
       updated_at: service.updated_at
     }
@@ -149,3 +158,4 @@ class Api::ServicesController < ApiController
     response
   end
 end
+# rubocop:enable Metrics/ClassLength

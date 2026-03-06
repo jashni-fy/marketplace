@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 class Api::UsersController < ApiController
   before_action :authenticate_user!
-  before_action :set_user, only: [:show, :update, :upload_avatar]
+  before_action :set_user, only: %i[show update upload_avatar]
 
   def show
     render json: user_response(@user)
@@ -16,7 +18,7 @@ class Api::UsersController < ApiController
       render json: {
         error: 'Update failed',
         details: @user.errors.full_messages
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
     end
   end
 

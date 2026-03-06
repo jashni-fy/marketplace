@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
-RSpec.describe 'Email Confirmation Flow', type: :request do
+RSpec.describe 'Email Confirmation Flow' do
   describe 'User registration and confirmation' do
     it 'creates unconfirmed user and allows confirmation' do
       # Register a new user
@@ -16,7 +18,7 @@ RSpec.describe 'Email Confirmation Flow', type: :request do
       }, as: :json
 
       expect(response).to have_http_status(:created)
-      
+
       user = User.find_by(email: 'test@example.com')
       expect(user).to be_present
       expect(user.confirmed?).to be false

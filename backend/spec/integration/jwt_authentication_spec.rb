@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
-RSpec.describe 'JWT Authentication Integration', type: :request do
+RSpec.describe 'JWT Authentication Integration' do
   let(:user) { create(:user, confirmed_at: Time.current) }
   let(:token) { JwtService.encode(user_id: user.id) }
   let(:headers) { { 'Authorization' => "Bearer #{token}" } }
@@ -16,15 +18,15 @@ RSpec.describe 'JWT Authentication Integration', type: :request do
     it 'decodes a valid JWT token' do
       token = JwtService.encode(user_id: user.id)
       decoded = JwtService.decode(token)
-      
+
       expect(decoded[:user_id]).to eq(user.id)
       expect(decoded[:exp]).to be_present
     end
 
     it 'raises error for invalid token' do
-      expect {
+      expect do
         JwtService.decode('invalid.token.here')
-      }.to raise_error(ExceptionHandler::InvalidToken)
+      end.to raise_error(ExceptionHandler::InvalidToken)
     end
   end
 
@@ -35,22 +37,22 @@ RSpec.describe 'JWT Authentication Integration', type: :request do
     end
 
     it 'raises error for missing token' do
-      expect {
+      expect do
         AuthorizeApiRequest.new({}).call
-      }.to raise_error(ExceptionHandler::MissingToken)
+      end.to raise_error(ExceptionHandler::MissingToken)
     end
 
     it 'raises error for invalid token format' do
-      expect {
+      expect do
         AuthorizeApiRequest.new({ 'Authorization' => 'InvalidFormat' }).call
-      }.to raise_error(ExceptionHandler::InvalidToken)
+      end.to raise_error(ExceptionHandler::InvalidToken)
     end
 
     it 'raises error for non-existent user' do
-      invalid_token = JwtService.encode(user_id: 99999)
-      expect {
+      invalid_token = JwtService.encode(user_id: 99_999)
+      expect do
         AuthorizeApiRequest.new({ 'Authorization' => "Bearer #{invalid_token}" }).call
-      }.to raise_error(ExceptionHandler::InvalidToken)
+      end.to raise_error(ExceptionHandler::InvalidToken)
     end
   end
 
@@ -61,7 +63,7 @@ RSpec.describe 'JWT Authentication Integration', type: :request do
       expect(user).to be_persisted
       expect(user.confirmed?).to be true
       expect(token).to be_present
-      
+
       # Verify the token can be used to find the user
       result = AuthorizeApiRequest.new(headers).call
       expect(result[:user]).to eq(user)

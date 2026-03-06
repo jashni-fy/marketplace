@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
-RSpec.describe ServicesController, type: :controller do
+RSpec.describe ServicesController do
   let(:vendor_user) { create(:user, :vendor) }
   let(:customer_user) { create(:user, :customer) }
   let(:service_category) { create(:service_category) }
@@ -8,8 +10,13 @@ RSpec.describe ServicesController, type: :controller do
   let(:other_service) { create(:service, service_category: service_category) }
 
   describe 'GET #index' do
-    let!(:active_service) { create(:service, status: :active, service_category: service_category) }
-    let!(:inactive_service) { create(:service, status: :inactive, service_category: service_category) }
+    let(:active_service) { create(:service, status: :active, service_category: service_category) }
+    let(:inactive_service) { create(:service, status: :inactive, service_category: service_category) }
+
+    before do
+      active_service
+      inactive_service
+    end
 
     context 'without authentication' do
       it 'returns only active services' do
@@ -35,7 +42,7 @@ RSpec.describe ServicesController, type: :controller do
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
         expect(json_response['services'].length).to eq(2)
-        service_ids = json_response['services'].map { |s| s['id'] }
+        service_ids = json_response['services'].pluck('id')
         expect(service_ids).to include(vendor_active.id, vendor_inactive.id)
       end
     end
@@ -43,7 +50,7 @@ RSpec.describe ServicesController, type: :controller do
     context 'with filters' do
       it 'filters by category' do
         other_category = create(:service_category)
-        other_service = create(:service, service_category: other_category, status: :active)
+        create(:service, service_category: other_category, status: :active)
 
         get :index, params: { category_id: service_category.id }
 
@@ -54,7 +61,7 @@ RSpec.describe ServicesController, type: :controller do
       end
 
       it 'filters by price range' do
-        cheap_service = create(:service, base_price: 50, status: :active)
+        create(:service, base_price: 50, status: :active)
         expensive_service = create(:service, base_price: 200, status: :active)
 
         get :index, params: { min_price: 100, max_price: 300 }
@@ -67,8 +74,13 @@ RSpec.describe ServicesController, type: :controller do
     end
 
     context 'with sorting' do
-      let!(:service_a) { create(:service, name: 'A Service', base_price: 100, status: :active) }
-      let!(:service_b) { create(:service, name: 'B Service', base_price: 50, status: :active) }
+      let(:service_a) { create(:service, name: 'A Service', base_price: 100, status: :active) }
+      let(:service_b) { create(:service, name: 'B Service', base_price: 50, status: :active) }
+
+      before do
+        service_a
+        service_b
+      end
 
       it 'sorts by name' do
         get :index, params: { sort: 'name' }
@@ -103,7 +115,7 @@ RSpec.describe ServicesController, type: :controller do
 
     context 'when service does not exist' do
       it 'returns not found' do
-        get :show, params: { id: 999999 }
+        get :show, params: { id: 999_999 }
 
         expect(response).to have_http_status(:not_found)
         json_response = JSON.parse(response.body)
@@ -130,9 +142,9 @@ RSpec.describe ServicesController, type: :controller do
       end
 
       it 'creates a new service' do
-        expect {
+        expect do
           post :create, params: valid_params
-        }.to change(Service, :count).by(1)
+        end.to change(Service, :count).by(1)
 
         expect(response).to have_http_status(:created)
         json_response = JSON.parse(response.body)
@@ -152,11 +164,11 @@ RSpec.describe ServicesController, type: :controller do
         end
 
         it 'returns unprocessable entity' do
-          expect {
+          expect do
             post :create, params: invalid_params
-          }.not_to change(Service, :count)
+          end.not_to change(Service, :count)
 
-          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response).to have_http_status(:unprocessable_content)
           json_response = JSON.parse(response.body)
           expect(json_response['error']).to eq('Service creation failed')
           expect(json_response['details']).to be_an(Array)
@@ -209,6 +221,7 @@ RSpec.describe ServicesController, type: :controller do
 
     context 'when user does not own the service' do
       let(:other_vendor) { create(:user, :vendor) }
+
       before { sign_in other_vendor }
 
       it 'returns forbidden' do
@@ -226,10 +239,10 @@ RSpec.describe ServicesController, type: :controller do
 
     it 'deletes the service' do
       service_to_delete = create(:service, vendor_profile: vendor_user.vendor_profile)
-      
-      expect {
+
+      expect do
         delete :destroy, params: { id: service_to_delete.id }
-      }.to change(Service, :count).by(-1)
+      end.to change(Service, :count).by(-1)
 
       expect(response).to have_http_status(:ok)
       json_response = JSON.parse(response.body)
@@ -239,7 +252,10 @@ RSpec.describe ServicesController, type: :controller do
 
   describe 'GET #search' do
     let!(:matching_service) { create(:service, name: 'Photography Service', status: :active) }
-    let!(:non_matching_service) { create(:service, name: 'Catering Service', status: :active) }
+
+    before do
+      create(:service, name: 'Catering Service', status: :active)
+    end
 
     it 'searches services by query' do
       get :search, params: { q: 'photography' }
@@ -264,7 +280,7 @@ RSpec.describe ServicesController, type: :controller do
     context 'with additional filters' do
       it 'applies filters to search results' do
         photography_expensive = create(:service, name: 'Expensive Photography', base_price: 500, status: :active)
-        photography_cheap = create(:service, name: 'Cheap Photography', base_price: 50, status: :active)
+        create(:service, name: 'Cheap Photography', base_price: 50, status: :active)
 
         get :search, params: { q: 'photography', min_price: 100 }
 

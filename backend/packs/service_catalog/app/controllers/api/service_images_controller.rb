@@ -1,14 +1,17 @@
+# frozen_string_literal: true
+
+# rubocop:disable Metrics/ClassLength
 class Api::ServiceImagesController < ApiController
   before_action :authenticate_user!
   before_action :ensure_vendor
   before_action :set_service
   before_action :ensure_service_owner
-  before_action :set_service_image, only: [:show, :update, :destroy, :set_primary]
+  before_action :set_service_image, only: %i[show update destroy set_primary]
 
   # GET /api/services/:service_id/images
   def index
     @service_images = @service.service_images.ordered
-    
+
     render json: {
       service_images: @service_images.map { |image| service_image_response(image) }
     }
@@ -24,13 +27,13 @@ class Api::ServiceImagesController < ApiController
   # POST /api/services/:service_id/images
   def create
     @service_image = @service.service_images.build(service_image_params)
-    
+
     if @service_image.save
       # Process image in background if job exists
-      if defined?(ImageProcessingJob)
-        ImageProcessingJob.perform_later(@service_image.id) if @service_image.image.attached?
+      if defined?(ImageProcessingJob) && @service_image.image.attached?
+        ImageProcessingJob.perform_later(@service_image.id)
       end
-      
+
       render json: {
         message: 'Image uploaded successfully',
         service_image: detailed_service_image_response(@service_image)
@@ -39,7 +42,7 @@ class Api::ServiceImagesController < ApiController
       render json: {
         error: 'Image upload failed',
         details: @service_image.errors.full_messages
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
     end
   end
 
@@ -54,7 +57,7 @@ class Api::ServiceImagesController < ApiController
       render json: {
         error: 'Image update failed',
         details: @service_image.errors.full_messages
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
     end
   end
 
@@ -69,7 +72,7 @@ class Api::ServiceImagesController < ApiController
   # POST /api/services/:service_id/images/:id/set_primary
   def set_primary
     ServiceImage.set_primary_for_service(@service.id, @service_image.id)
-    
+
     render json: {
       message: 'Primary image updated successfully',
       service_image: detailed_service_image_response(@service_image.reload)
@@ -79,18 +82,18 @@ class Api::ServiceImagesController < ApiController
   # POST /api/services/:service_id/images/reorder
   def reorder
     image_ids = params[:image_ids]
-    
+
     if image_ids.blank? || !image_ids.is_a?(Array)
       render json: {
         error: 'image_ids parameter is required and must be an array'
       }, status: :bad_request
       return
     end
-    
+
     # Verify all image IDs belong to this service
     service_image_ids = @service.service_images.pluck(:id)
     invalid_ids = image_ids.map(&:to_i) - service_image_ids
-    
+
     if invalid_ids.any?
       render json: {
         error: 'Invalid image IDs provided',
@@ -98,28 +101,30 @@ class Api::ServiceImagesController < ApiController
       }, status: :bad_request
       return
     end
-    
+
     ServiceImage.reorder_for_service(@service.id, image_ids)
-    
+
     render json: {
       message: 'Images reordered successfully'
     }
   end
 
   # POST /api/services/:service_id/images/bulk_upload
+  # rubocop:disable Metrics/MethodLength, Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
   def bulk_upload
+    # rubocop:enable Metrics/MethodLength, Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
     images = params[:images]
-    
+
     if images.blank? || !images.is_a?(Array)
       render json: {
         error: 'images parameter is required and must be an array'
       }, status: :bad_request
       return
     end
-    
+
     uploaded_images = []
     errors = []
-    
+
     images.each_with_index do |image_data, index|
       service_image = @service.service_images.build(
         image: image_data[:image],
@@ -128,12 +133,12 @@ class Api::ServiceImagesController < ApiController
         alt_text: image_data[:alt_text],
         display_order: index
       )
-      
+
       if service_image.save
         uploaded_images << service_image
         # Process image in background if job exists
-        if defined?(ImageProcessingJob)
-          ImageProcessingJob.perform_later(service_image.id) if service_image.image.attached?
+        if defined?(ImageProcessingJob) && service_image.image.attached?
+          ImageProcessingJob.perform_later(service_image.id)
         end
       else
         errors << {
@@ -142,7 +147,7 @@ class Api::ServiceImagesController < ApiController
         }
       end
     end
-    
+
     if errors.any?
       render json: {
         message: "#{uploaded_images.count} images uploaded successfully, #{errors.count} failed",
@@ -176,19 +181,19 @@ class Api::ServiceImagesController < ApiController
   end
 
   def ensure_vendor
-    unless current_user&.role == 'vendor'
-      render json: {
-        error: 'Only vendors can manage service images'
-      }, status: :forbidden
-    end
+    return if current_user&.role == 'vendor'
+
+    render json: {
+      error: 'Only vendors can manage service images'
+    }, status: :forbidden
   end
 
   def ensure_service_owner
-    unless @service&.vendor_profile&.user == current_user
-      render json: {
-        error: 'You can only manage images for your own services'
-      }, status: :forbidden
-    end
+    return if @service&.vendor_profile&.user == current_user
+
+    render json: {
+      error: 'You can only manage images for your own services'
+    }, status: :forbidden
   end
 
   def service_image_params
@@ -236,3 +241,4 @@ class Api::ServiceImagesController < ApiController
     }
   end
 end
+# rubocop:enable Metrics/ClassLength

@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
-RSpec.describe Admin::UsersController, type: :controller do
+RSpec.describe Admin::UsersController do
   let(:admin_user) { create(:user, :admin) }
   let(:regular_user) { create(:user, :customer) }
   let(:vendor_user) { create(:user, :vendor) }
@@ -20,8 +22,8 @@ RSpec.describe Admin::UsersController, type: :controller do
     it 'returns all users' do
       get :index
       expect(response).to have_http_status(:success)
-      
-      json_response = JSON.parse(response.body)
+
+      json_response = response.parsed_body
       expect(json_response['users']).to be_an(Array)
       expect(json_response['meta']).to include('current_page', 'total_pages', 'total_count')
     end
@@ -29,19 +31,15 @@ RSpec.describe Admin::UsersController, type: :controller do
     it 'filters users by role' do
       get :index, params: { role: 'customer' }
       expect(response).to have_http_status(:success)
-      
-      json_response = JSON.parse(response.body)
-      json_response['users'].each do |user|
-        expect(user['role']).to eq('customer')
-      end
+      expect(response.parsed_body['users']).to all(include('role' => 'customer'))
     end
 
     it 'filters users by email' do
-      user = create(:user, email: 'test@example.com')
+      create(:user, email: 'test@example.com')
       get :index, params: { email: 'test@example' }
       expect(response).to have_http_status(:success)
-      
-      json_response = JSON.parse(response.body)
+
+      json_response = response.parsed_body
       expect(json_response['users'].any? { |u| u['email'] == 'test@example.com' }).to be true
     end
   end
@@ -50,8 +48,8 @@ RSpec.describe Admin::UsersController, type: :controller do
     it 'returns user details' do
       get :show, params: { id: regular_user.id }
       expect(response).to have_http_status(:success)
-      
-      json_response = JSON.parse(response.body)
+
+      json_response = response.parsed_body
       expect(json_response['user']['id']).to eq(regular_user.id)
       expect(json_response['user']['email']).to eq(regular_user.email)
     end
@@ -59,36 +57,26 @@ RSpec.describe Admin::UsersController, type: :controller do
 
   describe 'PATCH #update' do
     it 'updates user successfully' do
-      patch :update, params: { 
-        id: regular_user.id, 
-        user: { first_name: 'Updated', last_name: 'Name' } 
-      }
+      patch :update, params: { id: regular_user.id, user: { first_name: 'Updated', last_name: 'Name' } }
       expect(response).to have_http_status(:success)
-      
-      regular_user.reload
-      expect(regular_user.first_name).to eq('Updated')
+      expect(regular_user.reload.first_name).to eq('Updated')
       expect(regular_user.last_name).to eq('Name')
     end
 
     it 'returns errors for invalid data' do
-      patch :update, params: { 
-        id: regular_user.id, 
-        user: { email: '' } 
-      }
-      expect(response).to have_http_status(:unprocessable_entity)
-      
-      json_response = JSON.parse(response.body)
-      expect(json_response['errors']).to be_present
+      patch :update, params: { id: regular_user.id, user: { email: '' } }
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body['errors']).to be_present
     end
   end
 
   describe 'DELETE #destroy' do
     it 'deletes user successfully' do
       user_to_delete = create(:user)
-      expect {
+      expect do
         delete :destroy, params: { id: user_to_delete.id }
-      }.to change(User, :count).by(-1)
-      
+      end.to change(User, :count).by(-1)
+
       expect(response).to have_http_status(:success)
     end
   end
@@ -103,8 +91,8 @@ RSpec.describe Admin::UsersController, type: :controller do
       it 'denies access' do
         get :index
         expect(response).to have_http_status(:forbidden)
-        
-        json_response = JSON.parse(response.body)
+
+        json_response = response.parsed_body
         expect(json_response['error']).to include('Admin privileges required')
       end
     end
@@ -116,9 +104,9 @@ RSpec.describe Admin::UsersController, type: :controller do
 
       it 'denies access' do
         get :index
-        expect(response).to have_http_status(:unprocessable_entity)
-        
-        json_response = JSON.parse(response.body)
+        expect(response).to have_http_status(:unprocessable_content)
+
+        json_response = response.parsed_body
         # The response should contain a message about missing token
         expect(json_response['message']).to include('Missing token')
       end

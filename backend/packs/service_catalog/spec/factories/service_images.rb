@@ -1,16 +1,18 @@
+# frozen_string_literal: true
+
 FactoryBot.define do
   factory :service_image do
-    association :service
-    title { "Sample Service Image" }
-    description { "A beautiful image showcasing our service quality and attention to detail." }
-    alt_text { "Service portfolio image" }
+    service
+    title { 'Sample Service Image' }
+    description { 'A beautiful image showcasing our service quality and attention to detail.' }
+    alt_text { 'Service portfolio image' }
     display_order { 0 }
     is_primary { false }
 
     # Attach a test image file
     after(:build) do |service_image|
       service_image.image.attach(
-        io: File.open(Rails.root.join('spec', 'fixtures', 'files', 'test_image.jpg')),
+        io: Rails.root.join('spec/fixtures/files/test_image.jpg').open,
         filename: 'test_image.jpg',
         content_type: 'image/jpeg'
       )
@@ -29,7 +31,7 @@ FactoryBot.define do
     trait :with_png_image do
       after(:build) do |service_image|
         service_image.image.attach(
-          io: File.open(Rails.root.join('spec', 'fixtures', 'files', 'test_image.png')),
+          io: Rails.root.join('spec/fixtures/files/test_image.png').open,
           filename: 'test_image.png',
           content_type: 'image/png'
         )
@@ -39,7 +41,7 @@ FactoryBot.define do
     trait :large_image do
       after(:build) do |service_image|
         service_image.image.attach(
-          io: File.open(Rails.root.join('spec', 'fixtures', 'files', 'large_image.jpg')),
+          io: Rails.root.join('spec/fixtures/files/large_image.jpg').open,
           filename: 'large_image.jpg',
           content_type: 'image/jpeg'
         )

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: users
@@ -33,17 +35,17 @@ class User < ApplicationRecord
 
   # == Enums ==
   # Role enum - customer: 0, vendor: 1, admin: 2
-  enum role: { customer: 0, vendor: 1, admin: 2 }, _suffix: true
+  enum :role, { customer: 0, vendor: 1, admin: 2 }, suffix: true
 
   # == Associations ==
   has_one :vendor_profile, dependent: :destroy
   has_one :customer_profile, dependent: :destroy
-  
+
   accepts_nested_attributes_for :vendor_profile
   accepts_nested_attributes_for :customer_profile
 
   has_many :customer_bookings, class_name: 'Booking', foreign_key: 'customer_id', dependent: :destroy
-  has_many :vendor_bookings, class_name: 'Booking', foreign_key: 'vendor_id', dependent: :destroy
+  has_many :vendor_bookings, through: :vendor_profile, source: :bookings
   has_many :booking_messages, foreign_key: 'sender_id', dependent: :destroy
   has_many :reviews, foreign_key: 'customer_id', dependent: :destroy
 
@@ -70,27 +72,27 @@ class User < ApplicationRecord
 
   # == Ransackable Attributes ==
   # Explicitly allowlist safe searchable fields for Ransack/ActiveAdmin
-  def self.ransackable_attributes(auth_object = nil)
+  def self.ransackable_attributes(_auth_object = nil)
     %w[id email first_name last_name role confirmed_at created_at updated_at]
   end
 
   # == Ransackable Associations ==
   # Explicitly allowlist safe associations for Ransack/ActiveAdmin
-  def self.ransackable_associations(auth_object = nil)
+  def self.ransackable_associations(_auth_object = nil)
     %w[vendor_profile customer_profile customer_bookings vendor_bookings booking_messages]
   end
 
   # == Instance Methods ==
   def customer?
-    role == "customer"
+    role == 'customer'
   end
 
   def vendor?
-    role == "vendor"
+    role == 'vendor'
   end
 
   def admin?
-    role == "admin"
+    role == 'admin'
   end
 
   def confirmed?

@@ -19,11 +19,11 @@ class BookingCreationService
       create_booking
       check_availability
       prevent_double_booking
-      
+
       if @booking.save
         # Send notification to vendor about new booking
         if defined?(NotificationJob)
-          NotificationJob.perform_later('booking_created', @vendor.id, { 'booking_id' => @booking.id })
+          NotificationJob.perform_later('booking_created', @vendor_profile.user_id, { 'booking_id' => @booking.id })
         end
         { success: true, booking: @booking }
       else
@@ -38,23 +38,17 @@ class BookingCreationService
     { success: false, errors: errors.full_messages }
   end
 
-  def booking
-    @booking
-  end
-
-  def errors
-    @errors
-  end
+  attr_reader :booking, :errors
 
   private
 
   def create_booking
     @service = Service.find(service_id)
-    @vendor = @service.vendor_profile.user
+    @vendor_profile = @service.vendor_profile
 
     @booking = Booking.new(
       customer: customer,
-      vendor: @vendor,
+      vendor_profile: @vendor_profile,
       service: @service,
       event_date: event_date,
       event_end_date: event_end_date,
@@ -69,29 +63,29 @@ class BookingCreationService
 
   def check_availability
     availability_checker = AvailabilityCheckerService.new(
-      vendor_profile: @vendor.vendor_profile,
+      vendor_profile: @vendor_profile,
       date: event_date.to_date,
       start_time: event_date.strftime('%H:%M'),
-      end_time: (event_end_date || event_date + 2.hours).strftime('%H:%M')
+      end_time: (event_end_date || (event_date + 2.hours)).strftime('%H:%M')
     )
 
-    unless availability_checker.available?
-      @errors.add(:event_date, 'is not available for this vendor')
-      raise ActiveRecord::RecordInvalid.new(@booking)
-    end
+    return if availability_checker.available?
+
+    @errors.add(:event_date, 'is not available for this vendor')
+    raise ActiveRecord::RecordInvalid, @booking
   end
 
   def prevent_double_booking
     conflict_resolver = ConflictResolutionService.new(
-      vendor: @vendor,
+      vendor_profile: @vendor_profile,
       event_date: event_date,
-      event_end_date: event_end_date || event_date + 2.hours,
+      event_end_date: event_end_date || (event_date + 2.hours),
       exclude_booking_id: nil
     )
 
-    if conflict_resolver.has_conflict?
-      @errors.add(:event_date, 'conflicts with another booking')
-      raise ActiveRecord::RecordInvalid.new(@booking)
-    end
+    return unless conflict_resolver.conflict?
+
+    @errors.add(:event_date, 'conflicts with another booking')
+    raise ActiveRecord::RecordInvalid, @booking
   end
 end

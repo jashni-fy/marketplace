@@ -11,12 +11,11 @@ RSpec.describe BookingCreationService, type: :service do
 
   let!(:availability_slot) do
     create(:availability_slot,
-      vendor_profile: vendor.vendor_profile,
-      date: event_date.to_date,
-      start_time: '09:00',
-      end_time: '17:00',
-      is_available: true
-    )
+           vendor_profile: vendor.vendor_profile,
+           date: event_date.to_date,
+           start_time: '09:00',
+           end_time: '17:00',
+           is_available: true)
   end
 
   let(:valid_params) do
@@ -37,12 +36,12 @@ RSpec.describe BookingCreationService, type: :service do
     context 'with valid parameters' do
       it 'creates a booking successfully' do
         service_instance = described_class.new(valid_params)
-        
-        expect { 
+
+        expect do
           result = service_instance.call
           expect(result).to be true
-        }.to change(Booking, :count).by(1)
-        
+        end.to change(Booking, :count).by(1)
+
         booking = service_instance.booking
         expect(booking.customer).to eq(customer)
         expect(booking.vendor).to eq(vendor)
@@ -56,7 +55,7 @@ RSpec.describe BookingCreationService, type: :service do
       it 'sets the correct vendor from the service' do
         service_instance = described_class.new(valid_params)
         service_instance.call
-        
+
         expect(service_instance.booking.vendor).to eq(service.vendor_profile.user)
       end
     end
@@ -65,7 +64,7 @@ RSpec.describe BookingCreationService, type: :service do
       it 'fails when customer is missing' do
         params = valid_params.except(:customer)
         service_instance = described_class.new(params)
-        
+
         expect(service_instance.call).to be false
         expect(service_instance.errors[:customer]).to include("can't be blank")
       end
@@ -73,7 +72,7 @@ RSpec.describe BookingCreationService, type: :service do
       it 'fails when service_id is missing' do
         params = valid_params.except(:service_id)
         service_instance = described_class.new(params)
-        
+
         expect(service_instance.call).to be false
         expect(service_instance.errors[:service_id]).to include("can't be blank")
       end
@@ -81,7 +80,7 @@ RSpec.describe BookingCreationService, type: :service do
       it 'fails when event_date is missing' do
         params = valid_params.except(:event_date)
         service_instance = described_class.new(params)
-        
+
         expect(service_instance.call).to be false
         expect(service_instance.errors[:event_date]).to include("can't be blank")
       end
@@ -89,19 +88,19 @@ RSpec.describe BookingCreationService, type: :service do
       it 'fails when total_amount is invalid' do
         params = valid_params.merge(total_amount: -100)
         service_instance = described_class.new(params)
-        
+
         expect(service_instance.call).to be false
-        expect(service_instance.errors[:total_amount]).to include("must be greater than 0")
+        expect(service_instance.errors[:total_amount]).to include('must be greater than 0')
       end
     end
 
-    context 'availability checking' do
+    context 'with availability checking' do
       it 'fails when vendor has no availability for the date' do
         # Remove the availability slot
         availability_slot.destroy
-        
+
         service_instance = described_class.new(valid_params)
-        
+
         expect(service_instance.call).to be false
         expect(service_instance.errors[:event_date]).to include('is not available for this vendor')
       end
@@ -109,62 +108,58 @@ RSpec.describe BookingCreationService, type: :service do
       it 'fails when the time slot is outside vendor availability' do
         # Create availability slot that doesn't cover the requested time
         availability_slot.update!(start_time: '14:00', end_time: '18:00')
-        
+
         service_instance = described_class.new(valid_params)
-        
+
         expect(service_instance.call).to be false
         expect(service_instance.errors[:event_date]).to include('is not available for this vendor')
       end
     end
 
-    context 'conflict prevention' do
+    context 'with conflict prevention' do
       let!(:existing_booking) do
         create(:booking,
-          customer: create(:user, :customer),
-          vendor: vendor,
-          service: service,
-          event_date: event_date,
-          event_end_date: event_date + 1.hour,
-          status: :accepted
-        )
+               customer: create(:user, :customer),
+               vendor: vendor,
+               service: service,
+               event_date: event_date,
+               event_end_date: event_date + 1.hour,
+               status: :accepted)
       end
 
       it 'fails when there is a conflicting booking' do
         service_instance = described_class.new(valid_params)
-        
+
         expect(service_instance.call).to be false
         expect(service_instance.errors[:event_date]).to include('conflicts with another booking')
       end
 
       it 'allows booking when existing booking is declined' do
         existing_booking.update!(status: :declined)
-        
+
         service_instance = described_class.new(valid_params)
-        
+
         expect(service_instance.call).to be true
       end
 
       it 'allows booking when existing booking is cancelled' do
         existing_booking.update!(status: :cancelled)
-        
+
         service_instance = described_class.new(valid_params)
-        
+
         expect(service_instance.call).to be true
       end
     end
 
-    context 'transaction rollback' do
+    context 'when transaction rollback' do
       it 'rolls back when booking save fails' do
         # Make the booking invalid by stubbing save to return false
-        booking_double = double('Booking')
-        allow(booking_double).to receive(:save).and_return(false)
-        allow(booking_double).to receive(:errors).and_return(
-          double(full_messages: ['Some error'])
-        )
+        booking_double = instance_double(Booking)
+        allow(booking_double).to receive_messages(save: false, errors: double(full_messages: ['Some error']))
         allow(Booking).to receive(:new).and_return(booking_double)
-        
+
         service_instance = described_class.new(valid_params)
-        
+
         expect { service_instance.call }.not_to change(Booking, :count)
         expect(service_instance.call).to be false
       end
@@ -175,7 +170,7 @@ RSpec.describe BookingCreationService, type: :service do
     it 'returns the created booking' do
       service_instance = described_class.new(valid_params)
       service_instance.call
-      
+
       expect(service_instance.booking).to be_a(Booking)
       expect(service_instance.booking.persisted?).to be true
     end
@@ -184,7 +179,7 @@ RSpec.describe BookingCreationService, type: :service do
       params = valid_params.except(:customer)
       service_instance = described_class.new(params)
       service_instance.call
-      
+
       expect(service_instance.booking).to be_nil
     end
   end
@@ -194,7 +189,7 @@ RSpec.describe BookingCreationService, type: :service do
       params = valid_params.except(:customer)
       service_instance = described_class.new(params)
       service_instance.call
-      
+
       expect(service_instance.errors).to be_present
       expect(service_instance.errors[:customer]).to include("can't be blank")
     end
@@ -202,10 +197,10 @@ RSpec.describe BookingCreationService, type: :service do
     it 'returns booking model errors when save fails' do
       # Create a scenario where booking validation fails
       availability_slot.destroy
-      
+
       service_instance = described_class.new(valid_params)
       service_instance.call
-      
+
       expect(service_instance.errors[:event_date]).to include('is not available for this vendor')
     end
   end

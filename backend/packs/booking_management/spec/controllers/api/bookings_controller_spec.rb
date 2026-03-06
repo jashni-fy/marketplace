@@ -2,20 +2,21 @@
 
 require 'rails_helper'
 
-RSpec.describe Api::BookingsController, type: :controller do
+RSpec.describe Api::BookingsController do
   let(:customer) { create(:user, :customer) }
   let(:vendor) { create(:user, :vendor) }
   let(:service) { create(:service, vendor_profile: vendor.vendor_profile) }
   let!(:availability_slot) do
     create(:availability_slot,
-      vendor_profile: vendor.vendor_profile,
-      date: 1.week.from_now.to_date,
-      start_time: '09:00',
-      end_time: '17:00',
-      is_available: true
-    )
+           vendor_profile: vendor.vendor_profile,
+           date: 1.week.from_now.to_date,
+           start_time: '09:00',
+           end_time: '17:00',
+           is_available: true)
   end
-  let(:booking) { create(:booking, customer: customer, vendor: vendor, service: service, event_date: 1.week.from_now.change(hour: 10)) }
+  let(:booking) do
+    create(:booking, customer: customer, vendor: vendor, service: service, event_date: 1.week.from_now.change(hour: 10))
+  end
 
   describe 'GET #index' do
     context 'when user is a customer' do
@@ -26,7 +27,7 @@ RSpec.describe Api::BookingsController, type: :controller do
 
       it 'returns customer bookings' do
         customer_booking = create(:booking, customer: customer, vendor: vendor, service: service)
-        other_booking = create(:booking, vendor: vendor, service: service)
+        create(:booking, vendor: vendor, service: service)
 
         get :index
 
@@ -46,26 +47,24 @@ RSpec.describe Api::BookingsController, type: :controller do
       it 'returns vendor bookings' do
         # Create availability slots for both vendors
         create(:availability_slot,
-          vendor_profile: vendor.vendor_profile,
-          date: 1.week.from_now.to_date,
-          start_time: '09:00',
-          end_time: '17:00',
-          is_available: true
-        )
-        
+               vendor_profile: vendor.vendor_profile,
+               date: 1.week.from_now.to_date,
+               start_time: '09:00',
+               end_time: '17:00',
+               is_available: true)
+
         other_vendor = create(:user, :vendor)
         create(:availability_slot,
-          vendor_profile: other_vendor.vendor_profile,
-          date: 1.week.from_now.to_date,
-          start_time: '09:00',
-          end_time: '17:00',
-          is_available: true
-        )
-        
+               vendor_profile: other_vendor.vendor_profile,
+               date: 1.week.from_now.to_date,
+               start_time: '09:00',
+               end_time: '17:00',
+               is_available: true)
+
         vendor_booking = create(:booking, customer: customer, vendor: vendor, service: service)
         other_customer = create(:user, :customer)
         other_service = create(:service, vendor_profile: other_vendor.vendor_profile)
-        other_booking = create(:booking, customer: other_customer, vendor: other_vendor, service: other_service)
+        create(:booking, customer: other_customer, vendor: other_vendor, service: other_service)
 
         get :index
 
@@ -111,6 +110,7 @@ RSpec.describe Api::BookingsController, type: :controller do
 
     context 'when user is not involved in the booking' do
       let(:other_user) { create(:user, :customer) }
+
       before do
         token = JwtService.encode(user_id: other_user.id)
         request.headers['Authorization'] = "Bearer #{token}"
@@ -134,12 +134,11 @@ RSpec.describe Api::BookingsController, type: :controller do
 
     let!(:availability_slot) do
       create(:availability_slot,
-        vendor_profile: vendor.vendor_profile,
-        date: 1.week.from_now.to_date,
-        start_time: '09:00',
-        end_time: '17:00',
-        is_available: true
-      )
+             vendor_profile: vendor.vendor_profile,
+             date: 1.week.from_now.to_date,
+             start_time: '09:00',
+             end_time: '17:00',
+             is_available: true)
     end
 
     let(:valid_params) do
@@ -156,9 +155,9 @@ RSpec.describe Api::BookingsController, type: :controller do
     end
 
     it 'creates a new booking using BookingCreationService' do
-      expect {
+      expect do
         post :create, params: valid_params
-      }.to change(Booking, :count).by(1)
+      end.to change(Booking, :count).by(1)
 
       expect(response).to have_http_status(:created)
       json_response = JSON.parse(response.body)
@@ -180,11 +179,11 @@ RSpec.describe Api::BookingsController, type: :controller do
       end
 
       it 'returns unprocessable entity' do
-        expect {
+        expect do
           post :create, params: invalid_params
-        }.not_to change(Booking, :count)
+        end.not_to change(Booking, :count)
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         json_response = JSON.parse(response.body)
         expect(json_response['errors']).to be_an(Array)
         expect(json_response['error']).to eq('Failed to create booking')
@@ -195,11 +194,11 @@ RSpec.describe Api::BookingsController, type: :controller do
       before { availability_slot.destroy }
 
       it 'returns unprocessable entity with availability error' do
-        expect {
+        expect do
           post :create, params: valid_params
-        }.not_to change(Booking, :count)
+        end.not_to change(Booking, :count)
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         json_response = JSON.parse(response.body)
         expect(json_response['errors']).to include('Event date is not available for this vendor')
       end
@@ -236,7 +235,9 @@ RSpec.describe Api::BookingsController, type: :controller do
     end
 
     context 'when booking cannot be modified' do
-      let(:non_modifiable_booking) { create(:booking, customer: customer, vendor: vendor, service: service, status: :accepted) }
+      let(:non_modifiable_booking) do
+        create(:booking, customer: customer, vendor: vendor, service: service, status: :accepted)
+      end
       let(:update_params) do
         {
           id: non_modifiable_booking.id,
@@ -282,7 +283,7 @@ RSpec.describe Api::BookingsController, type: :controller do
       it 'returns unprocessable entity' do
         delete :destroy, params: { id: booking.id }
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         json_response = JSON.parse(response.body)
         expect(json_response['error']).to eq('Booking cannot be cancelled')
       end
@@ -319,8 +320,8 @@ RSpec.describe Api::BookingsController, type: :controller do
 
     context 'when making a counter offer' do
       it 'creates a counter offer' do
-        post :respond, params: { 
-          id: booking.id, 
+        post :respond, params: {
+          id: booking.id,
           response_action: 'counter_offer',
           counter_amount: 150.00,
           counter_message: 'Counter offer message'
@@ -381,6 +382,7 @@ RSpec.describe Api::BookingsController, type: :controller do
 
     context 'when user is not involved in the booking' do
       let(:other_user) { create(:user, :customer) }
+
       before do
         token = JwtService.encode(user_id: other_user.id)
         request.headers['Authorization'] = "Bearer #{token}"
@@ -403,9 +405,9 @@ RSpec.describe Api::BookingsController, type: :controller do
     end
 
     it 'creates a new message' do
-      expect {
+      expect do
         post :send_message, params: { id: booking.id, message: 'Test message' }
-      }.to change(BookingMessage, :count).by(1)
+      end.to change(BookingMessage, :count).by(1)
 
       expect(response).to have_http_status(:created)
       json_response = JSON.parse(response.body)
@@ -415,11 +417,11 @@ RSpec.describe Api::BookingsController, type: :controller do
 
     context 'with invalid message' do
       it 'returns unprocessable entity' do
-        expect {
+        expect do
           post :send_message, params: { id: booking.id, message: '' }
-        }.not_to change(BookingMessage, :count)
+        end.not_to change(BookingMessage, :count)
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         json_response = JSON.parse(response.body)
         expect(json_response['errors']).to be_an(Array)
       end
@@ -434,12 +436,11 @@ RSpec.describe Api::BookingsController, type: :controller do
 
     let!(:availability_slot) do
       create(:availability_slot,
-        vendor_profile: vendor.vendor_profile,
-        date: 1.week.from_now.to_date,
-        start_time: '09:00',
-        end_time: '17:00',
-        is_available: true
-      )
+             vendor_profile: vendor.vendor_profile,
+             date: 1.week.from_now.to_date,
+             start_time: '09:00',
+             end_time: '17:00',
+             is_available: true)
     end
 
     let(:valid_params) do
@@ -485,27 +486,23 @@ RSpec.describe Api::BookingsController, type: :controller do
     before do
       token = JwtService.encode(user_id: customer.id)
       request.headers['Authorization'] = "Bearer #{token}"
+
+      create(:booking,
+             customer: create(:user, :customer),
+             vendor: vendor,
+             service: service,
+             event_date: 1.week.from_now.change(hour: 10),
+             event_end_date: 1.week.from_now.change(hour: 12),
+             status: :accepted)
     end
 
     let!(:availability_slot) do
       create(:availability_slot,
-        vendor_profile: vendor.vendor_profile,
-        date: 1.week.from_now.to_date,
-        start_time: '09:00',
-        end_time: '17:00',
-        is_available: true
-      )
-    end
-
-    let!(:conflicting_booking) do
-      create(:booking,
-        customer: create(:user, :customer),
-        vendor: vendor,
-        service: service,
-        event_date: 1.week.from_now.change(hour: 10),
-        event_end_date: 1.week.from_now.change(hour: 12),
-        status: :accepted
-      )
+             vendor_profile: vendor.vendor_profile,
+             date: 1.week.from_now.to_date,
+             start_time: '09:00',
+             end_time: '17:00',
+             is_available: true)
     end
 
     let(:valid_params) do

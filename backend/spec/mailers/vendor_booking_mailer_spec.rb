@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
-RSpec.describe VendorBookingMailer, type: :mailer do
+RSpec.describe VendorBookingMailer do
   let(:vendor_user) { create(:user, :vendor) }
   let(:customer_user) { create(:user, :customer) }
   let(:vendor_profile) { vendor_user.vendor_profile }
@@ -9,11 +11,11 @@ RSpec.describe VendorBookingMailer, type: :mailer do
   let(:booking) do
     # Create availability slot for the booking date
     booking_date = 1.week.from_now
-    create(:availability_slot, 
-           vendor_profile: vendor_profile, 
-           date: booking_date.to_date, 
+    create(:availability_slot,
+           vendor_profile: vendor_profile,
+           date: booking_date.to_date,
            is_available: true)
-    
+
     create(:booking, service: service, vendor: vendor_user, customer: customer_user, event_date: booking_date)
   end
 

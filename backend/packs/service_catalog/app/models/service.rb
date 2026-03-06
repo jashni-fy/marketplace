@@ -1,3 +1,6 @@
+# frozen_string_literal: true
+
+# rubocop:disable Metrics/ClassLength
 class Service < ApplicationRecord
   # Associations
   belongs_to :vendor_profile
@@ -8,15 +11,15 @@ class Service < ApplicationRecord
   has_many_attached :images
 
   # Enums
-  enum pricing_type: { 
-    hourly: 0, 
-    package: 1, 
-    custom: 2 
+  enum :pricing_type, {
+    hourly: 0,
+    package: 1,
+    custom: 2
   }
-  
-  enum status: { 
-    draft: 0, 
-    active: 1, 
+
+  enum :status, {
+    draft: 0,
+    active: 1,
     inactive: 2,
     archived: 3
   }
@@ -27,8 +30,6 @@ class Service < ApplicationRecord
   validates :base_price, numericality: { greater_than: 0, less_than: 1_000_000 }, allow_nil: true
   validates :pricing_type, presence: true
   validates :status, presence: true
-  validates :vendor_profile_id, presence: true
-  validates :service_category_id, presence: true
 
   # Custom validations
   validate :base_price_required_for_non_custom_pricing
@@ -85,18 +86,17 @@ class Service < ApplicationRecord
   def formatted_base_price
     return 'Custom Quote' if custom_pricing?
     return "#{base_price}/hour" if hourly_pricing?
-    "#{base_price}"
+
+    base_price.to_s
   end
 
   def can_be_booked?
     active? && vendor_profile.present? && vendor_profile.user.present?
   end
 
-  def bookings_count
-    bookings.count
-  end
+  delegate :count, to: :bookings, prefix: true
 
-  def has_images?
+  def images?
     images.attached? || service_images.any?
   end
 
@@ -112,9 +112,7 @@ class Service < ApplicationRecord
     service_images.ordered
   end
 
-  def service_images_count
-    service_images.count
-  end
+  delegate :count, to: :service_images, prefix: true
 
   def display_name
     name
@@ -122,15 +120,18 @@ class Service < ApplicationRecord
 
   def short_description(limit = 100)
     return description if description.length <= limit
+
     "#{description.truncate(limit)}..."
   end
 
   def update_rating_stats!
-    stats = reviews.published.pluck('COUNT(id)', 'AVG(rating)').first
+    stats = reviews.published.pick('COUNT(id)', 'AVG(rating)')
     count = stats[0].to_i
     avg = stats[1].to_f.round(2)
-    
+
+    # rubocop:disable Rails/SkipsModelValidations
     update_columns(average_rating: avg, total_reviews: count)
+    # rubocop:enable Rails/SkipsModelValidations
   end
 
   def rating_distribution
@@ -154,7 +155,7 @@ class Service < ApplicationRecord
 
   def self.search(query)
     return all if query.blank?
-    
+
     where(
       'services.name ILIKE ? OR services.description ILIKE ?',
       "%#{query}%", "%#{query}%"
@@ -163,15 +164,16 @@ class Service < ApplicationRecord
 
   def self.filter_by_category(category_id)
     return all if category_id.blank?
+
     where(service_category_id: category_id)
   end
 
   def self.filter_by_price_range(min_price, max_price)
     return all if min_price.blank? && max_price.blank?
-    
+
     scope = all
-    scope = scope.where('base_price >= ?', min_price) if min_price.present?
-    scope = scope.where('base_price <= ?', max_price) if max_price.present?
+    scope = scope.where(base_price: min_price..) if min_price.present?
+    scope = scope.where(base_price: ..max_price) if max_price.present?
     scope
   end
 
@@ -187,16 +189,17 @@ class Service < ApplicationRecord
 
   def base_price_required_for_non_custom_pricing
     return if custom_pricing?
-    return if base_price.present? && base_price > 0
-    
+    return if base_price.present? && base_price.positive?
+
     errors.add(:base_price, 'must be present and greater than 0 for non-custom pricing')
   end
 
   def vendor_profile_belongs_to_vendor_user
-    return unless vendor_profile.present?
-    
-    unless vendor_profile.user&.vendor?
-      errors.add(:vendor_profile, 'must belong to a vendor user')
-    end
+    return if vendor_profile.blank?
+
+    return if vendor_profile.user&.vendor?
+
+    errors.add(:vendor_profile, 'must belong to a vendor user')
   end
 end
+# rubocop:enable Metrics/ClassLength

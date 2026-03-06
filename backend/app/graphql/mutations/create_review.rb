@@ -1,49 +1,41 @@
-module Mutations
-  class CreateReview < BaseMutation
-    argument :booking_id, ID, required: true
-    argument :rating, Integer, required: true
-    argument :quality_rating, Integer, required: false
-    argument :communication_rating, Integer, required: false
-    argument :value_rating, Integer, required: false
-    argument :punctuality_rating, Integer, required: false
-    argument :comment, String, required: false
+# frozen_string_literal: true
 
-    field :review, Types::ReviewType, null: true
-    field :errors, [String], null: false
+class Mutations::CreateReview < BaseMutation
+  description 'Creates a new review for a booking'
 
-    def resolve(booking_id:, rating:, **kwargs)
-      user = context[:current_user]
-      unless user
-        return { review: nil, errors: ["Authentication required"] }
-      end
+  argument :review_input,
+           Types::CreateReviewInput,
+           required: true,
+           description: 'Attributes for the review that will be created'
 
-      unless user.customer?
-        return { review: nil, errors: ["Only customers can submit reviews"] }
-      end
+  field :errors, [String], null: false, description: 'Errors encountered during review creation'
+  field :review, Types::ReviewType, null: true, description: 'The created review'
 
-      booking = Booking.find_by(id: booking_id)
-      unless booking
-        return { review: nil, errors: ["Booking not found"] }
-      end
+  def resolve(review_input:)
+    user = context[:current_user]
+    return { review: nil, errors: ['Authentication required'] } unless user
 
-      unless booking.customer == user
-        return { review: nil, errors: ["You can only review your own bookings"] }
-      end
+    return { review: nil, errors: ['Only customers can submit reviews'] } unless user.customer?
 
-      review = Review.new(
-        booking: booking,
-        customer: user,
-        vendor_profile: booking.vendor_profile,
-        service: booking.service,
-        rating: rating,
-        **kwargs
-      )
+    booking = Booking.find_by(id: review_input.booking_id)
+    return { review: nil, errors: ['Booking not found'] } unless booking
 
-      if review.save
-        { review: review, errors: [] }
-      else
-        { review: nil, errors: review.errors.full_messages }
-      end
+    return { review: nil, errors: ['You can only review your own bookings'] } unless booking.customer == user
+
+    review_attributes = review_input.to_h.reject { |key, _| key.to_sym == :booking_id }
+
+    review = Review.new(
+      booking: booking,
+      customer: user,
+      vendor_profile: booking.vendor_profile,
+      service: booking.service,
+      **review_attributes
+    )
+
+    if review.save
+      { review: review, errors: [] }
+    else
+      { review: nil, errors: review.errors.full_messages }
     end
   end
 end

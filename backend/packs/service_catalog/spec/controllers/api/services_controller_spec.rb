@@ -1,16 +1,19 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
-RSpec.describe Api::ServicesController, type: :controller do
+RSpec.describe Api::ServicesController do
   let(:vendor_user) { create(:user, role: 'vendor') }
   let(:customer_user) { create(:user, role: 'customer') }
   let(:vendor_profile) { vendor_user.vendor_profile }
   let(:service_category) { create(:service_category, :photography) }
   let(:videography_category) { create(:service_category, :videography) }
 
-  let!(:photography_service) do
-    create(:service, 
+  let(:photography_service) do
+    create(:service,
            name: 'Wedding Photography',
-           description: 'Professional wedding photography services in New York capturing your special moments with artistic flair',
+           description: 'Professional wedding photography services in New York capturing ' \
+                        'your special moments with artistic flair',
            base_price: 1000,
            pricing_type: 'package',
            status: 'active',
@@ -18,10 +21,11 @@ RSpec.describe Api::ServicesController, type: :controller do
            service_category: service_category)
   end
 
-  let!(:portrait_service) do
+  let(:portrait_service) do
     create(:service,
            name: 'Portrait Photography',
-           description: 'Studio portrait photography sessions with professional lighting and editing for stunning results',
+           description: 'Studio portrait photography sessions with professional lighting ' \
+                        'and editing for stunning results',
            base_price: 200,
            pricing_type: 'hourly',
            status: 'active',
@@ -29,10 +33,11 @@ RSpec.describe Api::ServicesController, type: :controller do
            service_category: service_category)
   end
 
-  let!(:videography_service) do
+  let(:videography_service) do
     create(:service,
            name: 'Event Videography',
-           description: 'Professional event video recording with multi-camera setup and post-production editing services',
+           description: 'Professional event video recording with multi-camera setup ' \
+                        'and post-production editing services',
            base_price: 1500,
            pricing_type: 'package',
            status: 'active',
@@ -40,13 +45,21 @@ RSpec.describe Api::ServicesController, type: :controller do
            service_category: videography_category)
   end
 
-  let!(:inactive_service) do
+  let(:inactive_service) do
     create(:service,
            name: 'Inactive Service',
-           description: 'This service is currently inactive and not available for booking at this time',
+           description: 'This service is currently inactive and not available for booking ' \
+                        'at this time',
            status: 'inactive',
            vendor_profile: vendor_profile,
            service_category: service_category)
+  end
+
+  before do
+    photography_service
+    portrait_service
+    videography_service
+    inactive_service
   end
 
   describe 'GET #index' do
@@ -56,11 +69,11 @@ RSpec.describe Api::ServicesController, type: :controller do
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response).to have_key('services')
         expect(json_response).to have_key('pagination')
         expect(json_response).to have_key('filters')
-        
+
         expect(json_response['services'].length).to eq(3) # Only active services
         expect(json_response['pagination']['current_page']).to eq(1)
         expect(json_response['pagination']['per_page']).to eq(20)
@@ -69,13 +82,13 @@ RSpec.describe Api::ServicesController, type: :controller do
 
       it 'filters by vendor_id' do
         other_vendor = create(:user, role: 'vendor')
-        other_service = create(:service, vendor_profile: other_vendor.vendor_profile, status: 'active')
+        create(:service, vendor_profile: other_vendor.vendor_profile, status: 'active')
 
         get :index, params: { vendor_id: vendor_profile.id }
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response['services'].length).to eq(3)
         json_response['services'].each do |service|
           expect(service['vendor']['id']).to eq(vendor_profile.id)
@@ -88,7 +101,7 @@ RSpec.describe Api::ServicesController, type: :controller do
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response['services'].length).to eq(2) # photography services only
         json_response['services'].each do |service|
           expect(service['category']['id']).to eq(service_category.id)
@@ -101,7 +114,7 @@ RSpec.describe Api::ServicesController, type: :controller do
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response['services'].length).to eq(2)
         expect(json_response['pagination']['current_page']).to eq(1)
         expect(json_response['pagination']['per_page']).to eq(2)
@@ -115,8 +128,8 @@ RSpec.describe Api::ServicesController, type: :controller do
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
-        
-        service_names = json_response['services'].map { |s| s['name'] }
+
+        service_names = json_response['services'].pluck('name')
         expect(service_names).to eq(['Event Videography', 'Portrait Photography', 'Wedding Photography'])
       end
 
@@ -125,7 +138,7 @@ RSpec.describe Api::ServicesController, type: :controller do
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
-        
+
         service_prices = json_response['services'].map { |s| s['base_price'].to_f }
         expect(service_prices).to eq([200.0, 1000.0, 1500.0])
       end
@@ -138,7 +151,7 @@ RSpec.describe Api::ServicesController, type: :controller do
 
       expect(response).to have_http_status(:ok)
       json_response = JSON.parse(response.body)
-      
+
       expect(json_response['id']).to eq(photography_service.id)
       expect(json_response['name']).to eq('Wedding Photography')
       expect(json_response['vendor']['id']).to eq(vendor_profile.id)
@@ -147,7 +160,7 @@ RSpec.describe Api::ServicesController, type: :controller do
     end
 
     it 'returns 404 for non-existent service' do
-      get :show, params: { id: 999999 }
+      get :show, params: { id: 999_999 }
 
       expect(response).to have_http_status(:not_found)
     end
@@ -160,12 +173,12 @@ RSpec.describe Api::ServicesController, type: :controller do
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response).to have_key('services')
         expect(json_response).to have_key('pagination')
         expect(json_response).to have_key('filters')
         expect(json_response).to have_key('total_count')
-        
+
         expect(json_response['services'].length).to eq(1)
         expect(json_response['services'].first['name']).to eq('Wedding Photography')
         expect(json_response['filters']['query']).to eq('Wedding')
@@ -177,7 +190,7 @@ RSpec.describe Api::ServicesController, type: :controller do
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response['services'].length).to eq(1)
         expect(json_response['services'].first['name']).to eq('Portrait Photography')
         expect(json_response['filters']['query']).to eq('Portrait')
@@ -186,12 +199,12 @@ RSpec.describe Api::ServicesController, type: :controller do
       it 'filters by location' do
         # Update vendor profile location for testing
         vendor_profile.update!(location: 'New York, NY')
-        
+
         get :search, params: { location: 'New York' }
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response['services'].length).to eq(3)
         expect(json_response['filters']['location']).to eq('New York')
       end
@@ -201,7 +214,7 @@ RSpec.describe Api::ServicesController, type: :controller do
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response['services'].length).to eq(1)
         expect(json_response['services'].first['name']).to eq('Wedding Photography')
         expect(json_response['filters']['min_price'].to_f).to eq(500.0)
@@ -213,7 +226,7 @@ RSpec.describe Api::ServicesController, type: :controller do
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response['services'].length).to eq(1)
         expect(json_response['services'].first['name']).to eq('Portrait Photography')
         expect(json_response['services'].first['pricing_type']).to eq('hourly')
@@ -221,7 +234,7 @@ RSpec.describe Api::ServicesController, type: :controller do
       end
 
       it 'combines multiple filters' do
-        get :search, params: { 
+        get :search, params: {
           query: 'Photography',
           category_id: service_category.id,
           min_price: 100,
@@ -230,7 +243,7 @@ RSpec.describe Api::ServicesController, type: :controller do
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response['services'].length).to eq(1)
         expect(json_response['services'].first['name']).to eq('Portrait Photography')
         expect(json_response['filters'].keys).to contain_exactly('query', 'category_id', 'min_price', 'max_price')
@@ -241,7 +254,7 @@ RSpec.describe Api::ServicesController, type: :controller do
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response['services']).to be_empty
         expect(json_response['total_count']).to eq(0)
         expect(json_response['pagination']['total_pages']).to eq(0)
@@ -252,7 +265,7 @@ RSpec.describe Api::ServicesController, type: :controller do
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response['services'].length).to eq(2)
         expect(json_response['pagination']['current_page']).to eq(1)
         expect(json_response['pagination']['per_page']).to eq(2)
@@ -264,7 +277,7 @@ RSpec.describe Api::ServicesController, type: :controller do
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
-        
+
         service_prices = json_response['services'].map { |s| s['base_price'].to_f }
         expect(service_prices).to eq([1500.0, 1000.0, 200.0])
       end
@@ -282,7 +295,8 @@ RSpec.describe Api::ServicesController, type: :controller do
         {
           service: {
             name: 'New Photography Service',
-            description: 'A comprehensive new photography service offering professional quality images for all occasions',
+            description: 'A comprehensive new photography service offering ' \
+                         'professional quality images for all occasions',
             base_price: 300,
             pricing_type: 'hourly',
             service_category_id: service_category.id,
@@ -292,13 +306,13 @@ RSpec.describe Api::ServicesController, type: :controller do
       end
 
       it 'creates a new service successfully' do
-        expect {
+        expect do
           post :create, params: valid_service_params
-        }.to change(Service, :count).by(1)
+        end.to change(Service, :count).by(1)
 
         expect(response).to have_http_status(:created)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response['message']).to eq('Service created successfully')
         expect(json_response['service']['name']).to eq('New Photography Service')
         expect(json_response['service']['vendor']['id']).to eq(vendor_profile.id)
@@ -312,13 +326,13 @@ RSpec.describe Api::ServicesController, type: :controller do
           }
         }
 
-        expect {
+        expect do
           post :create, params: invalid_params
-        }.not_to change(Service, :count)
+        end.not_to change(Service, :count)
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response['error']).to eq('Service creation failed')
         expect(json_response['details']).to be_an(Array)
         expect(json_response['details']).not_to be_empty
@@ -372,7 +386,7 @@ RSpec.describe Api::ServicesController, type: :controller do
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response['message']).to eq('Service updated successfully')
         expect(json_response['service']['name']).to eq('Updated Wedding Photography')
         expect(json_response['service']['base_price'].to_f).to eq(1200.0)
@@ -389,15 +403,15 @@ RSpec.describe Api::ServicesController, type: :controller do
 
         put :update, params: invalid_update_params
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         json_response = JSON.parse(response.body)
-        
+
         expect(json_response['error']).to eq('Service update failed')
         expect(json_response['details']).to be_an(Array)
       end
 
       it 'returns 404 for non-existent service' do
-        put :update, params: { id: 999999, service: { name: 'Test' } }
+        put :update, params: { id: 999_999, service: { name: 'Test' } }
 
         expect(response).to have_http_status(:not_found)
       end
@@ -405,6 +419,7 @@ RSpec.describe Api::ServicesController, type: :controller do
 
     context 'when authenticated as different vendor' do
       let(:other_vendor) { create(:user, :with_vendor_profile) }
+
       before do
         token = JwtService.encode(user_id: other_vendor.id)
         request.headers['Authorization'] = "Bearer #{token}"
@@ -427,10 +442,10 @@ RSpec.describe Api::ServicesController, type: :controller do
 
       it 'deletes the service successfully' do
         service_to_delete = create(:service, vendor_profile: vendor_profile)
-        
-        expect {
+
+        expect do
           delete :destroy, params: { id: service_to_delete.id }
-        }.to change(Service, :count).by(-1)
+        end.to change(Service, :count).by(-1)
 
         expect(response).to have_http_status(:ok)
         json_response = JSON.parse(response.body)
@@ -438,7 +453,7 @@ RSpec.describe Api::ServicesController, type: :controller do
       end
 
       it 'returns 404 for non-existent service' do
-        delete :destroy, params: { id: 999999 }
+        delete :destroy, params: { id: 999_999 }
 
         expect(response).to have_http_status(:not_found)
       end
@@ -446,6 +461,7 @@ RSpec.describe Api::ServicesController, type: :controller do
 
     context 'when authenticated as different vendor' do
       let(:other_vendor) { create(:user, :with_vendor_profile) }
+
       before do
         token = JwtService.encode(user_id: other_vendor.id)
         request.headers['Authorization'] = "Bearer #{token}"
@@ -466,13 +482,13 @@ RSpec.describe Api::ServicesController, type: :controller do
 
       expect(response).to have_http_status(:ok)
       json_response = JSON.parse(response.body)
-      
+
       expect(json_response).to include(
         'id', 'name', 'description', 'base_price', 'pricing_type',
         'formatted_price', 'status', 'vendor', 'category', 'images',
         'created_at', 'updated_at'
       )
-      
+
       expect(json_response['vendor']).to include('id', 'business_name', 'location')
       expect(json_response['category']).to include('id', 'name')
     end

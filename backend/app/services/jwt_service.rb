@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class JwtService
   SECRET_KEY = Rails.application.credentials.secret_key_base || 'your-secret-key'
 
@@ -8,7 +10,7 @@ class JwtService
 
   def self.decode(token)
     decoded = JWT.decode(token, SECRET_KEY)[0]
-    HashWithIndifferentAccess.new(decoded)
+    ActiveSupport::HashWithIndifferentAccess.new(decoded)
   rescue JWT::DecodeError => e
     raise ExceptionHandler::InvalidToken, e.message
   end

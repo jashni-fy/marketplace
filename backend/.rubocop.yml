@@ -1,0 +1,75 @@
+plugins:
+  - rubocop-rails
+  - rubocop-rspec
+  - rubocop-performance
+  - rubocop-factory_bot
+  - rubocop-graphql
+  - rubocop-rspec_rails
+
+AllCops:
+  NewCops: enable
+  Exclude:
+    - 'db/**/*'
+    - 'bin/**/*'
+    - 'node_modules/**/*'
+    - 'vendor/**/*'
+    - 'config/environments/*'
+    - 'lib/tasks/*.rake'
+
+Rails:
+  Enabled: true
+
+# Commonly tweaked rules for modern Rails
+Style/Documentation:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: true
+  EnforcedStyle: always
+  Exclude:
+    - 'config/**/*'
+    - 'Gemfile'
+    - 'Rakefile'
+
+Metrics/MethodLength:
+  Max: 20
+  Exclude:
+    - 'db/migrate/*'
+
+Metrics/AbcSize:
+  Max: 30
+
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/**/*'
+    - 'config/routes.rb'
+    - 'config/routes/**/*'
+    - 'lib/tasks/**/*'
+
+Style/ClassAndModuleChildren:
+  EnforcedStyle: compact
+
+Layout/LineLength:
+  Max: 120
+  Exclude:
+    - 'config/initializers/*'
+
+RSpec/DescribeClass:
+  Exclude:
+    - 'spec/integration/**/*'
+
+RSpec/MultipleExpectations:
+  Max: 10
+  Exclude:
+    - 'spec/integration/**/*'
+
+RSpec/NestedGroups:
+  Max: 5
+
+RSpec/ExampleLength:
+  Max: 50
+  Exclude:
+    - 'spec/integration/**/*'
+
+RSpec/MultipleMemoizedHelpers:
+  Max: 12

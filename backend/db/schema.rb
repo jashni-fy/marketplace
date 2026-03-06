@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_02_20_203007) do
+ActiveRecord::Schema[7.1].define(version: 2026_03_06_135035) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -81,7 +81,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_20_203007) do
 
   create_table "bookings", force: :cascade do |t|
     t.bigint "customer_id", null: false
-    t.bigint "vendor_id", null: false
     t.bigint "service_id", null: false
     t.datetime "event_date", null: false
     t.string "event_location", null: false
@@ -93,13 +92,13 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_20_203007) do
     t.string "event_duration"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "vendor_profile_id", null: false
     t.index ["customer_id", "status"], name: "index_bookings_on_customer_id_and_status"
     t.index ["customer_id"], name: "index_bookings_on_customer_id"
     t.index ["event_date"], name: "index_bookings_on_event_date"
     t.index ["service_id", "status"], name: "index_bookings_on_service_id_and_status"
     t.index ["service_id"], name: "index_bookings_on_service_id"
-    t.index ["vendor_id", "status"], name: "index_bookings_on_vendor_id_and_status"
-    t.index ["vendor_id"], name: "index_bookings_on_vendor_id"
+    t.index ["vendor_profile_id"], name: "index_bookings_on_vendor_profile_id"
   end
 
   create_table "customer_profiles", force: :cascade do |t|
@@ -238,7 +237,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_20_203007) do
     t.text "service_categories"
     t.string "business_license"
     t.integer "years_experience", default: 0
-    t.boolean "is_verified", default: false
     t.decimal "average_rating", precision: 3, scale: 2, default: "0.0"
     t.integer "total_reviews", default: 0
     t.decimal "latitude", precision: 10, scale: 6
@@ -247,7 +245,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_20_203007) do
     t.datetime "verified_at"
     t.text "rejection_reason"
     t.index ["business_name"], name: "index_vendor_profiles_on_business_name"
-    t.index ["is_verified"], name: "index_vendor_profiles_on_is_verified"
     t.index ["latitude", "longitude"], name: "index_vendor_profiles_on_coordinates"
     t.index ["location"], name: "index_vendor_profiles_on_location"
     t.index ["user_id"], name: "index_vendor_profiles_on_user_id"
@@ -261,7 +258,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_20_203007) do
   add_foreign_key "booking_messages", "users", column: "sender_id"
   add_foreign_key "bookings", "services"
   add_foreign_key "bookings", "users", column: "customer_id"
-  add_foreign_key "bookings", "users", column: "vendor_id"
+  add_foreign_key "bookings", "vendor_profiles"
   add_foreign_key "customer_profiles", "users"
   add_foreign_key "portfolio_items", "vendor_profiles"
   add_foreign_key "reviews", "bookings"

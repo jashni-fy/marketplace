@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 FactoryBot.define do
   factory :service_category do
     sequence(:name) { |n| "Category #{n}" }
-    description { "This is a detailed description of the service category that meets the minimum length requirement." }
+    description { 'This is a detailed description of the service category that meets the minimum length requirement.' }
     sequence(:slug) { |n| "category-#{n}" }
     active { true }
 

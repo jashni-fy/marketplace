@@ -1,11 +1,13 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
-RSpec.describe ServiceImagesController, type: :controller do
+RSpec.describe ServiceImagesController do
   let(:vendor_user) { create(:user, :vendor) }
   let(:customer_user) { create(:user, :customer) }
   let(:service) { create(:service, vendor_profile: vendor_user.vendor_profile) }
   let(:other_service) { create(:service) }
-  
+
   let(:valid_image_params) do
     {
       service_image: {
@@ -52,6 +54,7 @@ RSpec.describe ServiceImagesController, type: :controller do
 
     context 'when authenticated as vendor but not service owner' do
       let(:other_vendor) { create(:user, :vendor) }
+
       before { sign_in other_vendor }
 
       it 'returns forbidden for index' do
@@ -65,6 +68,7 @@ RSpec.describe ServiceImagesController, type: :controller do
 
   describe 'GET #index' do
     let!(:service_image) { create(:service_image, service: service) }
+
     before { sign_in vendor_user }
 
     it 'returns service images' do
@@ -80,6 +84,7 @@ RSpec.describe ServiceImagesController, type: :controller do
 
   describe 'GET #show' do
     let!(:service_image) { create(:service_image, service: service) }
+
     before { sign_in vendor_user }
 
     it 'returns the service image' do
@@ -93,7 +98,7 @@ RSpec.describe ServiceImagesController, type: :controller do
 
     context 'when image does not exist' do
       it 'returns not found' do
-        get :show, params: { service_id: service.id, id: 999999 }
+        get :show, params: { service_id: service.id, id: 999_999 }
 
         expect(response).to have_http_status(:not_found)
         json_response = JSON.parse(response.body)
@@ -107,9 +112,9 @@ RSpec.describe ServiceImagesController, type: :controller do
 
     context 'with valid parameters' do
       it 'creates a new service image' do
-        expect {
+        expect do
           post :create, params: { service_id: service.id }.merge(valid_image_params)
-        }.to change(ServiceImage, :count).by(1)
+        end.to change(ServiceImage, :count).by(1)
 
         expect(response).to have_http_status(:created)
         json_response = JSON.parse(response.body)
@@ -120,11 +125,11 @@ RSpec.describe ServiceImagesController, type: :controller do
 
     context 'with invalid parameters' do
       it 'returns unprocessable entity' do
-        expect {
+        expect do
           post :create, params: { service_id: service.id }.merge(invalid_image_params)
-        }.not_to change(ServiceImage, :count)
+        end.not_to change(ServiceImage, :count)
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         json_response = JSON.parse(response.body)
         expect(json_response['error']).to eq('Image upload failed')
         expect(json_response['details']).to be_an(Array)
@@ -134,8 +139,6 @@ RSpec.describe ServiceImagesController, type: :controller do
 
   describe 'PUT #update' do
     let!(:service_image) { create(:service_image, service: service) }
-    before { sign_in vendor_user }
-
     let(:update_params) do
       {
         service_image: {
@@ -144,6 +147,8 @@ RSpec.describe ServiceImagesController, type: :controller do
         }
       }
     end
+
+    before { sign_in vendor_user }
 
     it 'updates the service image' do
       put :update, params: { service_id: service.id, id: service_image.id }.merge(update_params)
@@ -157,12 +162,13 @@ RSpec.describe ServiceImagesController, type: :controller do
 
   describe 'DELETE #destroy' do
     let!(:service_image) { create(:service_image, service: service) }
+
     before { sign_in vendor_user }
 
     it 'deletes the service image' do
-      expect {
+      expect do
         delete :destroy, params: { service_id: service.id, id: service_image.id }
-      }.to change(ServiceImage, :count).by(-1)
+      end.to change(ServiceImage, :count).by(-1)
 
       expect(response).to have_http_status(:ok)
       json_response = JSON.parse(response.body)
@@ -172,6 +178,7 @@ RSpec.describe ServiceImagesController, type: :controller do
 
   describe 'POST #set_primary' do
     let!(:service_image) { create(:service_image, service: service) }
+
     before { sign_in vendor_user }
 
     it 'sets the image as primary' do
@@ -185,14 +192,15 @@ RSpec.describe ServiceImagesController, type: :controller do
   end
 
   describe 'POST #reorder' do
-    let!(:image1) { create(:service_image, service: service, display_order: 0) }
-    let!(:image2) { create(:service_image, service: service, display_order: 1) }
+    let!(:first_service_image) { create(:service_image, service: service, display_order: 0) }
+    let!(:second_service_image) { create(:service_image, service: service, display_order: 1) }
+
     before { sign_in vendor_user }
 
     it 'reorders the images' do
-      post :reorder, params: { 
-        service_id: service.id, 
-        image_ids: [image2.id, image1.id] 
+      post :reorder, params: {
+        service_id: service.id,
+        image_ids: [second_service_image.id, first_service_image.id]
       }
 
       expect(response).to have_http_status(:ok)
@@ -202,9 +210,9 @@ RSpec.describe ServiceImagesController, type: :controller do
 
     context 'with invalid image IDs' do
       it 'returns bad request' do
-        post :reorder, params: { 
-          service_id: service.id, 
-          image_ids: [999999] 
+        post :reorder, params: {
+          service_id: service.id,
+          image_ids: [999_999]
         }
 
         expect(response).to have_http_status(:bad_request)
@@ -235,9 +243,9 @@ RSpec.describe ServiceImagesController, type: :controller do
     end
 
     it 'uploads multiple images' do
-      expect {
+      expect do
         post :bulk_upload, params: { service_id: service.id }.merge(bulk_upload_params)
-      }.to change(ServiceImage, :count).by(2)
+      end.to change(ServiceImage, :count).by(2)
 
       expect(response).to have_http_status(:created)
       json_response = JSON.parse(response.body)

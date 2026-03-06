@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class PortfolioSummaryService
   include Callable
 
@@ -7,12 +9,12 @@ class PortfolioSummaryService
 
   def call
     items = @vendor_profile.portfolio_items
-    
+
     {
       total_items: items.count,
       featured_items: items.featured.count,
       categories: items.group(:category).count,
-      total_images: items.sum { |item| item.image_count },
+      total_images: items.sum(&:image_count),
       recent_items: items.order(created_at: :desc).limit(5).map do |item|
         {
           id: item.id,
