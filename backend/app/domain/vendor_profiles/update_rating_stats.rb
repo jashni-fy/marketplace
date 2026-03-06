@@ -22,7 +22,7 @@ class VendorProfiles::UpdateRatingStats
     count = stats[0].to_i
     avg = stats[1].to_f.round(2)
 
-    vendor_profile.update_columns(average_rating: avg, total_reviews: count)
+    vendor_profile.update(average_rating: avg, total_reviews: count)
 
     {
       count: count,

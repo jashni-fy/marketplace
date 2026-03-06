@@ -75,7 +75,7 @@ Rails.application.routes.draw do
         get :services
         get :availability
         get :portfolio
-        get :reviews, to: 'reviews#vendor_reviews'
+        get :reviews, action: :vendor_reviews
       end
 
       # Portfolio items nested under vendors for public viewing

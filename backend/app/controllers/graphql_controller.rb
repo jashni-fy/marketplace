@@ -28,15 +28,7 @@ class GraphqlController < ApplicationController
   def prepare_variables(variables_param)
     case variables_param
     when String
-      if variables_param.present?
-        begin
-          JSON.parse(variables_param) || {}
-        rescue JSON::ParserError => e
-          raise GraphQL::ExecutionError, "Invalid JSON in variables parameter: #{e.message}"
-        end
-      else
-        {}
-      end
+      parse_string_variables(variables_param)
     when Hash
       variables_param
     when ActionController::Parameters
@@ -48,10 +40,21 @@ class GraphqlController < ApplicationController
     end
   end
 
-  def handle_error_in_development(e)
-    logger.error e.message
-    logger.error e.backtrace.join("\n")
+  def parse_string_variables(variables_param)
+    return {} if variables_param.blank?
 
-    render json: { errors: [{ message: e.message, backtrace: e.backtrace }], data: {} }, status: :internal_server_error
+    begin
+      JSON.parse(variables_param) || {}
+    rescue JSON::ParserError => e
+      raise GraphQL::ExecutionError, "Invalid JSON in variables parameter: #{e.message}"
+    end
+  end
+
+  def handle_error_in_development(exception)
+    logger.error exception.message
+    logger.error exception.backtrace.join("\n")
+
+    render json: { errors: [{ message: exception.message, backtrace: exception.backtrace }], data: {} },
+           status: :internal_server_error
   end
 end

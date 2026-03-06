@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Admin::UsersController, type: :controller do
+RSpec.describe Admin::UsersController do
   let(:admin_user) { create(:user, :admin) }
   let(:regular_user) { create(:user, :customer) }
   let(:vendor_user) { create(:user, :vendor) }
@@ -31,11 +31,7 @@ RSpec.describe Admin::UsersController, type: :controller do
     it 'filters users by role' do
       get :index, params: { role: 'customer' }
       expect(response).to have_http_status(:success)
-
-      json_response = response.parsed_body
-      json_response['users'].each do |user|
-        expect(user['role']).to eq('customer')
-      end
+      expect(response.parsed_body['users']).to all(include('role' => 'customer'))
     end
 
     it 'filters users by email' do
@@ -61,26 +57,16 @@ RSpec.describe Admin::UsersController, type: :controller do
 
   describe 'PATCH #update' do
     it 'updates user successfully' do
-      patch :update, params: {
-        id: regular_user.id,
-        user: { first_name: 'Updated', last_name: 'Name' }
-      }
+      patch :update, params: { id: regular_user.id, user: { first_name: 'Updated', last_name: 'Name' } }
       expect(response).to have_http_status(:success)
-
-      regular_user.reload
-      expect(regular_user.first_name).to eq('Updated')
+      expect(regular_user.reload.first_name).to eq('Updated')
       expect(regular_user.last_name).to eq('Name')
     end
 
     it 'returns errors for invalid data' do
-      patch :update, params: {
-        id: regular_user.id,
-        user: { email: '' }
-      }
-      expect(response).to have_http_status(:unprocessable_entity)
-
-      json_response = response.parsed_body
-      expect(json_response['errors']).to be_present
+      patch :update, params: { id: regular_user.id, user: { email: '' } }
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body['errors']).to be_present
     end
   end
 
@@ -118,7 +104,7 @@ RSpec.describe Admin::UsersController, type: :controller do
 
       it 'denies access' do
         get :index
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
 
         json_response = response.parsed_body
         # The response should contain a message about missing token

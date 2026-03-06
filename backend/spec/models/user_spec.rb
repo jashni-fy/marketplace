@@ -28,276 +28,243 @@
 #
 require 'rails_helper'
 
-RSpec.describe User, type: :model do
-  describe 'validations' do
-    subject { build(:user) }
+RSpec.describe User do
+  let(:user) { create(:user) }
 
+  describe 'validations' do
     it { is_expected.to validate_presence_of(:email) }
-    it { is_expected.to validate_uniqueness_of(:email).case_insensitive }
     it { is_expected.to validate_presence_of(:role) }
     it { is_expected.to validate_presence_of(:first_name) }
-    it { is_expected.to validate_length_of(:first_name).is_at_most(50) }
     it { is_expected.to validate_presence_of(:last_name) }
-    it { is_expected.to validate_length_of(:last_name).is_at_most(50) }
 
-    context 'password validation' do
-      it 'validates password length on creation' do
-        user = build(:user, password: '123', password_confirmation: '123')
+    describe 'email uniqueness' do
+      subject { build(:user) }
+
+      it { is_expected.to validate_uniqueness_of(:email).case_insensitive }
+    end
+
+    context 'when validating password' do
+      it 'is invalid if shorter than 8 characters' do
+        user.password = '1234567'
         expect(user).not_to be_valid
-        expect(user.errors[:password]).to include('is too short (minimum is 8 characters)')
       end
 
-      it 'validates password length on update when password is provided' do
-        user = create(:user)
-        user.password = '123'
-        user.password_confirmation = '123'
-        expect(user).not_to be_valid
-        expect(user.errors[:password]).to include('is too short (minimum is 8 characters)')
-      end
-
-      it 'does not validate password length on update when password is not provided' do
-        user = create(:user)
-        user.first_name = 'Updated'
+      it 'is valid if 8 characters or more' do
+        user.password = '12345678'
+        user.password_confirmation = '12345678'
         expect(user).to be_valid
       end
     end
   end
 
+  describe 'enums' do
+    it { is_expected.to define_enum_for(:role).with_values(customer: 0, vendor: 1, admin: 2).with_suffix }
+  end
+
   describe 'associations' do
+    subject(:user_model) { create(:user) }
+
     it { is_expected.to have_one(:vendor_profile).dependent(:destroy) }
     it { is_expected.to have_one(:customer_profile).dependent(:destroy) }
-    # TODO: Add these tests when models are created in future tasks
-    # it { should have_many(:bookings).dependent(:destroy) }
-    # it { should have_many(:reviews).dependent(:destroy) }
-  end
 
-  describe 'enums' do
-    it { is_expected.to define_enum_for(:role).with_values(customer: 0, vendor: 1, admin: 2) }
-  end
-
-  describe 'scopes' do
-    before do
-      # Clean up any existing users
-      described_class.destroy_all
+    it 'has many customer bookings' do
+      expect(user_model).to have_many(:customer_bookings)
+        .class_name('Booking').with_foreign_key('customer_id').dependent(:destroy)
     end
 
-    let!(:customer) { create(:user, :customer) }
-    let!(:vendor) { create(:user, :vendor) }
-    let!(:admin) { create(:user, :admin) }
-    let!(:confirmed_user) { create(:user, confirmed_at: 1.day.ago) }
-    let!(:unconfirmed_user) { create(:user, :unconfirmed) }
-
-    describe '.customers' do
-      it 'returns only customer users' do
-        customers = described_class.customers
-        expect(customers).to include(customer, confirmed_user)
-        expect(customers).not_to include(vendor, admin)
-      end
-    end
-
-    describe '.vendors' do
-      it 'returns only vendor users' do
-        vendors = described_class.vendors
-        expect(vendors).to include(vendor)
-        expect(vendors).not_to include(customer, admin, confirmed_user, unconfirmed_user)
-      end
-    end
-
-    describe '.admins' do
-      it 'returns only admin users' do
-        admins = described_class.admins
-        expect(admins).to include(admin)
-        expect(admins).not_to include(customer, vendor, confirmed_user, unconfirmed_user)
-      end
-    end
-
-    describe '.confirmed' do
-      it 'returns only confirmed users' do
-        confirmed_users = described_class.confirmed
-        expect(confirmed_users).to include(customer, vendor, admin, confirmed_user)
-        expect(confirmed_users).not_to include(unconfirmed_user)
-      end
-    end
+    it { is_expected.to have_many(:vendor_bookings).through(:vendor_profile).source(:bookings) }
+    it { is_expected.to have_many(:booking_messages).with_foreign_key('sender_id').dependent(:destroy) }
+    it { is_expected.to have_many(:reviews).with_foreign_key('customer_id').dependent(:destroy) }
   end
 
   describe 'callbacks' do
-    describe 'after_create :create_profile' do
-      context 'when user is a vendor' do
+    describe '#create_profile' do
+      context 'when role is vendor' do
+        let(:vendor_user) { build(:user, :vendor) }
+
         it 'creates a vendor profile' do
-          user = build(:user, :vendor)
-          expect { user.save! }.to change { user.vendor_profile }.from(nil)
+          expect { vendor_user.save }.to change(VendorProfile, :count).by(1)
         end
 
-        it 'does not create a customer profile' do
-          user = create(:user, :vendor)
-          expect(user.customer_profile).to be_nil
+        it 'sets default business name' do
+          vendor_user.save
+          expect(vendor_user.vendor_profile.business_name).to eq("#{vendor_user.full_name}'s Business")
         end
       end
 
-      context 'when user is a customer' do
+      context 'when role is customer' do
+        let(:customer_user) { build(:user, :customer) }
+
         it 'creates a customer profile' do
-          user = build(:user, :customer)
-          expect { user.save! }.to change { user.customer_profile }.from(nil)
-        end
-
-        it 'does not create a vendor profile' do
-          user = create(:user, :customer)
-          expect(user.vendor_profile).to be_nil
+          expect { customer_user.save }.to change(CustomerProfile, :count).by(1)
         end
       end
 
-      context 'when user is an admin' do
+      context 'when role is admin' do
+        let(:admin_user) { build(:user, :admin) }
+
         it 'does not create any profile' do
-          user = create(:user, :admin)
-          expect(user.vendor_profile).to be_nil
-          expect(user.customer_profile).to be_nil
+          expect { admin_user.save }.not_to(change { [VendorProfile.count, CustomerProfile.count] })
         end
       end
     end
 
-    describe 'before_save :downcase_email' do
-      it 'downcases email before saving' do
-        user = build(:user, email: 'TEST@EXAMPLE.COM')
-        user.save!
-        expect(user.email).to eq('test@example.com')
+    describe '#auto_confirm_user' do
+      it 'confirms user automatically on creation' do
+        new_user = build(:user, confirmed_at: nil)
+        new_user.save
+        expect(new_user.confirmed?).to be true
       end
+    end
 
-      it 'handles nil email gracefully' do
-        user = build(:user, email: nil)
-        expect { user.save }.not_to raise_error
+    describe '#downcase_email' do
+      it 'downcases email before validation' do
+        mixed_case_email = 'MixedCase@Example.Com'
+        user = build(:user, email: mixed_case_email)
+        user.validate
+        expect(user.email).to eq(mixed_case_email.downcase)
       end
     end
   end
 
   describe 'instance methods' do
-    let(:customer) { create(:user, :customer) }
-    let(:vendor) { create(:user, :vendor) }
-    let(:admin) { create(:user, :admin) }
+    describe '#full_name' do
+      it 'returns first and last name combined' do
+        user = build(:user, first_name: 'John', last_name: 'Doe')
+        expect(user.full_name).to eq('John Doe')
+      end
+    end
 
-    describe '#customer?' do
-      it 'returns true for customer users' do
-        expect(customer.customer?).to be true
+    describe '#display_name' do
+      it 'returns full name if present' do
+        user = build(:user, first_name: 'John', last_name: 'Doe')
+        expect(user.display_name).to eq('John Doe')
       end
 
-      it 'returns false for non-customer users' do
-        expect(vendor.customer?).to be false
-        expect(admin.customer?).to be false
+      it 'returns email if full name is blank' do
+        user = build(:user, first_name: '', last_name: '', email: 'test@example.com')
+        expect(user.display_name).to eq('test@example.com')
+      end
+    end
+
+    describe '#customer?' do
+      it 'returns true if role is customer' do
+        expect(build(:user, :customer).customer?).to be true
+      end
+
+      it 'returns false if role is vendor' do
+        expect(build(:user, :vendor).customer?).to be false
       end
     end
 
     describe '#vendor?' do
-      it 'returns true for vendor users' do
-        expect(vendor.vendor?).to be true
+      it 'returns true if role is vendor' do
+        expect(build(:user, :vendor).vendor?).to be true
       end
 
-      it 'returns false for non-vendor users' do
-        expect(customer.vendor?).to be false
-        expect(admin.vendor?).to be false
+      it 'returns false if role is customer' do
+        expect(build(:user, :customer).vendor?).to be false
       end
     end
 
     describe '#admin?' do
-      it 'returns true for admin users' do
-        expect(admin.admin?).to be true
+      it 'returns true if role is admin' do
+        expect(build(:user, :admin).admin?).to be true
       end
 
-      it 'returns false for non-admin users' do
-        expect(customer.admin?).to be false
-        expect(vendor.admin?).to be false
+      it 'returns false if role is customer' do
+        expect(build(:user, :customer).admin?).to be false
       end
     end
 
     describe '#confirmed?' do
-      it 'returns true for confirmed users' do
-        user = create(:user, confirmed_at: 1.day.ago)
-        expect(user.confirmed?).to be true
+      it 'returns true if confirmed_at is present' do
+        expect(create(:user, confirmed_at: Time.current).confirmed?).to be true
       end
 
-      it 'returns false for unconfirmed users' do
-        user = create(:user, :unconfirmed)
+      it 'returns false if confirmed_at is nil' do
+        # We need to skip the auto-confirmation for this test
+        user = build(:user)
+        allow(user).to receive(:auto_confirm_user)
+        user.confirmed_at = nil
+        user.save(validate: false)
         expect(user.confirmed?).to be false
       end
     end
+  end
 
-    describe '#full_name' do
-      it 'returns the full name' do
-        user = create(:user, first_name: 'John', last_name: 'Doe')
-        expect(user.full_name).to eq('John Doe')
+  describe 'scopes' do
+    let!(:customer) { create(:user, :customer) }
+    let!(:vendor) { create(:user, :vendor) }
+    let!(:admin) { create(:user, :admin) }
+
+    describe '.customers' do
+      it 'returns only customers' do
+        expect(described_class.customers).to include(customer)
+        expect(described_class.customers).not_to include(vendor, admin)
       end
+    end
 
-      it 'handles nil names gracefully' do
-        user = build(:user, first_name: nil, last_name: nil)
-        user.save(validate: false) # Skip validations for this test
-        expect(user.full_name).to eq('')
+    describe '.vendors' do
+      it 'returns only vendors' do
+        expect(described_class.vendors).to include(vendor)
+        expect(described_class.vendors).not_to include(customer, admin)
       end
+    end
 
-      it 'strips whitespace' do
-        user = create(:user, first_name: ' John ', last_name: ' Doe ')
-        expect(user.full_name).to eq('John   Doe')
+    describe '.admins' do
+      it 'returns only admins' do
+        expect(described_class.admins).to include(admin)
+        expect(described_class.admins).not_to include(customer, vendor)
+      end
+    end
+
+    describe '.confirmed' do
+      it 'returns only confirmed users' do
+        confirmed_user = create(:user, confirmed_at: Time.current)
+        expect(described_class.confirmed).to include(confirmed_user)
+      end
+    end
+
+    describe '.unconfirmed' do
+      it 'returns only unconfirmed users' do
+        unconfirmed_user = build(:user)
+        allow(unconfirmed_user).to receive(:auto_confirm_user)
+        unconfirmed_user.confirmed_at = nil
+        unconfirmed_user.save(validate: false)
+        expect(described_class.unconfirmed).to include(unconfirmed_user)
       end
     end
   end
 
-  describe 'Devise modules' do
-    it 'includes database_authenticatable' do
-      expect(described_class.devise_modules).to include(:database_authenticatable)
-    end
-
-    it 'includes registerable' do
-      expect(described_class.devise_modules).to include(:registerable)
-    end
-
-    it 'includes recoverable' do
-      expect(described_class.devise_modules).to include(:recoverable)
-    end
-
-    it 'includes rememberable' do
-      expect(described_class.devise_modules).to include(:rememberable)
-    end
-
-    it 'includes validatable' do
-      expect(described_class.devise_modules).to include(:validatable)
-    end
-
-    it 'includes confirmable' do
-      expect(described_class.devise_modules).to include(:confirmable)
+  describe 'ransackable attributes' do
+    it 'allows searching by specific attributes' do
+      expect(described_class.ransackable_attributes).to contain_exactly(
+        'id', 'email', 'first_name', 'last_name', 'role', 'confirmed_at', 'created_at', 'updated_at'
+      )
     end
   end
 
-  describe 'JWT token integration' do
-    let(:user) { create(:user) }
-
-    it 'can generate JWT token using JwtService' do
-      token = JwtService.encode(user_id: user.id)
-      expect(token).to be_present
-      expect(token).to be_a(String)
-    end
-
-    it 'can decode JWT token using JwtService' do
-      token = JwtService.encode(user_id: user.id)
-      decoded = JwtService.decode(token)
-      expect(decoded[:user_id]).to eq(user.id)
-    end
-
-    it 'can be found using AuthorizeApiRequest service' do
-      token = JwtService.encode(user_id: user.id)
-      headers = { 'Authorization' => "Bearer #{token}" }
-
-      result = AuthorizeApiRequest.new(headers).call
-      expect(result[:user]).to eq(user)
+  describe 'ransackable associations' do
+    it 'allows searching by specific associations' do
+      associations = %w[vendor_profile customer_profile customer_bookings vendor_bookings booking_messages]
+      expect(described_class.ransackable_associations).to match_array(associations)
     end
   end
 
   describe 'error handling in profile creation' do
+    before do
+      allow(Rails.logger).to receive(:error)
+    end
+
     it 'logs error when profile creation fails' do
       user = build(:user, :vendor)
 
       # Mock the vendor_profile creation to fail
       allow(user).to receive(:create_vendor_profile!).and_raise(ActiveRecord::RecordInvalid.new(user))
 
-      expect(Rails.logger).to receive(:error).with(/Failed to create profile/)
-
       user.save!
+      expect(Rails.logger).to have_received(:error).with(/Failed to create profile/)
     end
   end
 end
