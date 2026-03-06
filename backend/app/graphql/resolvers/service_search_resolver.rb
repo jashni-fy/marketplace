@@ -1,12 +1,15 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/ClassLength, Metrics/MethodLength, Style/MultilineBlockChain
 class Resolvers::ServiceSearchResolver < Resolvers::BaseResolver
+  description 'Search for services based on various criteria'
+
   type [Types::ServiceSearchResultType], null: false
 
-  argument :query, String, required: false, description: 'Search query string'
   argument :filters, Types::ServiceFiltersInput, required: false, description: 'Service filters'
   argument :location, Types::LocationInput, required: false, description: 'Location-based filtering'
   argument :pagination, Types::PaginationInput, required: false, description: 'Pagination options'
+  argument :query, String, required: false, description: 'Search query string'
 
   # == Constants ==
   MAX_PER_PAGE = 100
@@ -51,7 +54,10 @@ class Resolvers::ServiceSearchResolver < Resolvers::BaseResolver
     # Calculate search time
     search_time = Time.current - start_time
     if search_time > SLOW_QUERY_THRESHOLD
-      Rails.logger.warn("ServiceSearchResolver: Slow search (#{search_time.round(2)}s) for query: #{query.inspect}, filters: #{filters.inspect}, location: #{location.inspect}")
+      Rails.logger.warn(
+        "ServiceSearchResolver: Slow search (#{search_time.round(2)}s) for query: #{query.inspect}, " \
+        "filters: #{filters.inspect}, location: #{location.inspect}"
+      )
     end
 
     {
@@ -70,7 +76,7 @@ class Resolvers::ServiceSearchResolver < Resolvers::BaseResolver
   # Validates and normalizes pagination input.
   def validate_pagination(pagination)
     page = [pagination[:page].to_i, 1].max
-    per_page = [[pagination[:per_page].to_i, MAX_PER_PAGE].min, 1].max
+    per_page = pagination[:per_page].to_i.clamp(1, MAX_PER_PAGE)
     sort_by = pagination[:sort_by] || DEFAULT_SORT_BY
     sort_order = %w[asc desc].include?(pagination[:sort_order]) ? pagination[:sort_order] : DEFAULT_SORT_ORDER
     { page: page, per_page: per_page, sort_by: sort_by, sort_order: sort_order }
@@ -96,9 +102,7 @@ class Resolvers::ServiceSearchResolver < Resolvers::BaseResolver
     services = services.where(service_category_id: filters[:categories]) if filters[:categories].present?
 
     # Price range filter
-    services = services.where(services: { base_price: (filters[:price_min]).. }) if filters[:price_min].present?
-
-    services = services.where(services: { base_price: ..(filters[:price_max]) }) if filters[:price_max].present?
+    services = apply_price_filter(services, filters)
 
     # Pricing type filter
     services = services.where(pricing_type: filters[:pricing_type]) if filters[:pricing_type].present?
@@ -137,22 +141,26 @@ class Resolvers::ServiceSearchResolver < Resolvers::BaseResolver
     end
 
     # Text-based location filtering
+    apply_text_location_filters(services, location)
+  end
+
+  def apply_text_location_filters(services, location)
     if location[:city].present?
-      services = services.joins(:vendor_profile).where('vendor_profiles.location ILIKE ?', "%#{location[:city]}%")
+      services = services.joins(:vendor_profile).where('vendor_profiles.location ILIKE ?',
+                                                       "%#{location[:city]}%")
     end
-
     if location[:state].present?
-      services = services.joins(:vendor_profile).where('vendor_profiles.location ILIKE ?', "%#{location[:state]}%")
+      services = services.joins(:vendor_profile).where('vendor_profiles.location ILIKE ?',
+                                                       "%#{location[:state]}%")
     end
-
     if location[:country].present?
-      services = services.joins(:vendor_profile).where('vendor_profiles.location ILIKE ?', "%#{location[:country]}%")
+      services = services.joins(:vendor_profile).where('vendor_profiles.location ILIKE ?',
+                                                       "%#{location[:country]}%")
     end
-
     if location[:address].present?
-      services = services.joins(:vendor_profile).where('vendor_profiles.location ILIKE ?', "%#{location[:address]}%")
+      services = services.joins(:vendor_profile).where('vendor_profiles.location ILIKE ?',
+                                                       "%#{location[:address]}%")
     end
-
     services
   end
 
@@ -164,8 +172,6 @@ class Resolvers::ServiceSearchResolver < Resolvers::BaseResolver
       services.order("services.base_price #{pagination[:sort_order]} NULLS LAST")
     when 'rating'
       services.order("vendor_profiles.average_rating #{pagination[:sort_order]}")
-    when 'created_at'
-      services.order("services.created_at #{pagination[:sort_order]}")
     else
       services.order("services.created_at #{pagination[:sort_order]}")
     end
@@ -220,7 +226,7 @@ class Resolvers::ServiceSearchResolver < Resolvers::BaseResolver
     # Apply all filters except price
     facet_services = apply_filters(services, filters.except(:price_min, :price_max))
 
-    price_ranges.map do |range|
+    facets = price_ranges.map do |range|
       count = facet_services
               .where(services: { base_price: (range[:min])...(range[:max]) })
               .count
@@ -231,7 +237,8 @@ class Resolvers::ServiceSearchResolver < Resolvers::BaseResolver
         label: range[:label],
         count: count
       }
-    end.select { |facet| facet[:count].positive? }
+    end
+    facets.select { |facet| facet[:count].positive? }
   end
 
   def generate_location_facets(services, filters)
@@ -256,7 +263,7 @@ class Resolvers::ServiceSearchResolver < Resolvers::BaseResolver
     # Apply all filters except pricing_type
     facet_services = apply_filters(services, filters.except(:pricing_type))
 
-    Service.pricing_types.map do |pricing_type, _|
+    facets = Service.pricing_types.map do |pricing_type, _|
       count = facet_services.where(pricing_type: pricing_type).count
 
       {
@@ -264,7 +271,8 @@ class Resolvers::ServiceSearchResolver < Resolvers::BaseResolver
         label: pricing_type.humanize,
         count: count
       }
-    end.select { |facet| facet[:count].positive? }
+    end
+    facets.select { |facet| facet[:count].positive? }
   end
 
   def generate_rating_facets(services, filters)
@@ -279,7 +287,7 @@ class Resolvers::ServiceSearchResolver < Resolvers::BaseResolver
     # Apply all filters except vendor_rating
     facet_services = apply_filters(services, filters.except(:vendor_rating))
 
-    rating_ranges.map do |range|
+    facets = rating_ranges.map do |range|
       count = facet_services
               .joins(:vendor_profile)
               .where(vendor_profiles: { average_rating: (range[:min])...(range[:max]) })
@@ -291,7 +299,8 @@ class Resolvers::ServiceSearchResolver < Resolvers::BaseResolver
         label: range[:label],
         count: count
       }
-    end.select { |facet| facet[:count].positive? }
+    end
+    facets.select { |facet| facet[:count].positive? }
   end
 
   def apply_price_filter(services, filters)
@@ -300,3 +309,5 @@ class Resolvers::ServiceSearchResolver < Resolvers::BaseResolver
     services
   end
 end
+
+# rubocop:enable Metrics/ClassLength, Metrics/MethodLength, Style/MultilineBlockChain

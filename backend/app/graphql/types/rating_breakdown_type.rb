@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 class Types::RatingBreakdownType < Types::BaseObject
-  field :quality, Float, null: false
-  field :communication, Float, null: false
-  field :value, Float, null: false
-  field :punctuality, Float, null: false
+  description 'Average rating components for a vendor profile'
+
+  field :communication, Float, null: false, description: 'Average communication score'
+  field :punctuality, Float, null: false, description: 'Average punctuality score'
+  field :quality, Float, null: false, description: 'Average quality score'
+  field :value, Float, null: false, description: 'Average value-for-money score'
 end
