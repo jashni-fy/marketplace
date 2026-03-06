@@ -1,0 +1,17 @@
+# Lefthook configuration for Marketplace
+# https://github.com/evilmartians/lefthook
+
+pre-commit:
+  parallel: true
+  commands:
+    # Backend Hooks
+    rubocop:
+      root: "backend/"
+      glob: "*.rb"
+      run: bundle exec rubocop --force-exclusion --parallel {staged_files}
+    
+    # Frontend Hooks
+    eslint:
+      root: "frontend/"
+      glob: "*.{js,ts,jsx,tsx}"
+      run: npx eslint {staged_files}
