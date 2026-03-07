@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class Mutations::CreateReview < BaseMutation
+class Mutations::CreateReview < Mutations::BaseMutation
   description 'Creates a new review for a booking'
 
   argument :review_input,
