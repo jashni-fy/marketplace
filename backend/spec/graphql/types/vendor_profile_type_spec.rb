@@ -8,15 +8,17 @@ RSpec.describe Types::VendorProfileType, type: :graphql do
 
   let(:user) { create(:user, email: 'vendor@example.com', role: :vendor) }
   let(:vendor) do
-    create(:vendor_profile,
-           user: user,
-           business_name: 'Test Vendor',
-           location: 'New York, NY',
-           latitude: 40.7128,
-           longitude: -74.0060,
-           average_rating: 4.5,
-           total_reviews: 10,
-           is_verified: true)
+    user.vendor_profile.tap do |vp|
+      vp.update!(
+        business_name: 'Test Vendor',
+        location: 'New York, NY',
+        latitude: 40.7128,
+        longitude: -74.0060,
+        average_rating: 4.5,
+        total_reviews: 10,
+        verification_status: :verified
+      )
+    end
   end
 
   let(:query) do
@@ -127,7 +129,7 @@ RSpec.describe Types::VendorProfileType, type: :graphql do
   end
 
   it 'returns associated services and portfolio items' do
-    category = create(:service_category)
+    category = create(:category)
     create(:service, vendor_profile: vendor, service_category: category, name: 'Test Service')
     create(:portfolio_item, vendor_profile: vendor, title: 'Test Portfolio')
 

@@ -131,9 +131,9 @@ class ServiceSearchService
     }
   end
 
-  # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity
+  # rubocop:disable Metrics/CyclomaticComplexity
   def applied_filters
-    # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity
+    # rubocop:enable Metrics/CyclomaticComplexity
     filters = {}
     filters[:query] = query if query.present?
     filters[:category_id] = category_id if category_id.present?
@@ -142,8 +142,6 @@ class ServiceSearchService
     filters[:max_price] = max_price if max_price.present?
     filters[:pricing_type] = pricing_type if pricing_type.present?
     filters[:vendor_id] = vendor_id if vendor_id.present?
-    filters[:sort_by] = sort_by
-    filters[:sort_direction] = sort_direction
     filters
   end
 
@@ -164,6 +162,10 @@ class ServiceSearchService
   private
 
   def normalize_attributes
+    # Strip whitespace from string parameters
+    self.query = query.strip if query.present?
+    self.location = location.strip if location.present?
+
     # Ensure page is at least 1
     self.page = [page.to_i, 1].max
 

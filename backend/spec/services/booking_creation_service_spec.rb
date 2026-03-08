@@ -39,7 +39,7 @@ RSpec.describe BookingCreationService, type: :service do
 
         expect do
           result = service_instance.call
-          expect(result).to be true
+          expect(result[:success]).to be true
         end.to change(Booking, :count).by(1)
 
         booking = service_instance.booking
@@ -65,7 +65,7 @@ RSpec.describe BookingCreationService, type: :service do
         params = valid_params.except(:customer)
         service_instance = described_class.new(params)
 
-        expect(service_instance.call).to be false
+        expect(service_instance.call[:success]).to be false
         expect(service_instance.errors[:customer]).to include("can't be blank")
       end
 
@@ -73,7 +73,7 @@ RSpec.describe BookingCreationService, type: :service do
         params = valid_params.except(:service_id)
         service_instance = described_class.new(params)
 
-        expect(service_instance.call).to be false
+        expect(service_instance.call[:success]).to be false
         expect(service_instance.errors[:service_id]).to include("can't be blank")
       end
 
@@ -81,7 +81,7 @@ RSpec.describe BookingCreationService, type: :service do
         params = valid_params.except(:event_date)
         service_instance = described_class.new(params)
 
-        expect(service_instance.call).to be false
+        expect(service_instance.call[:success]).to be false
         expect(service_instance.errors[:event_date]).to include("can't be blank")
       end
 
@@ -89,7 +89,7 @@ RSpec.describe BookingCreationService, type: :service do
         params = valid_params.merge(total_amount: -100)
         service_instance = described_class.new(params)
 
-        expect(service_instance.call).to be false
+        expect(service_instance.call[:success]).to be false
         expect(service_instance.errors[:total_amount]).to include('must be greater than 0')
       end
     end
@@ -101,7 +101,7 @@ RSpec.describe BookingCreationService, type: :service do
 
         service_instance = described_class.new(valid_params)
 
-        expect(service_instance.call).to be false
+        expect(service_instance.call[:success]).to be false
         expect(service_instance.errors[:event_date]).to include('is not available for this vendor')
       end
 
@@ -111,7 +111,7 @@ RSpec.describe BookingCreationService, type: :service do
 
         service_instance = described_class.new(valid_params)
 
-        expect(service_instance.call).to be false
+        expect(service_instance.call[:success]).to be false
         expect(service_instance.errors[:event_date]).to include('is not available for this vendor')
       end
     end
@@ -130,7 +130,7 @@ RSpec.describe BookingCreationService, type: :service do
       it 'fails when there is a conflicting booking' do
         service_instance = described_class.new(valid_params)
 
-        expect(service_instance.call).to be false
+        expect(service_instance.call[:success]).to be false
         expect(service_instance.errors[:event_date]).to include('conflicts with another booking')
       end
 
@@ -139,7 +139,7 @@ RSpec.describe BookingCreationService, type: :service do
 
         service_instance = described_class.new(valid_params)
 
-        expect(service_instance.call).to be true
+        expect(service_instance.call[:success]).to be true
       end
 
       it 'allows booking when existing booking is cancelled' do
@@ -147,7 +147,7 @@ RSpec.describe BookingCreationService, type: :service do
 
         service_instance = described_class.new(valid_params)
 
-        expect(service_instance.call).to be true
+        expect(service_instance.call[:success]).to be true
       end
     end
 
@@ -161,7 +161,7 @@ RSpec.describe BookingCreationService, type: :service do
         service_instance = described_class.new(valid_params)
 
         expect { service_instance.call }.not_to change(Booking, :count)
-        expect(service_instance.call).to be false
+        expect(service_instance.call[:success]).to be false
       end
     end
   end

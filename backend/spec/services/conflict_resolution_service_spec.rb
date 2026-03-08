@@ -19,16 +19,16 @@ RSpec.describe ConflictResolutionService, type: :service do
            is_available: true)
   end
 
-  describe '#has_conflict?' do
+  describe '#conflict?' do
     context 'when there are no existing bookings' do
       it 'returns false' do
         service_instance = described_class.new(
-          vendor: vendor,
+          vendor_profile: vendor.vendor_profile,
           event_date: event_date,
           event_end_date: event_end_date
         )
 
-        expect(service_instance.has_conflict?).to be false
+        expect(service_instance.conflict?).to be false
       end
     end
 
@@ -53,12 +53,12 @@ RSpec.describe ConflictResolutionService, type: :service do
 
       it 'returns false' do
         service_instance = described_class.new(
-          vendor: vendor,
+          vendor_profile: vendor.vendor_profile,
           event_date: event_date,
           event_end_date: event_end_date
         )
 
-        expect(service_instance.has_conflict?).to be false
+        expect(service_instance.conflict?).to be false
       end
     end
 
@@ -75,36 +75,36 @@ RSpec.describe ConflictResolutionService, type: :service do
 
       it 'returns true for overlapping bookings' do
         service_instance = described_class.new(
-          vendor: vendor,
+          vendor_profile: vendor.vendor_profile,
           event_date: event_date,
           event_end_date: event_end_date
         )
 
-        expect(service_instance.has_conflict?).to be true
+        expect(service_instance.conflict?).to be true
       end
 
       it 'returns false when conflicting booking is declined' do
         overlapping_booking.update!(status: :declined)
 
         service_instance = described_class.new(
-          vendor: vendor,
+          vendor_profile: vendor.vendor_profile,
           event_date: event_date,
           event_end_date: event_end_date
         )
 
-        expect(service_instance.has_conflict?).to be false
+        expect(service_instance.conflict?).to be false
       end
 
       it 'returns false when conflicting booking is cancelled' do
         overlapping_booking.update!(status: :cancelled)
 
         service_instance = described_class.new(
-          vendor: vendor,
+          vendor_profile: vendor.vendor_profile,
           event_date: event_date,
           event_end_date: event_end_date
         )
 
-        expect(service_instance.has_conflict?).to be false
+        expect(service_instance.conflict?).to be false
       end
     end
 
@@ -121,13 +121,13 @@ RSpec.describe ConflictResolutionService, type: :service do
 
       it 'excludes the specified booking from conflict check' do
         service_instance = described_class.new(
-          vendor: vendor,
+          vendor_profile: vendor.vendor_profile,
           event_date: event_date,
           event_end_date: event_end_date,
           exclude_booking_id: existing_booking.id
         )
 
-        expect(service_instance.has_conflict?).to be false
+        expect(service_instance.conflict?).to be false
       end
 
       it 'includes other conflicting bookings' do
@@ -141,13 +141,13 @@ RSpec.describe ConflictResolutionService, type: :service do
         other_booking.save(validate: false)
 
         service_instance = described_class.new(
-          vendor: vendor,
+          vendor_profile: vendor.vendor_profile,
           event_date: event_date,
           event_end_date: event_end_date,
           exclude_booking_id: existing_booking.id
         )
 
-        expect(service_instance.has_conflict?).to be true
+        expect(service_instance.conflict?).to be true
       end
     end
 
@@ -163,12 +163,12 @@ RSpec.describe ConflictResolutionService, type: :service do
                status: :accepted)
 
         service_instance = described_class.new(
-          vendor: vendor,
+          vendor_profile: vendor.vendor_profile,
           event_date: event_date
           # event_end_date not provided, should default to event_date + 2.hours
         )
 
-        expect(service_instance.has_conflict?).to be true
+        expect(service_instance.conflict?).to be true
       end
     end
   end
@@ -196,7 +196,7 @@ RSpec.describe ConflictResolutionService, type: :service do
 
     it 'returns only conflicting bookings' do
       service_instance = described_class.new(
-        vendor: vendor,
+        vendor_profile: vendor.vendor_profile,
         event_date: event_date,
         event_end_date: event_end_date
       )
@@ -220,7 +220,7 @@ RSpec.describe ConflictResolutionService, type: :service do
 
     it 'suggests alternative times when there are conflicts' do
       service_instance = described_class.new(
-        vendor: vendor,
+        vendor_profile: vendor.vendor_profile,
         event_date: event_date,
         event_end_date: event_end_date
       )
@@ -241,7 +241,7 @@ RSpec.describe ConflictResolutionService, type: :service do
       availability_slot.destroy
 
       service_instance = described_class.new(
-        vendor: vendor,
+        vendor_profile: vendor.vendor_profile,
         event_date: event_date,
         event_end_date: event_end_date
       )
@@ -254,7 +254,7 @@ RSpec.describe ConflictResolutionService, type: :service do
       existing_booking.destroy
 
       service_instance = described_class.new(
-        vendor: vendor,
+        vendor_profile: vendor.vendor_profile,
         event_date: event_date,
         event_end_date: event_end_date
       )
@@ -265,25 +265,25 @@ RSpec.describe ConflictResolutionService, type: :service do
   end
 
   describe 'validations' do
-    it 'is invalid without vendor' do
+    it 'is invalid without vendor_profile' do
       service_instance = described_class.new(
-        vendor: nil,
+        vendor_profile: nil,
         event_date: event_date,
         event_end_date: event_end_date
       )
 
-      expect(service_instance.has_conflict?).to be false
-      expect(service_instance.errors[:vendor]).to include("can't be blank")
+      expect(service_instance.conflict?).to be false
+      expect(service_instance.errors[:vendor_profile]).to include("can't be blank")
     end
 
     it 'is invalid without event_date' do
       service_instance = described_class.new(
-        vendor: vendor,
+        vendor_profile: vendor.vendor_profile,
         event_date: nil,
         event_end_date: event_end_date
       )
 
-      expect(service_instance.has_conflict?).to be false
+      expect(service_instance.conflict?).to be false
       expect(service_instance.errors[:event_date]).to include("can't be blank")
     end
   end

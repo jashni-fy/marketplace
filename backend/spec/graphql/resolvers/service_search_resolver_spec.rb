@@ -2,49 +2,64 @@
 
 require 'rails_helper'
 
+# rubocop:disable RSpec/MultipleMemoizedHelpers, RSpec/IndexedLet
 RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
   let(:schema) { MarketplaceSchema }
   let(:context) { {} }
 
   # Create test data
-  let!(:photography_category) { create(:service_category, name: 'Photography', slug: 'photography') }
-  let!(:videography_category) { create(:service_category, name: 'Videography', slug: 'videography') }
+  let!(:photography_category) { create(:category, name: 'Photography', slug: 'photography') }
+  let!(:videography_category) { create(:category, name: 'Videography', slug: 'videography') }
 
   let!(:user1) { create(:user, email: 'vendor1@example.com', role: :vendor) }
   let!(:user2) { create(:user, email: 'vendor2@example.com', role: :vendor) }
   let!(:user3) { create(:user, email: 'vendor3@example.com', role: :vendor) }
 
   let!(:vendor1) do
-    create(:vendor_profile, user: user1, business_name: 'Amazing Photos', location: 'New York, NY', average_rating: 4.5,
-                            latitude: 40.7128, longitude: -74.0060)
+    user1.vendor_profile.tap do |v|
+      v.update!(business_name: 'Amazing Photos', location: 'New York, NY', average_rating: 4.5,
+                latitude: 40.7128, longitude: -74.0060)
+    end
   end
   let!(:vendor2) do
-    create(:vendor_profile, user: user2, business_name: 'Video Masters', location: 'Los Angeles, CA', average_rating: 4.2,
-                            latitude: 34.0522, longitude: -118.2437)
+    user2.vendor_profile.tap do |v|
+      v.update!(business_name: 'Video Masters', location: 'Los Angeles, CA', average_rating: 4.2,
+                latitude: 34.0522, longitude: -118.2437)
+    end
   end
   let!(:vendor3) do
-    create(:vendor_profile, user: user3, business_name: 'Event Specialists', location: 'Chicago, IL', average_rating: 3.8,
-                            latitude: 41.8781, longitude: -87.6298)
+    user3.vendor_profile.tap do |v|
+      v.update!(business_name: 'Event Specialists', location: 'Chicago, IL', average_rating: 3.8,
+                latitude: 41.8781, longitude: -87.6298)
+    end
   end
 
-  let!(:service1) do
+  let(:service1) do
     create(:service, name: 'Wedding Photography', vendor_profile: vendor1, service_category: photography_category,
                      base_price: 1500, status: :active)
   end
-  let!(:service2) do
+  let(:service2) do
     create(:service, name: 'Corporate Video', vendor_profile: vendor2, service_category: videography_category,
                      base_price: 2500, status: :active)
   end
-  let!(:service3) do
+  let(:service3) do
     create(:service, name: 'Event Photography', vendor_profile: vendor3, service_category: photography_category,
                      base_price: 800, status: :active)
   end
-  let!(:service4) do
+  let(:service4) do
     create(:service, name: 'Portrait Session', vendor_profile: vendor1, service_category: photography_category,
                      base_price: 300, status: :inactive)
   end
 
   describe '#resolve' do
+    before do
+      # Setup services for all tests
+      service1
+      service2
+      service3
+      service4
+    end
+
     let(:query) do
       <<~GQL
         query SearchServices($query: String, $filters: ServiceFiltersInput, $location: LocationInput, $pagination: PaginationInput) {
@@ -290,6 +305,7 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
       end
     end
 
+    # rubocop:disable RSpec/ContextWording
     context 'facet generation' do
       it 'generates category facets correctly' do
         result = schema.execute(query, context: context)
@@ -359,6 +375,7 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
         expect(result.dig('data', 'searchServices', 'facets')).to be_present
       end
     end
+    # rubocop:enable RSpec/ContextWording
   end
 
   describe 'query complexity' do
@@ -414,3 +431,4 @@ RSpec.describe Resolvers::ServiceSearchResolver, type: :graphql do
     end
   end
 end
+# rubocop:enable RSpec/MultipleMemoizedHelpers, RSpec/IndexedLet

@@ -80,7 +80,7 @@ class VendorProfile < ApplicationRecord
   scope :with_coordinates, -> { where('latitude IS NOT NULL AND longitude IS NOT NULL') }
   scope :within_radius, lambda { |lat, lng, radius_km|
     where('latitude IS NOT NULL AND longitude IS NOT NULL')
-      .where(haversine_distance_sql, lat, lng, lat, radius_km)
+      .where(VendorProfile.haversine_distance_sql, lat, lng, lat, radius_km)
   }
 
   # Instance methods
@@ -293,14 +293,12 @@ class VendorProfile < ApplicationRecord
     end
   end
 
-  class << self
-    private
-
-    def haversine_distance_sql
-      '6371 * acos(cos(radians(?)) * cos(radians(latitude)) * ' \
-        'cos(radians(longitude) - radians(?)) + sin(radians(?)) * ' \
-        'sin(radians(latitude))) <= ?'
-    end
+  # rubocop:disable Lint/IneffectiveAccessModifier
+  def self.haversine_distance_sql
+    '6371 * acos(cos(radians(?)) * cos(radians(latitude)) * ' \
+      'cos(radians(longitude) - radians(?)) + sin(radians(?)) * ' \
+      'sin(radians(latitude))) <= ?'
   end
+  # rubocop:enable Lint/IneffectiveAccessModifier
 end
 # rubocop:enable Metrics/ClassLength, Rails/UniqueValidationWithoutIndex

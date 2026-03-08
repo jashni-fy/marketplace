@@ -45,7 +45,7 @@ class Types::ServiceType < Types::BaseObject
         method: :can_be_booked?,
         description: 'Indicates whether the service is currently bookable'
   field :formatted_base_price, String, null: false, description: 'Localized display version of the base price'
-  field :has_images, Boolean, null: false, method: :has_images?, description: 'True if the service has attached images'
+  field :has_images, Boolean, null: false, method: :images?, description: 'True if the service has attached images'
   field :short_description, String, null: false, description: 'Shortened version of the service description' do
     argument :limit,
              Integer,
@@ -67,13 +67,21 @@ class Types::ServiceType < Types::BaseObject
     object.short_description(limit)
   end
 
-  delegate :vendor_location, to: :object
+  def vendor_location
+    object.vendor_profile&.location
+  end
 
-  delegate :vendor_business_name, to: :object
+  def vendor_business_name
+    object.vendor_profile&.business_name
+  end
 
-  delegate :vendor_average_rating, to: :object
+  def vendor_average_rating
+    object.vendor_profile&.average_rating || 0.0
+  end
 
-  delegate :vendor_total_reviews, to: :object
+  def vendor_total_reviews
+    object.vendor_profile&.total_reviews || 0
+  end
 end
 
 # rubocop:enable GraphQL/ExtractType

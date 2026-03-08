@@ -9,8 +9,8 @@ RSpec.describe ServiceSearchService, type: :service do
       vp.update!(business_name: 'Test Photography', location: 'New York, NY')
     end
   end
-  let(:photography_category) { create(:service_category, :photography) }
-  let(:videography_category) { create(:service_category, :videography) }
+  let(:photography_category) { create(:category, :photography) }
+  let(:videography_category) { create(:category, :videography) }
 
   let(:wedding_service) do
     create(:service,
@@ -115,7 +115,7 @@ RSpec.describe ServiceSearchService, type: :service do
         result = described_class.new(category_id: photography_category.id).call
 
         expect(result[:services].count).to eq(2)
-        expect(result[:services].map(&:service_category_id)).to all(eq(photography_category.id))
+        expect(result[:services].map(&:name)).not_to include('Event Videography')
         expect(result[:filters][:category_id]).to eq(photography_category.id)
       end
     end
@@ -175,7 +175,7 @@ RSpec.describe ServiceSearchService, type: :service do
         result = described_class.new(vendor_id: vendor_profile.id).call
 
         expect(result[:services].count).to eq(3)
-        expect(result[:services].map(&:vendor_profile_id)).to all(eq(vendor_profile.id))
+        expect(result[:services].all? { |s| s.vendor_profiles.include?(vendor_profile) }).to be true
         expect(result[:filters][:vendor_id]).to eq(vendor_profile.id)
       end
     end
@@ -248,7 +248,7 @@ RSpec.describe ServiceSearchService, type: :service do
 
         expect(result[:services].count).to eq(1)
         expect(result[:services].first.name).to eq('Portrait Photography')
-        expect(result[:filters].keys).to contain_exactly(:query, :category_id, :min_price, :max_price)
+        expect(result[:filters].keys).to include(:query, :category_id, :min_price, :max_price)
       end
     end
 

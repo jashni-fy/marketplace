@@ -16,11 +16,11 @@ class BookingCreationService
   attribute :special_instructions, :string
   attribute :event_duration, :string
 
-  def initialize(attributes = {})
-    super
-    @errors = ActiveModel::Errors.new(self)
-  end
-
+  validates :customer, presence: true
+  validates :service_id, presence: true
+  validates :event_date, presence: true
+  validates :total_amount, numericality: { greater_than: 0 }
+  # rubocop: disable Metrics/AbcSize, Metrics/MethodLength
   def call
     return { success: false, errors: errors.full_messages } unless valid?
 
@@ -42,23 +42,18 @@ class BookingCreationService
         { success: true, booking: @booking }
       else
         @booking.errors.full_messages.each do |message|
-          @errors.add(:base, message)
+          errors.add(:base, message)
         end
         { success: false, errors: errors.full_messages }
       end
     end
-  rescue ActiveRecord::RecordInvalid => e
-    @errors.add(:base, e.message)
-    { success: false, errors: errors.full_messages }
-  rescue ActiveRecord::RecordNotFound => e
-    @errors.add(:base, e.message)
-    { success: false, errors: errors.full_messages }
   rescue StandardError => e
-    @errors.add(:base, e.message)
+    errors.add(:base, e.message)
     { success: false, errors: errors.full_messages }
   end
+  # rubocop: enable Metrics/AbcSize, Metrics/MethodLength
 
-  attr_reader :booking, :errors
+  attr_reader :booking
 
   private
 
@@ -91,7 +86,7 @@ class BookingCreationService
 
     return if availability_checker.available?
 
-    @errors.add(:event_date, 'is not available for this vendor')
+    errors.add(:event_date, 'is not available for this vendor')
     raise ActiveRecord::RecordInvalid, @booking
   end
 
@@ -105,7 +100,7 @@ class BookingCreationService
 
     return unless conflict_resolver.conflict?
 
-    @errors.add(:event_date, 'conflicts with another booking')
+    errors.add(:event_date, 'conflicts with another booking')
     raise ActiveRecord::RecordInvalid, @booking
   end
 end

@@ -4,7 +4,7 @@
 class Resolvers::ServiceSearchResolver < Resolvers::BaseResolver
   description 'Search for services based on various criteria'
 
-  type [Types::ServiceSearchResultType], null: false
+  type Types::ServiceSearchResultType, null: false
 
   argument :filters, Types::ServiceFiltersInput, required: false, description: 'Service filters'
   argument :location, Types::LocationInput, required: false, description: 'Location-based filtering'
@@ -21,8 +21,14 @@ class Resolvers::ServiceSearchResolver < Resolvers::BaseResolver
   # == Main Resolver ==
   # Resolves a service search with query, filters, location, and pagination.
   # Returns a hash with services, pagination, facets, and search time.
+  # rubocop:disable Metrics/AbcSize
   def resolve(query: nil, filters: {}, location: {}, pagination: {})
     start_time = Time.current
+
+    # Convert GraphQL input objects to regular hashes for internal manipulation
+    filters = (filters || {}).to_h
+    location = (location || {}).to_h
+    pagination = (pagination || {}).to_h
 
     # Validate and sanitize pagination
     pagination = validate_pagination(pagination)
@@ -70,13 +76,14 @@ class Resolvers::ServiceSearchResolver < Resolvers::BaseResolver
       search_time: search_time
     }
   end
+  # rubocop:enable Metrics/AbcSize
 
   private
 
   # Validates and normalizes pagination input.
   def validate_pagination(pagination)
-    page = [pagination[:page].to_i, 1].max
-    per_page = pagination[:per_page].to_i.clamp(1, MAX_PER_PAGE)
+    page = pagination[:page].present? ? [pagination[:page].to_i, 1].max : 1
+    per_page = pagination[:per_page].present? ? pagination[:per_page].to_i.clamp(1, MAX_PER_PAGE) : DEFAULT_PER_PAGE
     sort_by = pagination[:sort_by] || DEFAULT_SORT_BY
     sort_order = %w[asc desc].include?(pagination[:sort_order]) ? pagination[:sort_order] : DEFAULT_SORT_ORDER
     { page: page, per_page: per_page, sort_by: sort_by, sort_order: sort_order }
