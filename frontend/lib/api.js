@@ -3,9 +3,10 @@ import { tokenService } from './tokenService';
 
 // Get API URL from environment variable
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const normalizedApiUrl = API_URL.replace(/\/+$/, '');
 
 const api = axios.create({
-  baseURL: API_URL.endsWith('/api') ? API_URL : `${API_URL}/api`,
+  baseURL: normalizedApiUrl === '' ? '/' : normalizedApiUrl,
   headers: {
     'Content-Type': 'application/json',
   },

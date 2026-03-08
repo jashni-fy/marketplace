@@ -58,9 +58,16 @@ class ServicesController < ApiController
   end
 
   def create
-    @service = current_user.vendor_profile.services.build(service_params)
+    @service = Service.new(service_params)
 
     if @service.save
+      VendorService.create!(vendor_profile: current_user.vendor_profile, service: @service)
+      @service.reload
+      # Associate with category if provided
+      if params.dig(:service, :category_id)
+        category = Category.find_by(id: params[:service][:category_id])
+        @service.categories << category if category
+      end
       render json: {
         message: 'Service created successfully',
         service: service_response(@service, include_details: true)
@@ -111,7 +118,7 @@ class ServicesController < ApiController
   end
 
   def service_params
-    params.expect(service: %i[name description base_price pricing_type service_category_id status])
+    params.expect(service: %i[name description base_price pricing_type status])
   end
 
   # rubocop:disable Metrics/MethodLength, Metrics/AbcSize

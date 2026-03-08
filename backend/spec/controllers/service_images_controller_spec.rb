@@ -3,6 +3,10 @@
 require 'rails_helper'
 
 RSpec.describe ServiceImagesController do
+  before do
+    allow(ImageProcessingJob).to receive(:perform_later)
+  end
+
   let(:vendor_user) { create(:user, :vendor) }
   let(:customer_user) { create(:user, :customer) }
   let(:service) { create(:service, vendor_profile: vendor_user.vendor_profile) }

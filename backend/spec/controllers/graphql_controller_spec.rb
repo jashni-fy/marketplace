@@ -42,8 +42,9 @@ RSpec.describe GraphqlController do
     end
 
     context 'with complex query exceeding limits' do
-      let(:complex_query) do
-        <<~GQL
+      it 'rejects queries exceeding depth limit' do
+        # Build a query that exceeds max_depth of 15 (need >15 levels)
+        deep_query = <<~GQL
           query {
             searchServices {
               services {
@@ -53,7 +54,23 @@ RSpec.describe GraphqlController do
                       services {
                         vendorProfile {
                           services {
-                            id
+                            vendorProfile {
+                              services {
+                                vendorProfile {
+                                  services {
+                                    vendorProfile {
+                                      services {
+                                        vendorProfile {
+                                          services {
+                                            id
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
                           }
                         }
                       }
@@ -64,10 +81,8 @@ RSpec.describe GraphqlController do
             }
           }
         GQL
-      end
 
-      it 'rejects queries exceeding depth limit' do
-        post :execute, params: { query: complex_query }
+        post :execute, params: { query: deep_query }
 
         json_response = response.parsed_body
         expect(json_response['errors']).to be_present
@@ -161,7 +176,7 @@ RSpec.describe GraphqlController do
 
         json_response = response.parsed_body
         expect(json_response['errors']).to be_present
-        expect(json_response['errors'].first['message']).to include('too many tokens')
+        expect(json_response['errors'].first['message']).to include('too large to execute')
       end
     end
   end

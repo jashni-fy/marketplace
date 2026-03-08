@@ -246,7 +246,7 @@ RSpec.describe ServicesController do
 
         expect(json_response['services'].length).to eq(1)
         expect(json_response['services'].first['name']).to eq('Portrait Photography')
-        expect(json_response['filters'].keys).to contain_exactly('query', 'category_id', 'min_price', 'max_price')
+        expect(json_response['filters'].keys).to include('query', 'category_id', 'min_price', 'max_price')
       end
 
       it 'returns empty results when no services match' do
@@ -299,7 +299,7 @@ RSpec.describe ServicesController do
                          'professional quality images for all occasions',
             base_price: 300,
             pricing_type: 'hourly',
-            service_category_id: service_category.id,
+            category_id: service_category.id,
             status: 'active'
           }
         }

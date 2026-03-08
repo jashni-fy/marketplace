@@ -23,7 +23,7 @@ class VendorsController < ApiController
   end
 
   def services
-    services = @vendor_profile.services.active.includes(:service_category, :service_images)
+    services = @vendor_profile.services.active.includes(:categories, :service_images)
 
     render json: {
       services: services.map { |service| service_json(service) }

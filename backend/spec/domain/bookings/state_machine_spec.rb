@@ -67,7 +67,7 @@ RSpec.describe Bookings::StateMachine do
       end
 
       it 'prevents completion of pending booking without acceptance' do
-        expect(described_class.can_transition?(booking, :completed)).to be true # pending can complete
+        expect(described_class.can_transition?(booking, :completed)).to be false # pending can complete
       end
     end
 

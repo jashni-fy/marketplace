@@ -46,7 +46,7 @@ RSpec.describe ProfilesController do
         {
           vendor_profile: {
             business_name: 'Test Business',
-            description: 'Test Description',
+            description: 'This is a detailed test description that meets the minimum length requirement of fifty.',
             location: 'Test Location',
             phone: '123-456-7890',
             website: 'https://test.com',
@@ -113,7 +113,7 @@ RSpec.describe ProfilesController do
         id: vendor_profile.id,
         vendor_profile: {
           business_name: 'Updated Business Name',
-          description: 'Updated Description'
+          description: 'This is an updated description that meets the minimum length'
         }
       }
     end
@@ -127,7 +127,7 @@ RSpec.describe ProfilesController do
         expect(response).to have_http_status(:ok)
         json_response = response.parsed_body
         expect(json_response['business_name']).to eq('Updated Business Name')
-        expect(json_response['description']).to eq('Updated Description')
+        expect(json_response['description']).to eq('This is an updated description that meets the minimum length')
       end
     end
 

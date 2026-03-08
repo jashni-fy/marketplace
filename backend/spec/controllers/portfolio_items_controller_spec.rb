@@ -11,8 +11,12 @@ RSpec.describe PortfolioItemsController do
 
   describe 'GET #index' do
     context 'when accessing vendor specific portfolio' do
-      let(:wedding_item) { create(:portfolio_item, vendor_profile: vendor_profile, category: 'weddings') }
-      let(:event_item) { create(:portfolio_item, vendor_profile: vendor_profile, category: 'events') }
+      let(:wedding_item) do
+        create(:portfolio_item, vendor_profile: vendor_profile, category: 'weddings', is_featured: false)
+      end
+      let(:event_item) do
+        create(:portfolio_item, vendor_profile: vendor_profile, category: 'events', is_featured: false)
+      end
 
       before do
         wedding_item
@@ -333,6 +337,7 @@ RSpec.describe PortfolioItemsController do
     before { sign_in vendor_user }
 
     it 'duplicates a portfolio item' do
+      portfolio_item # force creation before the expect block
       expect do
         post :duplicate, params: { id: portfolio_item.id }
       end.to change(PortfolioItem, :count).by(1)

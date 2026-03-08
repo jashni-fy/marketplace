@@ -63,7 +63,7 @@ services:
     volumes:
       - ./frontend:/app
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:3001/api
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
     depends_on:
       - backend
     profiles: ["full"]

@@ -99,8 +99,8 @@ class ServiceSearchService
     when 'name'
       filtered_services.order("services.name #{sort_direction}")
     when 'base_price'
-      # Handle custom pricing by putting them at the end
-      filtered_services.order(
+      # Use subquery to avoid DISTINCT + complex ORDER BY conflict in PostgreSQL
+      Service.where(id: filtered_services.select(:id)).order(
         Arel.sql("CASE WHEN services.pricing_type = #{Service.pricing_types['custom']} THEN 1 ELSE 0 END"),
         "services.base_price #{sort_direction}"
       )

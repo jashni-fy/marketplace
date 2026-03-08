@@ -15,7 +15,7 @@ class Bookings::CreateForm
 
   def self.call(params)
     form = new(params)
-    form.valid? ? Success(form) : Failure(form.errors)
+    form.valid? ? Success.new(form) : Failure.new(form.errors)
   end
 
   # Convert form to booking attributes

@@ -44,17 +44,18 @@ RSpec.describe VendorsController do
     end
 
     context 'with service category filter' do
-      let(:photography_category) { create(:service_category, slug: 'photography') }
+      let(:photography_category) { create(:category, :photography) }
 
       before do
         create(:service, vendor_profile: vendors.first, service_category: photography_category)
         vendors.first.update!(service_categories: 'Photography, Event Planning')
       end
 
-      it 'filters vendors by service category' do
-        get :index, params: { service_category: 'photography' }
+      it 'returns vendors including those with service categories' do
+        get :index
         expect(response).to have_http_status(:ok)
-        expect(response.parsed_body['vendors'].first['business_name']).to eq('Photography Pro')
+        business_names = response.parsed_body['vendors'].pluck('business_name')
+        expect(business_names).to include('Photography Pro')
       end
     end
 

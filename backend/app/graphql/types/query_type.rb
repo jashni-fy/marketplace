@@ -61,11 +61,11 @@ class Types::QueryType < Types::BaseObject
   end
 
   def services(limit:)
-    Service.active.includes(:vendor_profile, :service_category).limit(limit)
+    Service.active.includes(vendor_services: :vendor_profile).includes(:categories).limit(limit)
   end
 
   def service_categories
-    ServiceCategory.active.ordered
+    Category.where(active: true).order(:name)
   end
 
   def vendor_profile(id:)
