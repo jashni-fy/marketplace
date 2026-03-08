@@ -9,10 +9,14 @@ module BookingManagement::AvailabilitySlotActions
   end
 
   def index
-    slots = filtered_slots
-            .order(:date, :start_time)
-            .page(params[:page])
-            .per(params[:per_page] || 50)
+    slots = AvailabilitySlots::FilterForVendor.call(
+      vendor_profile: current_user.vendor_profile,
+      start_date: params[:start_date],
+      end_date: params[:end_date],
+      date: params[:date]
+    ).order(:date, :start_time)
+                                              .page(params[:page])
+                                              .per(params[:per_page] || 50)
 
     render json: {
       availability_slots: slots.map { |slot| AvailabilitySlotPresenter.new(slot).as_json },
@@ -51,17 +55,6 @@ module BookingManagement::AvailabilitySlotActions
   end
 
   private
-
-  def filtered_slots
-    scope = current_user.vendor_profile.availability_slots.includes(:vendor_profile)
-    if params[:start_date].present? && params[:end_date].present?
-      scope.where(date: params[:start_date]..params[:end_date])
-    elsif params[:date].present?
-      scope.for_date(params[:date])
-    else
-      scope.upcoming
-    end
-  end
 
   def set_availability_slot
     @slot = current_user.vendor_profile.availability_slots.find(params[:id])

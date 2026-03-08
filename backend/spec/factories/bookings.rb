@@ -3,8 +3,8 @@
 FactoryBot.define do
   factory :booking do
     customer factory: %i[user customer]
-    vendor factory: %i[user vendor]
-    service
+    vendor_profile factory: %i[vendor_profile]
+    service { association :service, vendor_profile: vendor_profile }
 
     event_date { 1.week.from_now }
     event_location { Faker::Address.full_address }
@@ -13,6 +13,14 @@ FactoryBot.define do
     requirements { Faker::Lorem.paragraph }
     special_instructions { Faker::Lorem.sentence }
     event_duration { "#{rand(2..8)} hours" }
+
+    transient do
+      vendor { nil }
+    end
+
+    after(:build) do |booking, evaluator|
+      booking.vendor_profile = evaluator.vendor.vendor_profile if evaluator.vendor.present?
+    end
 
     trait :with_end_date do
       event_end_date { event_date + rand(2..8).hours }

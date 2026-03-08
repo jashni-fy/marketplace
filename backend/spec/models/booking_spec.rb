@@ -73,6 +73,10 @@ RSpec.describe Booking do
       create(:booking, customer: customer, vendor: vendor, service: service, status: :accepted,
                        event_date: 1.week.from_now.change(hour: 15))
     end
+    let!(:cancelled_booking) do
+      create(:booking, customer: customer, vendor: vendor, service: service, status: :cancelled,
+                       event_date: 1.week.from_now.change(hour: 16))
+    end
 
     describe '.upcoming' do
       it 'returns bookings with future event dates' do
@@ -97,6 +101,52 @@ RSpec.describe Booking do
       it 'returns bookings with specific status' do
         expect(described_class.by_status(:pending)).to include(pending_booking)
         expect(described_class.by_status(:accepted)).to include(accepted_booking)
+      end
+    end
+
+    describe '.cancellable' do
+      it 'returns pending/accepted bookings more than 24 hours away' do
+        pending_far = create(:booking, customer: customer, vendor: vendor, service: service,
+                                       status: :pending, event_date: 2.days.from_now)
+        accepted_far = create(:booking, customer: customer, vendor: vendor, service: service,
+                                        status: :accepted, event_date: 2.days.from_now)
+        pending_near = create(:booking, customer: customer, vendor: vendor, service: service,
+                                        status: :pending, event_date: 12.hours.from_now)
+
+        expect(described_class.cancellable).to include(pending_far, accepted_far)
+        expect(described_class.cancellable).not_to include(pending_near, cancelled_booking)
+      end
+    end
+
+    describe '.modifiable' do
+      it 'returns pending bookings more than 24 hours away' do
+        pending_far = create(:booking, customer: customer, vendor: vendor, service: service,
+                                       status: :pending, event_date: 2.days.from_now)
+        pending_near = create(:booking, customer: customer, vendor: vendor, service: service,
+                                        status: :pending, event_date: 12.hours.from_now)
+
+        expect(described_class.modifiable).to include(pending_far)
+        expect(described_class.modifiable).not_to include(pending_near, accepted_booking)
+      end
+    end
+
+    describe '.active' do
+      it 'returns pending and accepted bookings' do
+        expect(described_class.active).to include(pending_booking, accepted_booking)
+        expect(described_class.active).not_to include(cancelled_booking)
+      end
+    end
+
+    describe '.overlapping_period' do
+      it 'returns bookings that overlap with given time period' do
+        overlapping = create(:booking, customer: customer, vendor: vendor, service: service,
+                                       event_date: 1.week.from_now.change(hour: 11),
+                                       event_end_date: 1.week.from_now.change(hour: 13))
+
+        start_time = 1.week.from_now.change(hour: 10)
+        end_time = 1.week.from_now.change(hour: 12)
+
+        expect(described_class.overlapping_period(start_time, end_time)).to include(overlapping)
       end
     end
   end
@@ -184,75 +234,15 @@ RSpec.describe Booking do
     end
   end
 
-  describe 'availability validation' do
-    before do
-      create(:availability_slot,
-             vendor_profile: vendor.vendor_profile,
-             date: 1.week.from_now.to_date,
-             start_time: '09:00',
-             end_time: '17:00',
-             is_available: true)
-    end
+  # NOTE: Complex validation (vendor_availability, booking_conflicts)
+  # has been moved to Bookings::Validate domain service
+  # See spec/domain/bookings/validate_spec.rb for those tests
 
-    it 'validates vendor has availability for the booking date' do
-      booking = build(:booking,
-                      customer: customer,
-                      vendor: vendor,
-                      service: service,
-                      event_date: 1.week.from_now.change(hour: 10))
-      expect(booking).to be_valid
-    end
-
-    it 'invalidates booking when vendor has no availability' do
-      booking = build(:booking,
-                      customer: customer,
-                      vendor: vendor,
-                      service: service,
-                      event_date: 2.weeks.from_now.change(hour: 10))
+  describe 'basic validation' do
+    it 'validates event_date is in the future on create' do
+      booking = build(:booking, customer: customer, vendor: vendor, service: service, event_date: 1.day.ago)
       expect(booking).not_to be_valid
-      expect(booking.errors[:event_date]).to include('is not available for this vendor')
-    end
-  end
-
-  describe 'booking conflict validation' do
-    before do
-      create(:availability_slot,
-             vendor_profile: vendor.vendor_profile,
-             date: 1.week.from_now.to_date,
-             start_time: '09:00',
-             end_time: '17:00',
-             is_available: true)
-
-      create(:booking,
-             customer: customer,
-             vendor: vendor,
-             service: service,
-             event_date: 1.week.from_now.change(hour: 10),
-             event_end_date: 1.week.from_now.change(hour: 12),
-             status: :accepted)
-    end
-
-    it 'prevents overlapping bookings' do
-      conflicting_booking = build(:booking,
-                                  customer: create(:user, :customer),
-                                  vendor: vendor,
-                                  service: service,
-                                  event_date: 1.week.from_now.change(hour: 11),
-                                  event_end_date: 1.week.from_now.change(hour: 13))
-
-      expect(conflicting_booking).not_to be_valid
-      expect(conflicting_booking.errors[:event_date]).to include('conflicts with another booking')
-    end
-
-    it 'allows non-overlapping bookings' do
-      non_conflicting_booking = build(:booking,
-                                      customer: create(:user, :customer),
-                                      vendor: vendor,
-                                      service: service,
-                                      event_date: 1.week.from_now.change(hour: 14),
-                                      event_end_date: 1.week.from_now.change(hour: 16))
-
-      expect(non_conflicting_booking).to be_valid
+      expect(booking.errors[:event_date]).to include('must be in the future')
     end
   end
 end

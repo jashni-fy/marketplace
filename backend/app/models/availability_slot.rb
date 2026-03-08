@@ -16,6 +16,13 @@ class AvailabilitySlot < ApplicationRecord
   scope :for_vendor, ->(vendor_profile) { where(vendor_profile: vendor_profile) }
   scope :upcoming, -> { where(date: Date.current..) }
 
+  # Domain scopes for queries
+  scope :available_on, ->(date) { where(date: date, is_available: true) }
+  scope :overlapping_time, lambda { |start_time, end_time|
+    where('(start_time < ? AND end_time > ?) OR (start_time < ? AND end_time > ?)',
+          end_time, start_time, start_time, end_time)
+  }
+
   def duration_hours
     return 0 unless start_time && end_time
 

@@ -2,39 +2,44 @@
 
 module BookingManagement::BookingActionHelpers
   extend ActiveSupport::Concern
+  include JsonResponse
+  include AuthorizeAction
+  include ResourceFinder
+  include ParseParams
   include BookingManagement::PaginationHelper
 
   private
 
+  # Get bookings scope for current user (uses domain service)
   def bookings_scope
-    current_user.vendor? ? current_user.vendor_bookings : current_user.customer_bookings
+    Bookings::ScopeForUser.call(user: current_user)
   end
 
+  # Authorize access and render error if unauthorized
   def booking_access_authorized?
-    authorized = @booking.customer == current_user || @booking.vendor == current_user
-    return true if authorized
-
-    render json: { error: 'Access denied' }, status: :forbidden
-    false
+    authorize_action(@booking, :access)
   end
 
+  # Authorize modification and render error if unauthorized
   def booking_modification_authorized?
-    authorized = @booking.customer == current_user && @booking.can_be_modified?
-    return true if authorized
-
-    render json: { error: 'Cannot modify this booking' }, status: :forbidden
-    false
+    authorize_action(@booking, :modify)
   end
 
+  # Authorize vendor response and render error if unauthorized
   def vendor_response_authorized?
-    authorized = @booking.vendor == current_user && @booking.pending?
-    return true if authorized
-
-    render json: { error: 'Cannot respond to this booking' }, status: :forbidden
-    false
+    authorize_action(@booking, :vendor_respond)
   end
+
+  # Set booking from params[:id]
+  def set_booking
+    @booking = find_booking_for_user(params[:id])
+  end
+
+  # OLD HELPERS (Deprecated - kept for backwards compatibility)
+  # These should be replaced with new form objects and domain services
 
   def build_availability_checker
+    Rails.logger.warn 'build_availability_checker is deprecated, use domain services instead'
     service = Service.find(params[:service_id])
     AvailabilityCheckerService.new(
       vendor_profile: service.vendor_profile,
@@ -45,6 +50,7 @@ module BookingManagement::BookingActionHelpers
   end
 
   def build_conflict_resolver
+    Rails.logger.warn 'build_conflict_resolver is deprecated, use domain services instead'
     ConflictResolutionService.new(
       vendor_profile: VendorProfile.find(params[:vendor_profile_id]),
       event_date: DateTime.parse("#{params[:date]} #{params[:start_time]}"),
@@ -53,15 +59,10 @@ module BookingManagement::BookingActionHelpers
   end
 
   def invalid_datetime_response
-    render json: { error: 'Invalid date or time format' }, status: :bad_request
+    render_bad_request('Invalid date or time format')
   end
 
-  def set_booking
-    @booking = Booking.find(params[:id])
-  rescue ActiveRecord::RecordNotFound
-    render json: { error: 'Booking not found' }, status: :not_found
-  end
-
+  # Use parse_booking_create_params instead
   def booking_params
     params.require(:booking).permit(
       :service_id, :event_date, :event_end_date, :event_location,
@@ -69,6 +70,7 @@ module BookingManagement::BookingActionHelpers
     )
   end
 
+  # Use parse_booking_update_params instead
   def booking_update_params
     params.require(:booking).permit(
       :event_date, :event_end_date, :event_location,
@@ -189,16 +191,16 @@ module BookingManagement::CommunicationActions
   def send_message
     return unless booking_access_authorized?
 
-    @message = @booking.booking_messages.build(
+    result = Bookings::SendMessage.call(
+      booking: @booking,
       sender: current_user,
-      message: params[:message],
-      sent_at: Time.current
+      message: params[:message]
     )
 
-    if @message.save
-      render json: { message: MessagePresenter.new(@message).as_json }, status: :created
+    if result[:success]
+      render json: { message: MessagePresenter.new(result[:message]).as_json }, status: :created
     else
-      render json: { errors: @message.errors.full_messages }, status: :unprocessable_content
+      render json: { errors: result[:errors] }, status: :unprocessable_content
     end
   end
 end
