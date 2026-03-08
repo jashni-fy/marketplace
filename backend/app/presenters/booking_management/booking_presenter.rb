@@ -56,7 +56,7 @@ class BookingManagement::BookingPresenter
     {
       id: service.id,
       name: service.name,
-      category: service.category_name
+      category: service.categories.pluck(:name).join(', ')
     }
   end
 
