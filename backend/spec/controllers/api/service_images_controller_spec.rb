@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe ServiceImagesController do
+RSpec.describe Api::ServiceImagesController do
   let(:vendor_user) { create(:user, :vendor) }
   let(:customer_user) { create(:user, :customer) }
   let(:service) { create(:service, vendor_profile: vendor_user.vendor_profile) }
@@ -47,7 +47,7 @@ RSpec.describe ServiceImagesController do
       it 'returns forbidden for index' do
         get :index, params: { service_id: service.id }
         expect(response).to have_http_status(:forbidden)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Only vendors can manage service images')
       end
     end
@@ -60,7 +60,7 @@ RSpec.describe ServiceImagesController do
       it 'returns forbidden for index' do
         get :index, params: { service_id: service.id }
         expect(response).to have_http_status(:forbidden)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('You can only manage images for your own services')
       end
     end
@@ -75,7 +75,7 @@ RSpec.describe ServiceImagesController do
       get :index, params: { service_id: service.id }
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['service_images']).to be_an(Array)
       expect(json_response['service_images'].length).to eq(1)
       expect(json_response['service_images'].first['id']).to eq(service_image.id)
@@ -91,7 +91,7 @@ RSpec.describe ServiceImagesController do
       get :show, params: { service_id: service.id, id: service_image.id }
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['service_image']['id']).to eq(service_image.id)
       expect(json_response['service_image']['title']).to eq(service_image.title)
     end
@@ -101,7 +101,7 @@ RSpec.describe ServiceImagesController do
         get :show, params: { service_id: service.id, id: 999_999 }
 
         expect(response).to have_http_status(:not_found)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Image not found')
       end
     end
@@ -117,7 +117,7 @@ RSpec.describe ServiceImagesController do
         end.to change(ServiceImage, :count).by(1)
 
         expect(response).to have_http_status(:created)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['message']).to eq('Image uploaded successfully')
         expect(json_response['service_image']['title']).to eq('Test Image')
       end
@@ -130,7 +130,7 @@ RSpec.describe ServiceImagesController do
         end.not_to change(ServiceImage, :count)
 
         expect(response).to have_http_status(:unprocessable_content)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Image upload failed')
         expect(json_response['details']).to be_an(Array)
       end
@@ -154,7 +154,7 @@ RSpec.describe ServiceImagesController do
       put :update, params: { service_id: service.id, id: service_image.id }.merge(update_params)
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['message']).to eq('Image updated successfully')
       expect(json_response['service_image']['title']).to eq('Updated Title')
     end
@@ -171,7 +171,7 @@ RSpec.describe ServiceImagesController do
       end.to change(ServiceImage, :count).by(-1)
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['message']).to eq('Image deleted successfully')
     end
   end
@@ -185,7 +185,7 @@ RSpec.describe ServiceImagesController do
       post :set_primary, params: { service_id: service.id, id: service_image.id }
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['message']).to eq('Primary image updated successfully')
       expect(service_image.reload.is_primary).to be true
     end
@@ -204,7 +204,7 @@ RSpec.describe ServiceImagesController do
       }
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['message']).to eq('Images reordered successfully')
     end
 
@@ -216,7 +216,7 @@ RSpec.describe ServiceImagesController do
         }
 
         expect(response).to have_http_status(:bad_request)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Invalid image IDs provided')
       end
     end
@@ -248,7 +248,7 @@ RSpec.describe ServiceImagesController do
       end.to change(ServiceImage, :count).by(2)
 
       expect(response).to have_http_status(:created)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['message']).to eq('2 images uploaded successfully')
       expect(json_response['service_images'].length).to eq(2)
     end
@@ -258,7 +258,7 @@ RSpec.describe ServiceImagesController do
         post :bulk_upload, params: { service_id: service.id, images: 'invalid' }
 
         expect(response).to have_http_status(:bad_request)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('images parameter is required and must be an array')
       end
     end

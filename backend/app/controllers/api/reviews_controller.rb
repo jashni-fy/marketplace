@@ -2,7 +2,7 @@
 
 class Api::ReviewsController < ApiController
   before_action :authenticate_user!, except: %i[index service_reviews vendor_reviews]
-  before_action :set_review, only: %i[show update destroy]
+  before_action :set_review, only: %i[update destroy]
   before_action :ensure_customer, only: [:create]
   before_action :ensure_owner, only: %i[update destroy]
 
@@ -96,25 +96,34 @@ class Api::ReviewsController < ApiController
     {
       id: review.id,
       rating: review.rating,
-      quality_rating: review.quality_rating,
-      communication_rating: review.communication_rating,
-      value_rating: review.value_rating,
-      punctuality_rating: review.punctuality_rating,
       comment: review.comment,
       status: review.status,
       created_at: review.created_at,
-      customer: {
-        id: review.customer.id,
-        name: review.customer.full_name
-      },
-      service: {
-        id: review.service.id,
-        name: review.service.name
-      },
-      vendor: {
-        id: review.vendor_profile.id,
-        business_name: review.vendor_profile.business_name
-      }
+      ratings: detailed_ratings(review),
+      customer: customer_json(review.customer),
+      service: service_json(review.service),
+      vendor: vendor_json(review.vendor_profile)
     }
+  end
+
+  def detailed_ratings(review)
+    {
+      quality: review.quality_rating,
+      communication: review.communication_rating,
+      value: review.value_rating,
+      punctuality: review.punctuality_rating
+    }
+  end
+
+  def customer_json(customer)
+    { id: customer.id, name: customer.full_name }
+  end
+
+  def service_json(service)
+    { id: service.id, name: service.name }
+  end
+
+  def vendor_json(vendor)
+    { id: vendor.id, business_name: vendor.business_name }
   end
 end

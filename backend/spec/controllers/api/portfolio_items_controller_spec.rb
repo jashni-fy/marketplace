@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe PortfolioItemsController do
+RSpec.describe Api::PortfolioItemsController do
   let(:vendor_user) { create(:user, :vendor) }
   let(:customer_user) { create(:user, :customer) }
   let(:vendor_profile) { vendor_user.vendor_profile }
@@ -23,7 +23,7 @@ RSpec.describe PortfolioItemsController do
         get :index, params: { vendor_profile_id: vendor_profile.id }
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['portfolio_items'].length).to eq(2)
         expect(json_response['categories']).to be_an(Array)
       end
@@ -32,7 +32,7 @@ RSpec.describe PortfolioItemsController do
         get :index, params: { vendor_profile_id: vendor_profile.id, category: 'weddings' }
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['portfolio_items'].length).to eq(1)
         expect(json_response['portfolio_items'].first['category']).to eq('weddings')
       end
@@ -43,7 +43,7 @@ RSpec.describe PortfolioItemsController do
         get :index, params: { vendor_profile_id: vendor_profile.id, featured: 'true' }
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['portfolio_items'].length).to eq(1)
         expect(json_response['portfolio_items'].first['is_featured']).to be true
       end
@@ -58,7 +58,7 @@ RSpec.describe PortfolioItemsController do
         get :index
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['portfolio_items'].length).to eq(1)
         expect(json_response['portfolio_items'].first['id']).to eq(own_item.id)
       end
@@ -69,7 +69,7 @@ RSpec.describe PortfolioItemsController do
         get :index, params: { vendor_profile_id: 999_999 }
 
         expect(response).to have_http_status(:not_found)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['errors']).to include('Vendor profile not found')
       end
     end
@@ -80,7 +80,7 @@ RSpec.describe PortfolioItemsController do
       get :show, params: { id: portfolio_item.id }
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['portfolio_item']['id']).to eq(portfolio_item.id)
       expect(json_response['portfolio_item']['title']).to eq(portfolio_item.title)
     end
@@ -90,7 +90,7 @@ RSpec.describe PortfolioItemsController do
         get :show, params: { id: 999_999 }
 
         expect(response).to have_http_status(:not_found)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['errors']).to include('Portfolio item not found')
       end
     end
@@ -118,7 +118,7 @@ RSpec.describe PortfolioItemsController do
         end.to change(PortfolioItem, :count).by(1)
 
         expect(response).to have_http_status(:created)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['message']).to eq('Portfolio item created successfully')
         expect(json_response['portfolio_item']['title']).to eq('New Portfolio Item')
       end
@@ -139,7 +139,7 @@ RSpec.describe PortfolioItemsController do
           end.not_to change(PortfolioItem, :count)
 
           expect(response).to have_http_status(:unprocessable_content)
-          json_response = JSON.parse(response.body)
+          json_response = response.parsed_body
           expect(json_response['errors']).to be_an(Array)
         end
       end
@@ -152,7 +152,7 @@ RSpec.describe PortfolioItemsController do
         post :create, params: { portfolio_item: { title: 'Test' } }
 
         expect(response).to have_http_status(:forbidden)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['errors']).to include('Vendor access required')
       end
     end
@@ -176,7 +176,7 @@ RSpec.describe PortfolioItemsController do
         put :update, params: update_params
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['message']).to eq('Portfolio item updated successfully')
         expect(json_response['portfolio_item']['title']).to eq('Updated Title')
       end
@@ -192,7 +192,7 @@ RSpec.describe PortfolioItemsController do
         }
 
         expect(response).to have_http_status(:forbidden)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['errors']).to include('Access denied')
       end
     end
@@ -210,7 +210,7 @@ RSpec.describe PortfolioItemsController do
         end.to change(PortfolioItem, :count).by(-1)
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['message']).to eq('Portfolio item deleted successfully')
       end
     end
@@ -222,7 +222,7 @@ RSpec.describe PortfolioItemsController do
         delete :destroy, params: { id: portfolio_item.id }
 
         expect(response).to have_http_status(:forbidden)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['errors']).to include('Access denied')
       end
     end
@@ -244,7 +244,7 @@ RSpec.describe PortfolioItemsController do
       post :upload_images, params: { id: portfolio_item.id }.merge(image_params)
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['message']).to eq('Images uploaded successfully')
       expect(json_response['images_uploaded']).to eq(2)
     end
@@ -272,7 +272,7 @@ RSpec.describe PortfolioItemsController do
       }
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['message']).to eq('Image removed successfully')
     end
 
@@ -284,7 +284,7 @@ RSpec.describe PortfolioItemsController do
         }
 
         expect(response).to have_http_status(:not_found)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['errors']).to include('Image not found')
       end
     end
@@ -299,7 +299,7 @@ RSpec.describe PortfolioItemsController do
       get :summary
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['summary']).to be_a(Hash)
     end
   end
@@ -324,7 +324,7 @@ RSpec.describe PortfolioItemsController do
       }
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['message']).to include('Successfully reordered')
     end
   end
@@ -338,7 +338,7 @@ RSpec.describe PortfolioItemsController do
       end.to change(PortfolioItem, :count).by(1)
 
       expect(response).to have_http_status(:created)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['message']).to eq('Portfolio item duplicated successfully')
     end
   end
@@ -356,7 +356,7 @@ RSpec.describe PortfolioItemsController do
       }
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['message']).to include('Successfully updated')
       expect(unfeatured_item_one.reload.is_featured).to be true
       expect(unfeatured_item_two.reload.is_featured).to be true

@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe ProfilesController do
+RSpec.describe Api::ProfilesController do
   let(:vendor_user) { create(:user, :vendor) }
   let(:customer_user) { create(:user, :customer) }
   let(:vendor_profile) { vendor_user.vendor_profile }
@@ -22,7 +22,7 @@ RSpec.describe ProfilesController do
         get :show, params: { id: vendor_profile.id }, format: :json
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['id']).to eq(vendor_profile.id)
         expect(json_response['business_name']).to eq(vendor_profile.business_name)
       end
@@ -34,7 +34,7 @@ RSpec.describe ProfilesController do
         get :show, params: { id: 999_999 }, format: :json
 
         expect(response).to have_http_status(:not_found)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Vendor profile not found')
       end
     end
@@ -69,7 +69,7 @@ RSpec.describe ProfilesController do
         end.to change(VendorProfile, :count).by(1)
 
         expect(response).to have_http_status(:created)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['business_name']).to eq('Test Business')
         expect(json_response['user_id']).to eq(user_without_profile.id)
       end
@@ -91,7 +91,7 @@ RSpec.describe ProfilesController do
         post :create, params: valid_params, format: :json
 
         expect(response).to have_http_status(:unprocessable_content)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Profile already exists')
       end
     end
@@ -103,7 +103,7 @@ RSpec.describe ProfilesController do
         post :create, params: { vendor_profile: { business_name: 'Test' } }, format: :json
 
         expect(response).to have_http_status(:forbidden)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Access denied. Vendor role required.')
       end
     end
@@ -127,7 +127,7 @@ RSpec.describe ProfilesController do
         put :update, params: update_params, format: :json
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['business_name']).to eq('Updated Business Name')
         expect(json_response['description']).to eq('Updated Description')
       end
@@ -140,7 +140,7 @@ RSpec.describe ProfilesController do
         put :update, params: update_params, format: :json
 
         expect(response).to have_http_status(:forbidden)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Access denied. You can only manage your own profile.')
       end
     end
@@ -166,7 +166,7 @@ RSpec.describe ProfilesController do
         delete :destroy, params: { id: vendor_profile.id }, format: :json
 
         expect(response).to have_http_status(:forbidden)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Access denied. You can only manage your own profile.')
       end
     end
@@ -180,7 +180,7 @@ RSpec.describe ProfilesController do
         get :me, format: :json
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['id']).to eq(vendor_profile.id)
         expect(json_response['user_id']).to eq(vendor_user.id)
       end
@@ -200,7 +200,7 @@ RSpec.describe ProfilesController do
         get :me, format: :json
 
         expect(response).to have_http_status(:not_found)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Vendor profile not found')
       end
     end
@@ -216,7 +216,7 @@ RSpec.describe ProfilesController do
       get :service_categories, format: :json
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['service_categories']).to be_an(Array)
       expect(json_response['service_categories'].length).to eq(1)
       expect(json_response['service_categories'].first['name']).to eq('Active Category')

@@ -56,14 +56,7 @@ module Marketplace # rubocop:disable Style/ClassAndModuleChildren
       url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/0'),
       namespace: 'marketplace_cache'
     }
-
     # Configure Active Job to use Sidekiq
     config.active_job.queue_adapter = :sidekiq
-
-    # Configure packs-rails for domain separation
-    config.paths.add 'packs/*/app', glob: '*/{*,*/concerns}', eager_load: true
-    config.paths.add 'packs/*/app/controllers', eager_load: true
-    config.paths.add 'packs/*/app/models', eager_load: true
-    config.paths.add 'packs/*/app/services', eager_load: true
   end
 end

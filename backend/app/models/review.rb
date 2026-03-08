@@ -17,7 +17,7 @@ class Review < ApplicationRecord
   validates :value_rating, inclusion: { in: 1..5 }, allow_nil: true
   validates :punctuality_rating, inclusion: { in: 1..5 }, allow_nil: true
   validates :comment, length: { maximum: 1000 }
-  validates :booking_id, uniqueness: { message: 'has already been reviewed' }
+  validates :booking_id, uniqueness: { message: :already_reviewed }
   validate :booking_must_be_completed
   validate :customer_must_own_booking
 

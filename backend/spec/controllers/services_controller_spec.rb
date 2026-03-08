@@ -23,7 +23,7 @@ RSpec.describe ServicesController do
         get :index
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['services'].length).to eq(1)
         expect(json_response['services'].first['id']).to eq(active_service.id)
         expect(json_response['services'].first['status']).to eq('active')
@@ -40,7 +40,7 @@ RSpec.describe ServicesController do
         get :index
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['services'].length).to eq(2)
         service_ids = json_response['services'].pluck('id')
         expect(service_ids).to include(vendor_active.id, vendor_inactive.id)
@@ -55,7 +55,7 @@ RSpec.describe ServicesController do
         get :index, params: { category_id: service_category.id }
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['services'].length).to eq(1)
         expect(json_response['services'].first['category']['id']).to eq(service_category.id)
       end
@@ -67,7 +67,7 @@ RSpec.describe ServicesController do
         get :index, params: { min_price: 100, max_price: 300 }
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['services'].length).to eq(1)
         expect(json_response['services'].first['id']).to eq(expensive_service.id)
       end
@@ -86,7 +86,7 @@ RSpec.describe ServicesController do
         get :index, params: { sort: 'name' }
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['services'].first['name']).to eq('A Service')
         expect(json_response['services'].last['name']).to eq('B Service')
       end
@@ -95,7 +95,7 @@ RSpec.describe ServicesController do
         get :index, params: { sort: 'price_low' }
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['services'].first['base_price']).to eq(50)
         expect(json_response['services'].last['base_price']).to eq(100)
       end
@@ -107,7 +107,7 @@ RSpec.describe ServicesController do
       get :show, params: { id: service.id }
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['service']['id']).to eq(service.id)
       expect(json_response['service']['name']).to eq(service.name)
       expect(json_response['service']['vendor']['id']).to eq(service.vendor_profile.id)
@@ -118,7 +118,7 @@ RSpec.describe ServicesController do
         get :show, params: { id: 999_999 }
 
         expect(response).to have_http_status(:not_found)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Service not found')
       end
     end
@@ -147,7 +147,7 @@ RSpec.describe ServicesController do
         end.to change(Service, :count).by(1)
 
         expect(response).to have_http_status(:created)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['message']).to eq('Service created successfully')
         expect(json_response['service']['name']).to eq('New Service')
         expect(json_response['service']['vendor']['id']).to eq(vendor_user.vendor_profile.id)
@@ -169,7 +169,7 @@ RSpec.describe ServicesController do
           end.not_to change(Service, :count)
 
           expect(response).to have_http_status(:unprocessable_content)
-          json_response = JSON.parse(response.body)
+          json_response = response.parsed_body
           expect(json_response['error']).to eq('Service creation failed')
           expect(json_response['details']).to be_an(Array)
         end
@@ -183,7 +183,7 @@ RSpec.describe ServicesController do
         post :create, params: { service: { name: 'Test' } }
 
         expect(response).to have_http_status(:forbidden)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Only vendors can manage services')
       end
     end
@@ -214,7 +214,7 @@ RSpec.describe ServicesController do
       put :update, params: update_params
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['message']).to eq('Service updated successfully')
       expect(json_response['service']['name']).to eq('Updated Service Name')
     end
@@ -228,7 +228,7 @@ RSpec.describe ServicesController do
         put :update, params: update_params
 
         expect(response).to have_http_status(:forbidden)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('You can only manage your own services')
       end
     end
@@ -245,7 +245,7 @@ RSpec.describe ServicesController do
       end.to change(Service, :count).by(-1)
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['message']).to eq('Service deleted successfully')
     end
   end
@@ -261,7 +261,7 @@ RSpec.describe ServicesController do
       get :search, params: { q: 'photography' }
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['query']).to eq('photography')
       expect(json_response['services'].length).to eq(1)
       expect(json_response['services'].first['id']).to eq(matching_service.id)
@@ -272,7 +272,7 @@ RSpec.describe ServicesController do
         get :search, params: { q: '' }
 
         expect(response).to have_http_status(:bad_request)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Search query is required')
       end
     end
@@ -285,7 +285,7 @@ RSpec.describe ServicesController do
         get :search, params: { q: 'photography', min_price: 100 }
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['services'].length).to eq(1)
         expect(json_response['services'].first['id']).to eq(photography_expensive.id)
       end

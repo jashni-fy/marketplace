@@ -2,6 +2,10 @@ en:
   activerecord:
     errors:
       models:
+        review:
+          attributes:
+            booking_id:
+              already_reviewed: 'has already been reviewed'
         service_category:
           attributes:
             slug:

@@ -166,7 +166,7 @@ RSpec.describe AvailabilitySlotsController do
   end
 
   def parsed_response
-    JSON.parse(response.body)
+    response.parsed_body
   end
 
   def slot_ids_from_response

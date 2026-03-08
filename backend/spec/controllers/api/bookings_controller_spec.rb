@@ -32,7 +32,7 @@ RSpec.describe Api::BookingsController do
         get :index
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['bookings'].length).to eq(1)
         expect(json_response['bookings'].first['id']).to eq(customer_booking.id)
       end
@@ -69,7 +69,7 @@ RSpec.describe Api::BookingsController do
         get :index
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['bookings'].length).to eq(1)
         expect(json_response['bookings'].first['id']).to eq(vendor_booking.id)
       end
@@ -87,7 +87,7 @@ RSpec.describe Api::BookingsController do
         get :show, params: { id: booking.id }
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['booking']['id']).to eq(booking.id)
         expect(json_response['booking']['status']).to eq(booking.status)
       end
@@ -103,7 +103,7 @@ RSpec.describe Api::BookingsController do
         get :show, params: { id: booking.id }
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['booking']['id']).to eq(booking.id)
       end
     end
@@ -120,7 +120,7 @@ RSpec.describe Api::BookingsController do
         get :show, params: { id: booking.id }
 
         expect(response).to have_http_status(:forbidden)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Access denied')
       end
     end
@@ -160,7 +160,7 @@ RSpec.describe Api::BookingsController do
       end.to change(Booking, :count).by(1)
 
       expect(response).to have_http_status(:created)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['booking']['service']['id']).to eq(service.id)
       expect(json_response['booking']['customer']['id']).to eq(customer.id)
       expect(json_response['booking']['vendor']['id']).to eq(vendor.id)
@@ -184,7 +184,7 @@ RSpec.describe Api::BookingsController do
         end.not_to change(Booking, :count)
 
         expect(response).to have_http_status(:unprocessable_content)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['errors']).to be_an(Array)
         expect(json_response['error']).to eq('Failed to create booking')
       end
@@ -199,7 +199,7 @@ RSpec.describe Api::BookingsController do
         end.not_to change(Booking, :count)
 
         expect(response).to have_http_status(:unprocessable_content)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['errors']).to include('Event date is not available for this vendor')
       end
     end
@@ -228,7 +228,7 @@ RSpec.describe Api::BookingsController do
         put :update, params: update_params
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['booking']['event_location']).to eq('Updated Location')
         expect(json_response['booking']['requirements']).to eq('Updated requirements')
       end
@@ -252,7 +252,7 @@ RSpec.describe Api::BookingsController do
         put :update, params: update_params
 
         expect(response).to have_http_status(:forbidden)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Cannot modify this booking')
       end
     end
@@ -271,7 +271,7 @@ RSpec.describe Api::BookingsController do
         delete :destroy, params: { id: booking.id }
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['message']).to eq('Booking cancelled successfully')
         expect(booking.reload.status).to eq('cancelled')
       end
@@ -284,7 +284,7 @@ RSpec.describe Api::BookingsController do
         delete :destroy, params: { id: booking.id }
 
         expect(response).to have_http_status(:unprocessable_content)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Booking cannot be cancelled')
       end
     end
@@ -301,7 +301,7 @@ RSpec.describe Api::BookingsController do
         post :respond, params: { id: booking.id, response_action: 'accept' }
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['message']).to eq('Booking accepted successfully')
         expect(booking.reload.status).to eq('accepted')
       end
@@ -312,7 +312,7 @@ RSpec.describe Api::BookingsController do
         post :respond, params: { id: booking.id, response_action: 'decline' }
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['message']).to eq('Booking declined')
         expect(booking.reload.status).to eq('declined')
       end
@@ -328,7 +328,7 @@ RSpec.describe Api::BookingsController do
         }
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['message']).to eq('Counter offer sent')
         expect(booking.reload.status).to eq('counter_offered')
         expect(booking.total_amount).to eq(150.00)
@@ -340,7 +340,7 @@ RSpec.describe Api::BookingsController do
         post :respond, params: { id: booking.id, response_action: 'invalid' }
 
         expect(response).to have_http_status(:bad_request)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Invalid response action')
       end
     end
@@ -355,7 +355,7 @@ RSpec.describe Api::BookingsController do
         post :respond, params: { id: booking.id, response_action: 'accept' }
 
         expect(response).to have_http_status(:forbidden)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Cannot respond to this booking')
       end
     end
@@ -374,7 +374,7 @@ RSpec.describe Api::BookingsController do
         get :messages, params: { id: booking.id }
 
         expect(response).to have_http_status(:ok)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['messages'].length).to eq(1)
         expect(json_response['messages'].first['id']).to eq(message.id)
       end
@@ -392,7 +392,7 @@ RSpec.describe Api::BookingsController do
         get :messages, params: { id: booking.id }
 
         expect(response).to have_http_status(:forbidden)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['error']).to eq('Access denied')
       end
     end
@@ -410,7 +410,7 @@ RSpec.describe Api::BookingsController do
       end.to change(BookingMessage, :count).by(1)
 
       expect(response).to have_http_status(:created)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['message']['message']).to eq('Test message')
       expect(json_response['message']['sender']['id']).to eq(customer.id)
     end
@@ -422,7 +422,7 @@ RSpec.describe Api::BookingsController do
         end.not_to change(BookingMessage, :count)
 
         expect(response).to have_http_status(:unprocessable_content)
-        json_response = JSON.parse(response.body)
+        json_response = response.parsed_body
         expect(json_response['errors']).to be_an(Array)
       end
     end
@@ -456,7 +456,7 @@ RSpec.describe Api::BookingsController do
       post :check_availability, params: valid_params
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['available']).to be true
       expect(json_response['message']).to eq('Time slot is available')
     end
@@ -466,7 +466,7 @@ RSpec.describe Api::BookingsController do
       post :check_availability, params: params
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['available']).to be false
       expect(json_response['message']).to eq('Time slot is not available')
       expect(json_response['suggested_times']).to be_an(Array)
@@ -477,7 +477,7 @@ RSpec.describe Api::BookingsController do
       post :check_availability, params: params
 
       expect(response).to have_http_status(:bad_request)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['error']).to eq('Invalid date or time format')
     end
   end
@@ -518,7 +518,7 @@ RSpec.describe Api::BookingsController do
       post :suggest_alternatives, params: valid_params
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['has_conflict']).to be true
       expect(json_response['alternative_times']).to be_an(Array)
     end
@@ -528,7 +528,7 @@ RSpec.describe Api::BookingsController do
       post :suggest_alternatives, params: params
 
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['has_conflict']).to be false
     end
 
@@ -537,7 +537,7 @@ RSpec.describe Api::BookingsController do
       post :suggest_alternatives, params: params
 
       expect(response).to have_http_status(:bad_request)
-      json_response = JSON.parse(response.body)
+      json_response = response.parsed_body
       expect(json_response['error']).to eq('Invalid date or time format')
     end
   end

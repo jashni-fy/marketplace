@@ -2,6 +2,8 @@
 
 class AvailabilitySlotsController < ApiController
   include BookingManagement::AvailabilitySlotActions
+  include BookingManagement::AvailabilitySlotBulkActions
+  include BookingManagement::AvailabilitySlotConflictActions
 
   before_action :authenticate_user!
   before_action :ensure_vendor!
