@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_03_06_135035) do
+ActiveRecord::Schema[7.1].define(version: 2026_03_08_134356) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -101,6 +101,18 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_06_135035) do
     t.index ["vendor_profile_id"], name: "index_bookings_on_vendor_profile_id"
   end
 
+  create_table "categories", force: :cascade do |t|
+    t.string "name"
+    t.text "description"
+    t.string "slug"
+    t.boolean "active", default: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "icon"
+    t.jsonb "metadata", default: {}
+    t.index ["slug"], name: "index_categories_on_slug", unique: true
+  end
+
   create_table "customer_profiles", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.datetime "created_at", null: false
@@ -158,17 +170,13 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_06_135035) do
   end
 
   create_table "service_categories", force: :cascade do |t|
-    t.string "name"
-    t.text "description"
-    t.string "slug"
-    t.boolean "active", default: true
+    t.bigint "service_id", null: false
+    t.bigint "category_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "icon"
-    t.string "ancestry"
-    t.jsonb "metadata", default: {}
-    t.index ["ancestry"], name: "index_service_categories_on_ancestry"
-    t.index ["slug"], name: "index_service_categories_on_slug", unique: true
+    t.index ["category_id"], name: "index_service_categories_on_category_id"
+    t.index ["service_id", "category_id"], name: "index_service_categories_on_service_id_and_category_id", unique: true
+    t.index ["service_id"], name: "index_service_categories_on_service_id"
   end
 
   create_table "service_images", force: :cascade do |t|
@@ -188,8 +196,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_06_135035) do
   create_table "services", force: :cascade do |t|
     t.string "name"
     t.text "description"
-    t.bigint "vendor_profile_id", null: false
-    t.bigint "service_category_id", null: false
     t.decimal "base_price", precision: 10, scale: 2
     t.integer "pricing_type", default: 0
     t.integer "status", default: 0
@@ -198,11 +204,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_06_135035) do
     t.decimal "average_rating", precision: 3, scale: 2, default: "0.0"
     t.integer "total_reviews", default: 0
     t.index ["average_rating"], name: "index_services_on_average_rating"
-    t.index ["service_category_id", "status"], name: "index_services_on_service_category_id_and_status"
-    t.index ["service_category_id"], name: "index_services_on_service_category_id"
     t.index ["status"], name: "index_services_on_status"
-    t.index ["vendor_profile_id", "status"], name: "index_services_on_vendor_profile_id_and_status"
-    t.index ["vendor_profile_id"], name: "index_services_on_vendor_profile_id"
   end
 
   create_table "users", force: :cascade do |t|
@@ -251,6 +253,16 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_06_135035) do
     t.index ["verification_status"], name: "index_vendor_profiles_on_verification_status"
   end
 
+  create_table "vendor_services", force: :cascade do |t|
+    t.bigint "vendor_profile_id", null: false
+    t.bigint "service_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["service_id"], name: "index_vendor_services_on_service_id"
+    t.index ["vendor_profile_id", "service_id"], name: "index_vendor_services_on_vendor_profile_id_and_service_id", unique: true
+    t.index ["vendor_profile_id"], name: "index_vendor_services_on_vendor_profile_id"
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "availability_slots", "vendor_profiles"
@@ -265,8 +277,10 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_06_135035) do
   add_foreign_key "reviews", "services"
   add_foreign_key "reviews", "users", column: "customer_id"
   add_foreign_key "reviews", "vendor_profiles"
+  add_foreign_key "service_categories", "categories"
+  add_foreign_key "service_categories", "services"
   add_foreign_key "service_images", "services"
-  add_foreign_key "services", "service_categories"
-  add_foreign_key "services", "vendor_profiles"
   add_foreign_key "vendor_profiles", "users"
+  add_foreign_key "vendor_services", "services"
+  add_foreign_key "vendor_services", "vendor_profiles"
 end

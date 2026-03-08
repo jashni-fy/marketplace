@@ -18,7 +18,7 @@ require 'action_cable/engine'
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
-module Marketplace # rubocop:disable Style/ClassAndModuleChildren
+module Marketplace
   class Application < Rails::Application
     config.active_record.query_log_tags_enabled = true
     config.active_record.query_log_tags = [
@@ -43,6 +43,9 @@ module Marketplace # rubocop:disable Style/ClassAndModuleChildren
     # in config/environments, which are processed later.
     #
     # config.time_zone = "Central Time (US & Canada)"
+
+    # Opt in to Rails 8.1 to_time behavior
+    config.active_support.to_time_preserves_timezone = :zone
 
     # Auto-load query objects and domain services
     config.eager_load_paths << Rails.root.join('app/models/queries')

@@ -47,7 +47,7 @@ Metrics/BlockLength:
     - 'lib/tasks/**/*'
 
 Style/ClassAndModuleChildren:
-  EnforcedStyle: compact
+  Enabled: false
 
 Layout/LineLength:
   Max: 120

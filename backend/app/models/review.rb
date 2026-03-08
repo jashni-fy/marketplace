@@ -1,5 +1,42 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: reviews
+#
+#  id                   :bigint           not null, primary key
+#  comment              :text
+#  communication_rating :integer
+#  punctuality_rating   :integer
+#  quality_rating       :integer
+#  rating               :integer          not null
+#  status               :integer          default("published")
+#  value_rating         :integer
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  booking_id           :bigint           not null
+#  customer_id          :bigint           not null
+#  service_id           :bigint           not null
+#  vendor_profile_id    :bigint           not null
+#
+# Indexes
+#
+#  index_reviews_on_booking_id                    (booking_id) UNIQUE
+#  index_reviews_on_customer_id                   (customer_id)
+#  index_reviews_on_rating                        (rating)
+#  index_reviews_on_service_id                    (service_id)
+#  index_reviews_on_service_id_and_status         (service_id,status)
+#  index_reviews_on_status                        (status)
+#  index_reviews_on_vendor_profile_id             (vendor_profile_id)
+#  index_reviews_on_vendor_profile_id_and_status  (vendor_profile_id,status)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (booking_id => bookings.id)
+#  fk_rails_...  (customer_id => users.id)
+#  fk_rails_...  (service_id => services.id)
+#  fk_rails_...  (vendor_profile_id => vendor_profiles.id)
+#
 class Review < ApplicationRecord
   # Associations
   belongs_to :booking

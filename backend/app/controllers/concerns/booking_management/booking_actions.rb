@@ -17,17 +17,17 @@ module BookingManagement::BookingActionHelpers
 
   # Authorize access and render error if unauthorized
   def booking_access_authorized?
-    authorize_action(@booking, :access)
+    authorize_action?(@booking, :access)
   end
 
   # Authorize modification and render error if unauthorized
   def booking_modification_authorized?
-    authorize_action(@booking, :modify)
+    authorize_action?(@booking, :modify)
   end
 
   # Authorize vendor response and render error if unauthorized
   def vendor_response_authorized?
-    authorize_action(@booking, :vendor_respond)
+    authorize_action?(@booking, :vendor_respond)
   end
 
   # Set booking from params[:id]
@@ -64,17 +64,17 @@ module BookingManagement::BookingActionHelpers
 
   # Use parse_booking_create_params instead
   def booking_params
-    params.require(:booking).permit(
-      :service_id, :event_date, :event_end_date, :event_location,
-      :total_amount, :requirements, :special_instructions, :event_duration
+    params.expect(
+      booking: %i[service_id event_date event_end_date event_location
+                  total_amount requirements special_instructions event_duration]
     )
   end
 
   # Use parse_booking_update_params instead
   def booking_update_params
-    params.require(:booking).permit(
-      :event_date, :event_end_date, :event_location,
-      :requirements, :special_instructions, :event_duration
+    params.expect(
+      booking: %i[event_date event_end_date event_location
+                  requirements special_instructions event_duration]
     )
   end
 end
@@ -94,7 +94,7 @@ module BookingManagement::ListingActions
                .per(params[:per_page] || 20)
 
     render json: {
-      bookings: BookingPresenter.collection(bookings),
+      bookings: BookingManagement::BookingPresenter.collection(bookings),
       pagination: pagination_meta(bookings)
     }
   end
@@ -102,7 +102,7 @@ module BookingManagement::ListingActions
   def show
     return unless booking_access_authorized?
 
-    render json: { booking: BookingPresenter.new(@booking).as_json(include_details: true) }
+    render json: { booking: BookingManagement::BookingPresenter.new(@booking).as_json(include_details: true) }
   end
 end
 
@@ -117,7 +117,7 @@ module BookingManagement::ModificationActions
     service = BookingCreationService.new(booking_params.merge(customer: current_user))
     if service.call
       render json: {
-        booking: BookingPresenter.new(service.booking).as_json,
+        booking: BookingManagement::BookingPresenter.new(service.booking).as_json,
         message: 'Booking created successfully'
       }, status: :created
     else
@@ -132,7 +132,7 @@ module BookingManagement::ModificationActions
     return unless booking_modification_authorized?
 
     if @booking.update(booking_update_params)
-      render json: { booking: BookingPresenter.new(@booking).as_json }
+      render json: { booking: BookingManagement::BookingPresenter.new(@booking).as_json }
     else
       render json: { errors: @booking.errors.full_messages }, status: :unprocessable_content
     end
@@ -157,7 +157,7 @@ module BookingManagement::ModificationActions
 
     if result[:success]
       render json: {
-        booking: BookingPresenter.new(result[:booking]).as_json,
+        booking: BookingManagement::BookingPresenter.new(result[:booking]).as_json,
         message: "Booking #{response_action}ed successfully"
       }
     else
@@ -183,7 +183,7 @@ module BookingManagement::CommunicationActions
                         .per(params[:per_page] || 50)
 
     render json: {
-      messages: @messages.map { |message| MessagePresenter.new(message).as_json },
+      messages: @messages.map { |message| BookingManagement::MessagePresenter.new(message).as_json },
       pagination: pagination_meta(@messages)
     }
   end
@@ -198,7 +198,7 @@ module BookingManagement::CommunicationActions
     )
 
     if result[:success]
-      render json: { message: MessagePresenter.new(result[:message]).as_json }, status: :created
+      render json: { message: BookingManagement::MessagePresenter.new(result[:message]).as_json }, status: :created
     else
       render json: { errors: result[:errors] }, status: :unprocessable_content
     end

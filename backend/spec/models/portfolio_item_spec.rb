@@ -1,5 +1,31 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: portfolio_items
+#
+#  id                :bigint           not null, primary key
+#  category          :string           not null
+#  description       :text
+#  display_order     :integer          default(0), not null
+#  is_featured       :boolean          default(FALSE), not null
+#  title             :string           not null
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  vendor_profile_id :bigint           not null
+#
+# Indexes
+#
+#  index_portfolio_items_on_category             (category)
+#  index_portfolio_items_on_vendor_and_category  (vendor_profile_id,category)
+#  index_portfolio_items_on_vendor_and_featured  (vendor_profile_id,is_featured)
+#  index_portfolio_items_on_vendor_and_order     (vendor_profile_id,display_order)
+#  index_portfolio_items_on_vendor_profile_id    (vendor_profile_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (vendor_profile_id => vendor_profiles.id)
+#
 require 'rails_helper'
 
 RSpec.describe PortfolioItem do

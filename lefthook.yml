@@ -8,7 +8,7 @@ pre-commit:
     rubocop:
       root: "backend/"
       glob: "*.rb"
-      run: bundle exec rubocop --force-exclusion --parallel {staged_files}
+      run: bundle exec rubocop -A --force-exclusion --parallel {staged_files}
     
     # Frontend Hooks
     eslint:

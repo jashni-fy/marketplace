@@ -1,18 +1,20 @@
 # frozen_string_literal: true
 
-class Bookings::SendMessage
-  extend Dry::Initializer
+module Bookings
+  class SendMessage
+    extend Dry::Initializer
 
-  option :booking, type: Types.Instance(Booking)
-  option :sender, type: Types.Instance(User)
-  option :message, type: Types::String
+    option :booking, type: Types.Instance(Booking)
+    option :sender, type: Types.Instance(User)
+    option :message, type: Types::String
 
-  def self.call(booking:, sender:, message:)
-    new(booking: booking, sender: sender, message: message).call
-  end
+    def self.call(booking:, sender:, message:)
+      new(booking: booking, sender: sender, message: message).call
+    end
 
-  def call
-    msg = booking.booking_messages.build(sender: sender, message: message, sent_at: Time.current)
-    { success: msg.save, message: msg, errors: msg.errors.full_messages }
+    def call
+      msg = booking.booking_messages.build(sender: sender, message: message, sent_at: Time.current)
+      { success: msg.save, message: msg, errors: msg.errors.full_messages }
+    end
   end
 end

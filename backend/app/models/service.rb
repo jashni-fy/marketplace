@@ -1,10 +1,32 @@
 # frozen_string_literal: true
 
 # rubocop:disable Metrics/ClassLength
+# == Schema Information
+#
+# Table name: services
+#
+#  id             :bigint           not null, primary key
+#  average_rating :decimal(3, 2)    default(0.0)
+#  base_price     :decimal(10, 2)
+#  description    :text
+#  name           :string
+#  pricing_type   :integer          default("hourly")
+#  status         :integer          default("draft")
+#  total_reviews  :integer          default(0)
+#  created_at     :datetime         not null
+#  updated_at     :datetime         not null
+#
+# Indexes
+#
+#  index_services_on_average_rating  (average_rating)
+#  index_services_on_status          (status)
+#
 class Service < ApplicationRecord
   # Associations
-  belongs_to :vendor_profile
-  belongs_to :service_category
+  has_many :vendor_services, dependent: :destroy
+  has_many :vendor_profiles, through: :vendor_services
+  has_many :service_categories, dependent: :destroy
+  has_many :categories, through: :service_categories
   has_many :bookings, dependent: :destroy
   has_many :service_images, dependent: :destroy
   has_many :reviews, dependent: :destroy
@@ -33,15 +55,14 @@ class Service < ApplicationRecord
 
   # Custom validations
   validate :base_price_required_for_non_custom_pricing
-  validate :vendor_profile_belongs_to_vendor_user
 
   # Scopes
   scope :active, -> { where(status: :active) }
   scope :inactive, -> { where(status: :inactive) }
   scope :draft, -> { where(status: :draft) }
   scope :archived, -> { where(status: :archived) }
-  scope :by_category, ->(category) { where(service_category: category) }
-  scope :by_vendor, ->(vendor_profile) { where(vendor_profile: vendor_profile) }
+  scope :by_category, ->(category) { joins(:categories).where(categories: { id: category }) }
+  scope :by_vendor, ->(vendor_profile) { joins(:vendor_profiles).where(vendor_profiles: { id: vendor_profile }) }
   scope :by_pricing_type, ->(pricing_type) { where(pricing_type: pricing_type) }
   scope :price_range, ->(min_price, max_price) { where(base_price: min_price..max_price) }
   scope :search_by_name, ->(query) { where('name ILIKE ?', "%#{query}%") if query.present? }
@@ -49,10 +70,6 @@ class Service < ApplicationRecord
   scope :ordered_by_name, -> { order(:name) }
   scope :ordered_by_price, -> { order(:base_price) }
   scope :ordered_by_created, -> { order(created_at: :desc) }
-
-  # Delegations
-  delegate :business_name, :location, :average_rating, :total_reviews, to: :vendor_profile, prefix: :vendor
-  delegate :name, to: :service_category, prefix: :category
 
   # Instance methods
   def active?
@@ -91,7 +108,7 @@ class Service < ApplicationRecord
   end
 
   def can_be_booked?
-    active? && vendor_profile.present? && vendor_profile.user.present?
+    active? && vendor_profiles.any?
   end
 
   delegate :count, to: :bookings, prefix: true
@@ -147,9 +164,10 @@ class Service < ApplicationRecord
 
   # Class methods
   def self.featured(limit = 6)
-    active.joins(:vendor_profile)
+    active.joins(:vendor_profiles)
           .where(vendor_profiles: { is_verified: true })
           .order('vendor_profiles.average_rating DESC, services.created_at DESC')
+          .distinct
           .limit(limit)
   end
 
@@ -165,7 +183,7 @@ class Service < ApplicationRecord
   def self.filter_by_category(category_id)
     return all if category_id.blank?
 
-    where(service_category_id: category_id)
+    joins(:categories).where(categories: { id: category_id })
   end
 
   def self.filter_by_price_range(min_price, max_price)
@@ -192,14 +210,6 @@ class Service < ApplicationRecord
     return if base_price.present? && base_price.positive?
 
     errors.add(:base_price, 'must be present and greater than 0 for non-custom pricing')
-  end
-
-  def vendor_profile_belongs_to_vendor_user
-    return if vendor_profile.blank?
-
-    return if vendor_profile.user&.vendor?
-
-    errors.add(:vendor_profile, 'must belong to a vendor user')
   end
 end
 # rubocop:enable Metrics/ClassLength

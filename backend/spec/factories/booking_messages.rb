@@ -1,5 +1,28 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: booking_messages
+#
+#  id         :bigint           not null, primary key
+#  message    :text             not null
+#  sent_at    :datetime         not null
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#  booking_id :bigint           not null
+#  sender_id  :bigint           not null
+#
+# Indexes
+#
+#  index_booking_messages_on_booking_id              (booking_id)
+#  index_booking_messages_on_booking_id_and_sent_at  (booking_id,sent_at)
+#  index_booking_messages_on_sender_id               (sender_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (booking_id => bookings.id)
+#  fk_rails_...  (sender_id => users.id)
+#
 FactoryBot.define do
   factory :booking_message do
     booking

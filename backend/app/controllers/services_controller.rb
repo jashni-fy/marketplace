@@ -3,50 +3,67 @@
 # rubocop:disable Metrics/ClassLength
 class ServicesController < ApiController
   before_action :authenticate_user!, except: %i[index show search]
-  before_action :authenticate_user_optional, only: [:index]
   before_action :set_service, only: %i[show update destroy]
-  before_action :ensure_vendor_user, only: %i[create update destroy]
+  before_action :ensure_vendor, only: %i[create update destroy]
   before_action :ensure_service_owner, only: %i[update destroy]
 
-  # GET /services
   def index
-    @services = Service.includes(:vendor_profile, :service_category)
+    search_params = {
+      vendor_id: params[:vendor_id],
+      category_id: params[:category_id],
+      page: params[:page] || 1,
+      per_page: params[:per_page] || 20,
+      sort_by: params[:sort_by] || 'created_at',
+      sort_direction: params[:sort_direction] || 'desc'
+    }
 
-    # Apply filters
-    @services = apply_filters(@services)
-
-    # Apply pagination
-    page = params[:page]&.to_i || 1
-    per_page = [params[:per_page]&.to_i || 20, 100].min # Max 100 per page
-
-    @services = @services.page(page).per(per_page)
+    result = ServiceSearchService.call(search_params)
 
     render json: {
-      services: @services.map { |service| service_response(service) },
-      pagination: {
-        current_page: @services.current_page,
-        total_pages: @services.total_pages,
-        total_count: @services.total_count,
-        per_page: per_page
-      }
+      services: result[:services].map { |service| service_response(service) },
+      pagination: result[:pagination],
+      filters: result[:filters]
     }
   end
 
-  # GET /services/:id
   def show
+    render json: service_response(@service, include_details: true)
+  end
+
+  # rubocop:disable Metrics/AbcSize
+  def search
+    # rubocop:enable Metrics/AbcSize
+    search_params = {
+      query: params[:q] || params[:query],
+      location: params[:location],
+      category_id: params[:category_id],
+      min_price: params[:min_price],
+      max_price: params[:max_price],
+      pricing_type: params[:pricing_type],
+      vendor_id: params[:vendor_id],
+      page: params[:page] || 1,
+      per_page: params[:per_page] || 20,
+      sort_by: params[:sort_by] || 'created_at',
+      sort_direction: params[:sort_direction] || 'desc'
+    }
+
+    result = ServiceSearchService.call(search_params)
+
     render json: {
-      service: detailed_service_response(@service)
+      services: result[:services].map { |service| service_response(service) },
+      pagination: result[:pagination],
+      filters: result[:filters],
+      total_count: result[:total_count]
     }
   end
 
-  # POST /services
   def create
     @service = current_user.vendor_profile.services.build(service_params)
 
     if @service.save
       render json: {
         message: 'Service created successfully',
-        service: detailed_service_response(@service)
+        service: service_response(@service, include_details: true)
       }, status: :created
     else
       render json: {
@@ -56,12 +73,11 @@ class ServicesController < ApiController
     end
   end
 
-  # PUT/PATCH /services/:id
   def update
     if @service.update(service_params)
       render json: {
         message: 'Service updated successfully',
-        service: detailed_service_response(@service)
+        service: service_response(@service, include_details: true)
       }
     else
       render json: {
@@ -71,215 +87,75 @@ class ServicesController < ApiController
     end
   end
 
-  # DELETE /services/:id
   def destroy
     @service.destroy
-    render json: {
-      message: 'Service deleted successfully'
-    }
-  end
-
-  # GET /services/search
-  # rubocop:disable Metrics/MethodLength
-  def search
-    # rubocop:enable Metrics/MethodLength
-    query = params[:q]
-
-    if query.blank?
-      render json: {
-        error: 'Search query is required'
-      }, status: :bad_request
-      return
-    end
-
-    @services = Service.includes(:vendor_profile, :service_category)
-                       .active
-                       .search(query)
-
-    # Apply additional filters
-    @services = apply_filters(@services)
-
-    # Apply pagination
-    page = params[:page]&.to_i || 1
-    per_page = [params[:per_page]&.to_i || 20, 100].min
-
-    @services = @services.page(page).per(per_page)
-
-    render json: {
-      query: query,
-      services: @services.map { |service| service_response(service) },
-      pagination: {
-        current_page: @services.current_page,
-        total_pages: @services.total_pages,
-        total_count: @services.total_count,
-        per_page: per_page
-      }
-    }
+    render json: { message: 'Service deleted successfully' }
   end
 
   private
 
-  def authenticate_user_optional
-    @current_user = begin
-      AuthorizeApiRequest.new(request.headers).call[:user]
-    rescue StandardError
-      nil
-    end
-  end
-
   def set_service
     @service = Service.find(params[:id])
-  rescue ActiveRecord::RecordNotFound
-    render json: {
-      error: 'Service not found'
-    }, status: :not_found
-  end
-
-  def ensure_vendor_user
-    return if current_user&.vendor?
-
-    render json: {
-      error: 'Only vendors can manage services'
-    }, status: :forbidden
   end
 
   def ensure_service_owner
-    return if @service.vendor_profile == current_user.vendor_profile
+    return if @service.vendor_profile.user == current_user
 
-    render json: {
-      error: 'You can only manage your own services'
-    }, status: :forbidden
+    render json: { error: 'You can only manage your own services' }, status: :forbidden
+  end
+
+  def ensure_vendor
+    return if current_user&.role == 'vendor'
+
+    render json: { error: 'Only vendors can manage services' }, status: :forbidden
   end
 
   def service_params
-    params.require(:service).permit(
-      :name, :description, :service_category_id, :base_price,
-      :pricing_type, :status, images: []
-    )
+    params.expect(service: %i[name description base_price pricing_type service_category_id status])
   end
 
-  # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
-  def apply_filters(services)
-    # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
-    # Filter by category
-    services = services.where(service_category_id: params[:category_id]) if params[:category_id].present?
-
-    # Filter by pricing type
-    services = services.where(pricing_type: params[:pricing_type]) if params[:pricing_type].present?
-
-    # Filter by status (only for vendor's own services)
-    services = if params[:status].present? && current_user&.vendor?
-                 services.joins(:vendor_profile).where(vendor_profiles: { user: current_user }, status: params[:status])
-               elsif current_user&.vendor?
-                 # For authenticated vendors without status filter, show all their services
-                 services.joins(:vendor_profile).where(vendor_profiles: { user: current_user })
-               else
-                 # For non-vendors, only show active services
-                 services.active
-               end
-
-    # Filter by price range
-    services = services.where(base_price: (params[:min_price])..) if params[:min_price].present?
-
-    services = services.where(base_price: ..(params[:max_price])) if params[:max_price].present?
-
-    # Filter by vendor (for vendor's own services)
-    if params[:vendor_id].present?
-      services = services.joins(:vendor_profile).where(vendor_profiles: { id: params[:vendor_id] })
-    end
-
-    # Sort options
-    case params[:sort]
-    when 'name'
-      services.order(:name)
-    when 'price_low'
-      services.order(:base_price)
-    when 'price_high'
-      services.order(base_price: :desc)
-    when 'oldest'
-      services.order(created_at: :asc)
-    else
-      # Default to newest
-      services.order(created_at: :desc)
-    end
-  end
-
-  # rubocop:disable Metrics/MethodLength
-  def service_response(service)
-    # rubocop:enable Metrics/MethodLength
-    {
-      id: service.id,
-      name: service.name,
-      description: service.short_description,
-      base_price: service.base_price,
-      formatted_price: service.formatted_base_price,
-      pricing_type: service.pricing_type,
-      status: service.status,
-      category: {
-        id: service.service_category.id,
-        name: service.service_category.name,
-        slug: service.service_category.slug
-      },
-      vendor: {
-        id: service.vendor_profile.id,
-        business_name: service.vendor_profile.business_name,
-        location: service.vendor_profile.location,
-        average_rating: service.vendor_profile.average_rating,
-        total_reviews: service.vendor_profile.total_reviews
-      },
-      has_images: service.images?,
-      primary_image_url: service.primary_service_image&.thumbnail_url,
-      images_count: service.service_images_count,
-      created_at: service.created_at,
-      updated_at: service.updated_at
-    }
-  end
-
-  # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
-  def detailed_service_response(service)
-    # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
-    {
+  # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
+  def service_response(service, include_details: false)
+    # rubocop:enable Metrics/MethodLength, Metrics/AbcSize
+    response = {
       id: service.id,
       name: service.name,
       description: service.description,
       base_price: service.base_price,
-      formatted_price: service.formatted_base_price,
       pricing_type: service.pricing_type,
+      formatted_price: service.formatted_base_price,
       status: service.status,
-      category: {
-        id: service.service_category.id,
-        name: service.service_category.name,
-        slug: service.service_category.slug,
-        description: service.service_category.description
-      },
       vendor: {
         id: service.vendor_profile.id,
         business_name: service.vendor_profile.business_name,
-        description: service.vendor_profile.description,
-        location: service.vendor_profile.location,
-        phone: service.vendor_profile.phone,
-        website: service.vendor_profile.website,
-        years_experience: service.vendor_profile.years_experience,
-        average_rating: service.vendor_profile.average_rating,
-        total_reviews: service.vendor_profile.total_reviews,
-        is_verified: service.vendor_profile.is_verified
+        location: service.vendor_profile.location
       },
-      has_images: service.images?,
-      images_count: service.service_images_count,
-      service_images: service.ordered_service_images.limit(5).map do |img|
+      category: if service.service_category
+                  {
+                    id: service.service_category.id,
+                    name: service.service_category.name
+                  }
+                end,
+      images: service.service_images.map do |img|
         {
           id: img.id,
-          thumbnail_url: img.thumbnail_url,
-          medium_url: img.medium_url,
-          is_primary: img.is_primary,
-          alt_text: img.alt_text
+          url: img.image.attached? ? url_for(img.image) : nil,
+          is_primary: img.is_primary
         }
       end,
-      bookings_count: service.bookings_count,
-      can_be_booked: service.can_be_booked?,
       created_at: service.created_at,
       updated_at: service.updated_at
     }
+
+    if include_details
+      response[:vendor][:description] = service.vendor_profile.description
+      response[:vendor][:years_experience] = service.vendor_profile.years_experience
+      response[:vendor][:website] = service.vendor_profile.website
+      response[:bookings_count] = service.bookings_count
+      response[:can_be_booked] = service.can_be_booked?
+    end
+
+    response
   end
 end
 # rubocop:enable Metrics/ClassLength

@@ -1,4 +1,4 @@
-class CreateVendorCategories < ActiveRecord::Migration[8.0]
+class CreateVendorCategories < ActiveRecord::Migration[7.1]
   def change
     # Remove existing foreign keys and columns from services
     remove_index :services, :service_category_id, if_exists: true

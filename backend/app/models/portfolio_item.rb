@@ -16,10 +16,11 @@
 #
 # Indexes
 #
-#  index_portfolio_items_on_category                    (category)
-#  index_portfolio_items_on_vendor_and_category         (vendor_profile_id,category)
-#  index_portfolio_items_on_vendor_and_featured         (vendor_profile_id,is_featured)
-#  index_portfolio_items_on_vendor_and_order            (vendor_profile_id,display_order)
+#  index_portfolio_items_on_category             (category)
+#  index_portfolio_items_on_vendor_and_category  (vendor_profile_id,category)
+#  index_portfolio_items_on_vendor_and_featured  (vendor_profile_id,is_featured)
+#  index_portfolio_items_on_vendor_and_order     (vendor_profile_id,display_order)
+#  index_portfolio_items_on_vendor_profile_id    (vendor_profile_id)
 #
 # Foreign Keys
 #

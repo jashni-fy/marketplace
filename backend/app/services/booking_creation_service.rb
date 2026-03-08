@@ -7,6 +7,15 @@ class BookingCreationService
 
   attr_accessor :customer
 
+  attribute :service_id, :integer
+  attribute :event_date, :datetime
+  attribute :event_end_date, :datetime
+  attribute :event_location, :string
+  attribute :total_amount, :decimal
+  attribute :requirements, :string
+  attribute :special_instructions, :string
+  attribute :event_duration, :string
+
   def initialize(attributes = {})
     super
     @errors = ActiveModel::Errors.new(self)
