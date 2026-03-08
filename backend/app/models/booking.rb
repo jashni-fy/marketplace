@@ -72,7 +72,7 @@ class Booking < ApplicationRecord
 
   # Time-based scopes
   scope :overlapping_period, lambda { |start_date, end_date|
-    where('(event_date <= ? AND event_end_date >= ?) OR (event_date <= ? AND event_end_date >= ?)',
+    where('(event_date < ? AND event_end_date > ?) OR (event_date < ? AND event_end_date > ?)',
           end_date, start_date, start_date, end_date)
   }
 

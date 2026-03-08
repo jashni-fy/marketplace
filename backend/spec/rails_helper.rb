@@ -9,6 +9,14 @@ abort('The Rails environment is running in production mode!') if Rails.env.produ
 require 'rspec/rails'
 # Add additional requires below this line. Rails is not loaded until this point!
 
+# Helper module for JWT authentication in controller tests
+module JWTAuthenticationHelper
+  def sign_in(user)
+    token = JwtService.encode(user_id: user.id)
+    request.headers['Authorization'] = "Bearer #{token}"
+  end
+end
+
 # Requires supporting ruby files with custom matchers and macros, etc, in
 # spec/support/ and its subdirectories. Files matching `spec/**/*_spec.rb` are
 # run as spec files by default. This means that files in spec/support that end
@@ -84,6 +92,8 @@ RSpec.configure do |config|
       end
     end
   end
+
+  config.include JWTAuthenticationHelper, type: :controller
 end
 
 Shoulda::Matchers.configure do |config|

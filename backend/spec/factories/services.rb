@@ -1,25 +1,5 @@
 # frozen_string_literal: true
 
-# == Schema Information
-#
-# Table name: services
-#
-#  id             :bigint           not null, primary key
-#  average_rating :decimal(3, 2)    default(0.0)
-#  base_price     :decimal(10, 2)
-#  description    :text
-#  name           :string
-#  pricing_type   :integer          default("hourly")
-#  status         :integer          default("draft")
-#  total_reviews  :integer          default(0)
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
-#
-# Indexes
-#
-#  index_services_on_average_rating  (average_rating)
-#  index_services_on_status          (status)
-#
 FactoryBot.define do
   factory :service do
     sequence(:name) { |n| "Service #{n}" }
@@ -27,21 +7,26 @@ FactoryBot.define do
       'This is a comprehensive description of the service that provides detailed ' \
         'information about what is offered and meets the minimum length requirement for validation.'
     end
-    service_category
     base_price { 150.00 }
     pricing_type { :hourly }
     status { :active }
 
-    # Create vendor_profile through association
+    # Support backward compatibility - accept vendor_profile and service_category parameters
+    # and create the associations automatically
     transient do
-      vendor_user { nil }
+      vendor_profile { nil }
+      service_category { nil }
     end
 
-    vendor_profile do
-      if vendor_user
-        vendor_user.vendor_profile
-      else
-        association :vendor_profile
+    after(:create) do |service, evaluator|
+      if evaluator.vendor_profile.present?
+        create(:vendor_service, service: service, vendor_profile: evaluator.vendor_profile)
+      end
+
+      # service_category is now a join table, but this support is for backward compat
+      # If a Category model instance is passed, create the join record
+      if evaluator.service_category.present? && evaluator.service_category.is_a?(Category)
+        create(:service_category, service: service, category: evaluator.service_category)
       end
     end
 
@@ -74,7 +59,6 @@ FactoryBot.define do
           'and attention to detail. Includes pre-wedding consultation, full day coverage, ' \
           'and edited high-resolution images.'
       end
-      service_category factory: %i[service_category photography]
       base_price { 1200.00 }
       pricing_type { :package }
     end
@@ -85,7 +69,6 @@ FactoryBot.define do
         'Complete event videography service including multi-camera setup, professional audio recording, ' \
           'and post-production editing to create a memorable video of your special event.'
       end
-      service_category factory: %i[service_category videography]
       base_price { 80.00 }
       pricing_type { :hourly }
     end

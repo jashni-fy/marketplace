@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 FactoryBot.define do
-  factory :service_category do
+  factory :vendor_service do
+    vendor_profile
     service
-    category
   end
 end

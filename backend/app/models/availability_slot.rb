@@ -77,8 +77,7 @@ class AvailabilitySlot < ApplicationRecord
       EXTRACT(MINUTE FROM COALESCE(bookings.event_end_date, bookings.event_date + INTERVAL '2 hours')) > ?)
     SQL
 
-    Booking.joins(vendor: :vendor_profile)
-           .where(vendor_profiles: { id: vendor_profile_id })
+    Booking.where(vendor_profile_id: vendor_profile_id)
            .where(status: %i[pending accepted])
            .where('DATE(bookings.event_date) = ?', date)
            .exists?([conflict_sql, (end_time.hour * 60) + end_time.min, (start_time.hour * 60) + start_time.min])

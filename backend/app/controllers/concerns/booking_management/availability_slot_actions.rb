@@ -19,19 +19,20 @@ module BookingManagement::AvailabilitySlotActions
                                               .per(params[:per_page] || 50)
 
     render json: {
-      availability_slots: slots.map { |slot| AvailabilitySlotPresenter.new(slot).as_json },
+      availability_slots: slots.map { |slot| BookingManagement::AvailabilitySlotPresenter.new(slot).as_json },
       pagination: pagination_meta(slots)
     }
   end
 
   def show
-    render json: { availability_slot: AvailabilitySlotPresenter.new(@slot).as_json }
+    render json: { availability_slot: BookingManagement::AvailabilitySlotPresenter.new(@slot).as_json }
   end
 
   def create
     @slot = current_user.vendor_profile.availability_slots.build(availability_slot_params)
     if @slot.save
-      render json: { availability_slot: AvailabilitySlotPresenter.new(@slot).as_json }, status: :created
+      render json: { availability_slot: BookingManagement::AvailabilitySlotPresenter.new(@slot).as_json },
+             status: :created
     else
       render json: { errors: @slot.errors.full_messages }, status: :unprocessable_content
     end
@@ -39,7 +40,7 @@ module BookingManagement::AvailabilitySlotActions
 
   def update
     if @slot.update(availability_slot_params)
-      render json: { availability_slot: AvailabilitySlotPresenter.new(@slot).as_json }
+      render json: { availability_slot: BookingManagement::AvailabilitySlotPresenter.new(@slot).as_json }
     else
       render json: { errors: @slot.errors.full_messages }, status: :unprocessable_content
     end
@@ -63,6 +64,6 @@ module BookingManagement::AvailabilitySlotActions
   end
 
   def availability_slot_params
-    params.require(:availability_slot).permit(:date, :start_time, :end_time, :is_available)
+    params.expect(availability_slot: %i[date start_time end_time is_available])
   end
 end

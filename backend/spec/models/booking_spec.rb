@@ -43,13 +43,13 @@ RSpec.describe Booking do
 
   describe 'associations' do
     it { is_expected.to belong_to(:customer).class_name('User') }
-    it { is_expected.to belong_to(:vendor).class_name('User') }
+    it { is_expected.to belong_to(:vendor_profile) }
     it { is_expected.to belong_to(:service) }
     it { is_expected.to have_many(:booking_messages).dependent(:destroy) }
   end
 
   describe 'validations' do
-    subject { build(:booking, customer: customer, vendor: vendor, service: service) }
+    subject { build(:booking, customer: customer, vendor_profile: vendor.vendor_profile, service: service) }
 
     it { is_expected.to validate_presence_of(:event_date) }
     it { is_expected.to validate_presence_of(:event_location) }
@@ -119,9 +119,9 @@ RSpec.describe Booking do
       end
     end
 
-    describe '.for_vendor' do
+    describe '.for_vendor_profile' do
       it 'returns bookings for specific vendor' do
-        expect(described_class.for_vendor(vendor)).to include(upcoming_booking, past_booking)
+        expect(described_class.for_vendor_profile(vendor.vendor_profile)).to include(upcoming_booking, past_booking)
       end
     end
 

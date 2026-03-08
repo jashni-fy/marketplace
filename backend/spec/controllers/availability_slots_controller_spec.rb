@@ -147,7 +147,7 @@ RSpec.describe AvailabilitySlotsController do
     context 'when slot has no booking conflicts' do
       it 'deletes the availability slot' do
         slot_to_delete = create_slot(vendor_user)
-        allow(slot_to_delete).to receive(:has_booking_conflict?).and_return(false)
+        allow(slot_to_delete).to receive(:booking_conflict?).and_return(false)
 
         expect { delete_slot(slot_to_delete) }.to change(AvailabilitySlot, :count).by(-1)
         expect(parsed_response['message']).to eq('Availability slot deleted successfully')
@@ -157,7 +157,7 @@ RSpec.describe AvailabilitySlotsController do
     context 'when slot has booking conflicts' do
       it 'returns unprocessable entity' do
         slot_to_delete = create_slot(vendor_user)
-        allow(slot_to_delete).to receive(:has_booking_conflict?).and_return(true)
+        allow(slot_to_delete).to receive(:booking_conflict?).and_return(true)
 
         expect { delete_slot(slot_to_delete) }.not_to(change(AvailabilitySlot, :count))
         expect(response).to have_http_status(:unprocessable_content)
@@ -177,11 +177,11 @@ RSpec.describe AvailabilitySlotsController do
     get :index, params: params
   end
 
-  def expect_upcoming_slots(today_slot, future_slot, past_slot)
+  def expect_upcoming_slots(today_slot, future_slot, past_slot = nil)
     expect(response).to have_http_status(:ok)
     ids = slot_ids_from_response
     expect(ids).to include(today_slot.id, future_slot.id)
-    expect(ids).not_to include(past_slot.id)
+    expect(ids).not_to include(past_slot.id) if past_slot
   end
 
   def expect_array_to_include(slot, exclude: [])

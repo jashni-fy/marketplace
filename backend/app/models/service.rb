@@ -165,9 +165,9 @@ class Service < ApplicationRecord
   # Class methods
   def self.featured(limit = 6)
     active.joins(:vendor_profiles)
-          .where(vendor_profiles: { is_verified: true })
-          .order('vendor_profiles.average_rating DESC, services.created_at DESC')
+          .where(vendor_profiles: { verification_status: :verified })
           .distinct
+          .order(created_at: :desc)
           .limit(limit)
   end
 

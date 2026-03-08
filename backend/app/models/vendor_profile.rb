@@ -59,7 +59,7 @@ class VendorProfile < ApplicationRecord
   }, prefix: :verification
 
   # Validations
-  validates :user_id, uniqueness: true, index: true
+  validates :user_id, uniqueness: true
   validates :business_name, presence: true, length: { minimum: 2, maximum: 100 }
   validates :description, length: { minimum: 50, maximum: 2000 }, allow_blank: true
   validates :location, presence: true, length: { maximum: 255 }

@@ -1,34 +1,13 @@
 # frozen_string_literal: true
 
-# == Schema Information
-#
-# Table name: services
-#
-#  id             :bigint           not null, primary key
-#  average_rating :decimal(3, 2)    default(0.0)
-#  base_price     :decimal(10, 2)
-#  description    :text
-#  name           :string
-#  pricing_type   :integer          default("hourly")
-#  status         :integer          default("draft")
-#  total_reviews  :integer          default(0)
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
-#
-# Indexes
-#
-#  index_services_on_average_rating  (average_rating)
-#  index_services_on_status          (status)
-#
 require 'rails_helper'
 
 RSpec.describe Service do
   describe 'associations' do
-    it { is_expected.to belong_to(:vendor_profile) }
-    it { is_expected.to belong_to(:service_category) }
-    # Future associations (will be tested when models are created)
-    # it { should have_many(:bookings).dependent(:destroy) }
-    # it { should have_many(:service_images).dependent(:destroy) }
+    it { is_expected.to have_many(:vendor_services).dependent(:destroy) }
+    it { is_expected.to have_many(:vendor_profiles).through(:vendor_services) }
+    it { is_expected.to have_many(:service_categories).dependent(:destroy) }
+    it { is_expected.to have_many(:categories).through(:service_categories) }
   end
 
   describe 'enums' do
@@ -50,73 +29,39 @@ RSpec.describe Service do
 
     it { is_expected.to validate_presence_of(:pricing_type) }
     it { is_expected.to validate_presence_of(:status) }
-    it { is_expected.to validate_presence_of(:vendor_profile_id) }
-    it { is_expected.to validate_presence_of(:service_category_id) }
 
     describe 'custom validations' do
       describe 'base_price_required_for_non_custom_pricing' do
         it 'allows nil base_price for custom pricing' do
-          vendor_user = create(:user, role: :vendor)
-          category = create(:service_category)
-          service = build(:service, pricing_type: :custom, base_price: nil, vendor_profile: vendor_user.vendor_profile,
-                                    service_category: category)
+          service = build(:service, pricing_type: :custom, base_price: nil)
           expect(service).to be_valid
         end
 
         it 'requires base_price for hourly pricing' do
-          vendor_user = create(:user, role: :vendor)
-          category = create(:service_category)
-          service = build(:service, pricing_type: :hourly, base_price: nil, vendor_profile: vendor_user.vendor_profile,
-                                    service_category: category)
+          service = build(:service, pricing_type: :hourly, base_price: nil)
           expect(service).not_to be_valid
           expect(service.errors[:base_price]).to include('must be present and greater than 0 for non-custom pricing')
         end
 
         it 'requires base_price for package pricing' do
-          vendor_user = create(:user, role: :vendor)
-          category = create(:service_category)
-          service = build(:service, pricing_type: :package, base_price: 0, vendor_profile: vendor_user.vendor_profile,
-                                    service_category: category)
+          service = build(:service, pricing_type: :package, base_price: 0)
           expect(service).not_to be_valid
           expect(service.errors[:base_price]).to include('must be present and greater than 0 for non-custom pricing')
-        end
-      end
-
-      describe 'vendor_profile_belongs_to_vendor_user' do
-        it 'is valid when vendor_profile belongs to vendor user' do
-          vendor_user = create(:user, role: :vendor)
-          category = create(:service_category)
-          service = build(:service, vendor_profile: vendor_user.vendor_profile, service_category: category)
-
-          expect(service).to be_valid
-        end
-
-        it 'is invalid when vendor_profile belongs to customer user' do
-          customer_user = create(:user, role: :customer)
-          # Create a separate vendor profile for the customer user (this should fail validation)
-          vendor_profile = build(:vendor_profile, user: customer_user)
-          category = create(:service_category)
-          service = build(:service, vendor_profile: vendor_profile, service_category: category)
-
-          expect(service).not_to be_valid
-          expect(service.errors[:vendor_profile]).to include('must belong to a vendor user')
         end
       end
     end
   end
 
   describe 'scopes' do
-    let(:vendor_user) { create(:user, role: :vendor) }
-    let(:vendor_profile) { vendor_user.vendor_profile }
-    let(:category) { create(:service_category) }
+    let(:category) { create(:category) }
     let!(:active_service) do
-      create(:service, status: :active, vendor_profile: vendor_profile, service_category: category)
+      create(:service, status: :active)
     end
     let!(:draft_service) do
-      create(:service, status: :draft, vendor_profile: vendor_profile, service_category: category)
+      create(:service, status: :draft)
     end
     let!(:inactive_service) do
-      create(:service, status: :inactive, vendor_profile: vendor_profile, service_category: category)
+      create(:service, status: :inactive)
     end
 
     describe '.active' do
@@ -134,21 +79,27 @@ RSpec.describe Service do
     end
 
     describe '.by_category' do
-      let(:other_category) { create(:service_category, name: 'Other Category', slug: 'other-category') }
-      let!(:other_service) { create(:service, service_category: other_category, vendor_profile: vendor_profile) }
+      let(:other_category) { create(:category) }
+      let!(:photo_service) { create(:service) }
+      let!(:video_service) { create(:service) }
+
+      before do
+        create(:service_category, service: photo_service, category: category)
+        create(:service_category, service: video_service, category: other_category)
+      end
 
       it 'returns services for specific category' do
-        expect(described_class.by_category(category)).to include(active_service, draft_service, inactive_service)
-        expect(described_class.by_category(category)).not_to include(other_service)
+        expect(described_class.by_category(category)).to include(photo_service)
+        expect(described_class.by_category(category)).not_to include(video_service)
       end
     end
 
     describe '.price_range' do
       let!(:cheap_service) do
-        create(:service, base_price: 50, vendor_profile: vendor_profile, service_category: category)
+        create(:service, base_price: 50)
       end
       let!(:expensive_service) do
-        create(:service, base_price: 500, vendor_profile: vendor_profile, service_category: category)
+        create(:service, base_price: 500)
       end
 
       it 'returns services within price range' do
@@ -160,10 +111,10 @@ RSpec.describe Service do
 
     describe '.search_by_name' do
       let!(:photo_service) do
-        create(:service, name: 'Wedding Photography', vendor_profile: vendor_profile, service_category: category)
+        create(:service, name: 'Wedding Photography')
       end
       let!(:video_service) do
-        create(:service, name: 'Event Videography', vendor_profile: vendor_profile, service_category: category)
+        create(:service, name: 'Event Videography')
       end
 
       it 'returns services matching name search' do
@@ -174,31 +125,8 @@ RSpec.describe Service do
     end
   end
 
-  describe 'delegations' do
-    let(:vendor_user) { create(:user, role: :vendor) }
-    let(:vendor_profile) { vendor_user.vendor_profile }
-    let(:category) { create(:service_category, name: 'Photography', slug: 'photography-test') }
-    let(:service) { create(:service, vendor_profile: vendor_profile, service_category: category) }
-
-    before do
-      vendor_profile.update!(business_name: 'Test Business', location: 'Test City')
-    end
-
-    it 'delegates vendor attributes' do
-      expect(service.vendor_business_name).to eq('Test Business')
-      expect(service.vendor_location).to eq('Test City')
-    end
-
-    it 'delegates category name' do
-      expect(service.category_name).to eq('Photography')
-    end
-  end
-
   describe 'instance methods' do
-    let(:vendor_user) { create(:user, role: :vendor) }
-    let(:vendor_profile) { vendor_user.vendor_profile }
-    let(:category) { create(:service_category) }
-    let(:service) { create(:service, vendor_profile: vendor_profile, service_category: category) }
+    let(:service) { create(:service) }
 
     describe 'status methods' do
       it 'returns correct status booleans' do
@@ -244,20 +172,25 @@ RSpec.describe Service do
     end
 
     describe '#can_be_booked?' do
-      let(:test_vendor_user) { create(:user, role: :vendor) }
-      let(:test_vendor_profile) { test_vendor_user.vendor_profile }
-      let(:test_category) { create(:service_category) }
+      it 'returns true for active service with vendor profiles' do
+        active_service = create(:service, status: :active)
+        vendor_profile = create(:vendor_profile)
+        create(:vendor_service, service: active_service, vendor_profile: vendor_profile)
 
-      it 'returns true for active service with valid vendor' do
-        service = create(:service, status: :active, vendor_profile: test_vendor_profile,
-                                   service_category: test_category)
-        expect(service.can_be_booked?).to be true
+        expect(active_service.can_be_booked?).to be true
       end
 
       it 'returns false for inactive service' do
-        service = create(:service, status: :inactive, vendor_profile: test_vendor_profile,
-                                   service_category: test_category)
-        expect(service.can_be_booked?).to be false
+        inactive_service = create(:service, status: :inactive)
+        vendor_profile = create(:vendor_profile)
+        create(:vendor_service, service: inactive_service, vendor_profile: vendor_profile)
+
+        expect(inactive_service.can_be_booked?).to be false
+      end
+
+      it 'returns false for active service without vendor profiles' do
+        active_service_no_vendors = create(:service, status: :active)
+        expect(active_service_no_vendors.can_be_booked?).to be false
       end
     end
 
@@ -278,53 +211,46 @@ RSpec.describe Service do
 
   describe 'class methods' do
     describe '.featured' do
-      let(:verified_vendor_user) { create(:user, role: :vendor) }
-      let(:unverified_vendor_user) { create(:user, role: :vendor) }
-      let(:category) { create(:service_category) }
       let!(:featured_service) do
-        verified_vendor_user.vendor_profile.update!(is_verified: true, average_rating: 4.5)
-        create(:service, status: :active, vendor_profile: verified_vendor_user.vendor_profile,
-                         service_category: category)
+        create(:service, status: :active, average_rating: 4.5)
       end
       let!(:unfeatured_service) do
-        unverified_vendor_user.vendor_profile.update!(is_verified: false, average_rating: 5.0)
-        create(:service, status: :active, vendor_profile: unverified_vendor_user.vendor_profile,
-                         service_category: category)
+        create(:service, status: :active, average_rating: 2.0)
       end
 
       it 'returns services from verified vendors only' do
+        # Associate featured_service with verified vendor
+        verified_vendor = create(:vendor_profile, verification_status: :verified, average_rating: 4.5)
+        create(:vendor_service, service: featured_service, vendor_profile: verified_vendor)
+
+        # Associate unfeatured_service with unverified vendor
+        unverified_vendor = create(:vendor_profile, verification_status: :unverified)
+        create(:vendor_service, service: unfeatured_service, vendor_profile: unverified_vendor)
+
         result = described_class.featured
         expect(result).to include(featured_service)
         expect(result).not_to include(unfeatured_service)
       end
 
       it 'limits results to specified number' do
-        # Create additional verified vendor users and services
-        10.times do |i|
-          vendor_user = create(:user, role: :vendor, email: "vendor#{i}@example.com")
-          vendor_user.vendor_profile.update!(is_verified: true, average_rating: 4.0)
-          create(:service, status: :active, vendor_profile: vendor_user.vendor_profile, service_category: category)
+        # Create additional verified vendors and services
+        5.times do |_i|
+          service = create(:service, status: :active, average_rating: 4.0)
+          vendor = create(:vendor_profile, verification_status: :verified, average_rating: 4.0)
+          create(:vendor_service, service: service, vendor_profile: vendor)
         end
-        expect(described_class.featured(3).count).to eq(3)
+        expect(described_class.featured(3).size).to eq(3)
       end
     end
 
     describe '.search' do
-      let(:search_vendor_user) { create(:user, role: :vendor) }
-      let(:search_category) { create(:service_category) }
       let!(:photo_service) do
         create(:service, name: 'Photography',
-                         description: 'Wedding photos and more details to meet minimum ' \
-                                      'length requirement',
-                         vendor_profile: search_vendor_user.vendor_profile,
-                         service_category: search_category)
+                         description: 'Wedding photos and more details to meet minimum length requirement')
       end
       let!(:video_service) do
         create(:service, name: 'Videography',
-                         description: 'Event videos and more details to meet minimum ' \
-                                      'length requirement',
-                         vendor_profile: search_vendor_user.vendor_profile,
-                         service_category: search_category)
+                         description: 'Event videos and more details to meet minimum length requirement')
       end
 
       it 'searches by name and description' do

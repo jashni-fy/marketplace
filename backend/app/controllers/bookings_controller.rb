@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class BookingsController < ApiController
-  include Concerns::BookingManagement::BookingActions
+  include BookingManagement::BookingActions
 
   before_action :authenticate_user!
   before_action :ensure_vendor!, only: %i[respond]

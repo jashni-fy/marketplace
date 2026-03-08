@@ -22,8 +22,7 @@ class Category < ApplicationRecord
   # Associations
   has_many :service_categories, dependent: :destroy
   has_many :services, through: :service_categories
-  has_many :vendor_services, dependent: :destroy
-  has_many :vendor_profiles, through: :vendor_services
+  has_many :vendor_profiles, through: :services
 
   # Validations
   validates :name, presence: true, uniqueness: true, length: { minimum: 2, maximum: 50 }

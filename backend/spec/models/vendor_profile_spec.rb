@@ -44,6 +44,9 @@ RSpec.describe VendorProfile do
 
   describe 'associations' do
     it { is_expected.to belong_to(:user) }
+    it { is_expected.to have_many(:vendor_services).dependent(:destroy) }
+    it { is_expected.to have_many(:services).through(:vendor_services) }
+    it { is_expected.to have_many(:categories).through(:services) }
     it { is_expected.to have_many(:bookings).dependent(:destroy) }
   end
 

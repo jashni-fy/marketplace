@@ -169,7 +169,7 @@ RSpec.describe AvailabilitySlot do
       end
     end
 
-    describe '#has_booking_conflict?' do
+    describe '#booking_conflict?' do
       let(:customer) { create(:user, :customer) }
       let(:service) { create(:service, vendor_profile: vendor_profile) }
 
@@ -185,13 +185,13 @@ RSpec.describe AvailabilitySlot do
         end
 
         it 'returns true' do
-          expect(slot.has_booking_conflict?).to be true
+          expect(slot.booking_conflict?).to be true
         end
       end
 
       context 'when there are no conflicting bookings' do
         it 'returns false' do
-          expect(slot.has_booking_conflict?).to be false
+          expect(slot.booking_conflict?).to be false
         end
       end
 
@@ -206,7 +206,7 @@ RSpec.describe AvailabilitySlot do
         end
 
         it 'returns false' do
-          expect(slot.has_booking_conflict?).to be false
+          expect(slot.booking_conflict?).to be false
         end
       end
     end
