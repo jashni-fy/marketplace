@@ -20,7 +20,7 @@ class BookingCreationService
   validates :service_id, presence: true
   validates :event_date, presence: true
   validates :total_amount, numericality: { greater_than: 0 }
-  # rubocop: disable Metrics/AbcSize, Metrics/MethodLength
+  # rubocop: disable Metrics/MethodLength
   def call
     return { success: false, errors: errors.full_messages } unless valid?
 
@@ -51,7 +51,7 @@ class BookingCreationService
     errors.add(:base, e.message)
     { success: false, errors: errors.full_messages }
   end
-  # rubocop: enable Metrics/AbcSize, Metrics/MethodLength
+  # rubocop: enable Metrics/MethodLength
 
   attr_reader :booking
 
