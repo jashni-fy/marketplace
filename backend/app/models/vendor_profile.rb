@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/ClassLength, Rails/UniqueValidationWithoutIndex
+
 # == Schema Information
 #
 # Table name: vendor_profiles
@@ -40,7 +42,9 @@ class VendorProfile < ApplicationRecord
   belongs_to :user
 
   # Service associations
-  has_many :services, dependent: :destroy
+  has_many :vendor_services, dependent: :destroy
+  has_many :services, through: :vendor_services
+  has_many :categories, through: :services
   has_many :portfolio_items, dependent: :destroy
   has_many :availability_slots, dependent: :destroy
   has_many :bookings, dependent: :destroy # Updated to direct association
@@ -73,13 +77,10 @@ class VendorProfile < ApplicationRecord
   scope :by_location, ->(location) { where('location ILIKE ?', "%#{location}%") }
   scope :with_rating_above, ->(rating) { where(average_rating: rating..) }
   scope :by_experience, ->(min_years) { where(years_experience: min_years..) }
-  scope :with_coordinates, -> { where.not(latitude: nil, longitude: nil) }
+  scope :with_coordinates, -> { where('latitude IS NOT NULL AND longitude IS NOT NULL') }
   scope :within_radius, lambda { |lat, lng, radius_km|
     where('latitude IS NOT NULL AND longitude IS NOT NULL')
-      .where(
-        '6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude))) <= ?',
-        lat, lng, lat, radius_km
-      )
+      .where(VendorProfile.haversine_distance_sql, lat, lng, lat, radius_km)
   }
 
   # Instance methods
@@ -99,9 +100,11 @@ class VendorProfile < ApplicationRecord
     VendorProfiles::HandleVerification.call(vendor_profile: self, action: :reject, reason: reason)
   end
 
-  def has_description?
+  def description?
     description.present? && description.length >= 50
   end
+
+  alias has_description? description?
 
   def service_categories_list
     return [] if service_categories.blank?
@@ -117,7 +120,7 @@ class VendorProfile < ApplicationRecord
     business_name.present? &&
       description.present? &&
       location.present? &&
-      has_description?
+      description?
   end
 
   def display_name
@@ -169,57 +172,29 @@ class VendorProfile < ApplicationRecord
     portfolio_items.categories_for_vendor(self)
   end
 
-  def has_portfolio?
+  def portfolio?
     portfolio_items.exists?
   end
 
-  def has_coordinates?
+  alias has_portfolio? portfolio?
+
+  def coordinates?
     latitude.present? && longitude.present?
   end
 
+  alias has_coordinates? coordinates?
+
   def coordinates
-    return nil unless has_coordinates?
+    return nil unless coordinates?
 
     [latitude.to_f, longitude.to_f]
   end
 
-  # Calculates the distance from this vendor to the given latitude and longitude.
-  # Params:
-  # +lat+:: Latitude of the target point (Float)
-  # +lng+:: Longitude of the target point (Float)
-  # +unit+:: :meters (default) or :kilometers
-  # Returns distance as Float (meters or kilometers), or nil if coordinates are missing/invalid.
+  # Calculates distance from this vendor to given latitude/longitude
   def distance_to(lat, lng, unit: :meters)
-    return nil unless has_coordinates?
-    return nil unless lat.is_a?(Numeric) && lng.is_a?(Numeric)
-    return nil unless lat.between?(-90, 90) && lng.between?(-180, 180)
+    return nil unless valid_distance_params?(lat, lng, coordinates?)
 
-    lat1 = latitude.to_f
-    lon1 = longitude.to_f
-    lat2 = lat.to_f
-    lon2 = lng.to_f
-
-    return 0.0 if lat1 == lat2 && lon1 == lon2
-
-    rad_per_deg = Math::PI / 180
-    rkm = 6371.0 # Earth radius in kilometers
-    dlat_rad = (lat2 - lat1) * rad_per_deg
-    dlon_rad = (lon2 - lon1) * rad_per_deg
-    lat1_rad = lat1 * rad_per_deg
-    lat2_rad = lat2 * rad_per_deg
-
-    a = (Math.sin(dlat_rad / 2)**2) + (Math.cos(lat1_rad) * Math.cos(lat2_rad) * (Math.sin(dlon_rad / 2)**2))
-    c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    distance_km = rkm * c
-
-    case unit
-    when :meters
-      (distance_km * 1000).round(2)
-    when :kilometers
-      distance_km.round(4)
-    else
-      distance_km * 1000 # default to meters if unknown unit
-    end
+    calculate_haversine_distance(latitude.to_f, longitude.to_f, lat.to_f, lng.to_f, unit)
   end
 
   # Class methods
@@ -242,7 +217,9 @@ class VendorProfile < ApplicationRecord
   # Explicitly allowlist safe searchable fields for Ransack/ActiveAdmin
   def self.ransackable_attributes(_auth_object = nil)
     %w[
-      id business_name description location phone website service_categories business_license years_experience average_rating total_reviews latitude longitude created_at updated_at user_id
+      id business_name description location phone website
+      service_categories business_license years_experience average_rating
+      total_reviews latitude longitude created_at updated_at user_id
     ]
   end
 
@@ -253,7 +230,6 @@ class VendorProfile < ApplicationRecord
 
   def normalize_website
     return if website.blank?
-
     return if website.match?(%r{\Ahttps?://})
 
     self.website = "https://#{website}"
@@ -265,13 +241,64 @@ class VendorProfile < ApplicationRecord
     normalize_website
     begin
       uri = URI.parse(website)
-      errors.add(:website, 'is not a valid URL') unless uri.is_a?(URI::HTTP) || uri.is_a?(URI::HTTPS)
-      # Additional validation for domain format
-      unless website.match?(%r{\A(https?://)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*/?\z}i)
-        errors.add(:website, 'is not a valid URL')
-      end
+      validate_url_format(uri)
     rescue URI::InvalidURIError
       errors.add(:website, 'is not a valid URL')
     end
   end
+
+  def validate_url_format(uri)
+    valid_scheme = uri.is_a?(URI::HTTP) || uri.is_a?(URI::HTTPS)
+    valid_domain = website.match?(%r{\A(https?://)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*/?\z}i)
+    errors.add(:website, 'is not a valid URL') unless valid_scheme && valid_domain
+  end
+
+  def valid_distance_params?(lat, lng, has_coords)
+    return false unless has_coords
+    return false unless lat.is_a?(Numeric) && lng.is_a?(Numeric)
+
+    lat.between?(-90, 90) && lng.between?(-180, 180)
+  end
+
+  def calculate_haversine_distance(lat1, lon1, lat2, lon2, unit)
+    return 0.0 if lat1 == lat2 && lon1 == lon2
+
+    rad_per_deg = Math::PI / 180
+    dlat_rad = (lat2 - lat1) * rad_per_deg
+    dlon_rad = (lon2 - lon1) * rad_per_deg
+    lat1_rad = lat1 * rad_per_deg
+    lat2_rad = lat2 * rad_per_deg
+
+    a = haversine_formula(dlat_rad, dlon_rad, lat1_rad, lat2_rad)
+    c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    distance_km = 6371.0 * c
+
+    format_distance(distance_km, unit)
+  end
+
+  def haversine_formula(dlat_rad, dlon_rad, lat1_rad, lat2_rad)
+    sin_dlat = Math.sin(dlat_rad / 2)**2
+    sin_dlon = Math.sin(dlon_rad / 2)**2
+    sin_dlat + (Math.cos(lat1_rad) * Math.cos(lat2_rad) * sin_dlon)
+  end
+
+  def format_distance(distance_km, unit)
+    case unit
+    when :meters
+      (distance_km * 1000).round(2)
+    when :kilometers
+      distance_km.round(4)
+    else
+      distance_km * 1000
+    end
+  end
+
+  # rubocop:disable Lint/IneffectiveAccessModifier
+  def self.haversine_distance_sql
+    '6371 * acos(cos(radians(?)) * cos(radians(latitude)) * ' \
+      'cos(radians(longitude) - radians(?)) + sin(radians(?)) * ' \
+      'sin(radians(latitude))) <= ?'
+  end
+  # rubocop:enable Lint/IneffectiveAccessModifier
 end
+# rubocop:enable Metrics/ClassLength, Rails/UniqueValidationWithoutIndex

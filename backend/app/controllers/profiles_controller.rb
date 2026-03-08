@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/ClassLength
 class ProfilesController < ApiController
   before_action :authenticate_user!, except: [:service_categories]
   before_action :set_profile, only: %i[show update destroy]
@@ -60,8 +61,17 @@ class ProfilesController < ApiController
     head :no_content
   end
 
+  def request_verification
+    @profile = current_user.vendor_profile
+    if @profile.request_verification!
+      render json: { message: 'Verification request submitted successfully', status: @profile.verification_status }
+    else
+      render json: { error: 'Failed to submit verification request' }, status: :unprocessable_content
+    end
+  end
+
   def service_categories
-    categories = ServiceCategory.where(active: true)
+    categories = Category.where(active: true)
     render json: {
       service_categories: categories.map { |cat| { id: cat.id, name: cat.name, description: cat.description } }
     }
@@ -92,8 +102,8 @@ class ProfilesController < ApiController
   end
 
   def profile_params
-    params.require(:vendor_profile).permit(:business_name, :description, :location, :phone, :website,
-                                           :years_experience, service_categories_list: [])
+    params.expect(vendor_profile: [:business_name, :description, :location, :phone, :website,
+                                   :years_experience, { service_categories_list: [] }])
   end
 
   def profile_response(profile)
@@ -112,3 +122,4 @@ class ProfilesController < ApiController
     }
   end
 end
+# rubocop:enable Metrics/ClassLength

@@ -6,9 +6,9 @@ RSpec.describe Types::ServiceType, type: :graphql do
   let(:schema) { MarketplaceSchema }
   let(:context) { {} }
 
-  let(:category) { create(:service_category, name: 'Photography') }
-  let(:user) { create(:user, email: 'vendor@example.com', role: :vendor) }
-  let(:vendor) { create(:vendor_profile, user: user, business_name: 'Test Vendor', average_rating: 4.5) }
+  let(:category) { create(:category, name: 'Photography') }
+  let(:user) { create(:user, email: 'type-test-vendor@example.com', role: :vendor) }
+  let(:vendor) { user.vendor_profile.tap { |v| v.update!(business_name: 'Test Vendor', average_rating: 4.5) } }
   let(:service) do
     create(:service, name: 'Wedding Photography', vendor_profile: vendor, service_category: category, base_price: 1500)
   end

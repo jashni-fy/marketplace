@@ -57,11 +57,13 @@ module VendorSerializable
       description: service.description,
       base_price: service.base_price,
       pricing_type: service.pricing_type,
-      category: {
-        id: service.service_category.id,
-        name: service.service_category.name,
-        slug: service.service_category.slug
-      },
+      category: if service.service_category
+                  {
+                    id: service.service_category.id,
+                    name: service.service_category.name,
+                    slug: service.service_category.respond_to?(:slug) ? service.service_category.slug : nil
+                  }
+                end,
       images: service.service_images.limit(3).map { |img| image_summary_json(img) }
     }
   end

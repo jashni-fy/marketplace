@@ -4,7 +4,7 @@ class ApplicationMailer < ActionMailer::Base
   default from: ENV.fetch('MAILER_FROM_EMAIL', 'noreply@marketplace.com')
   layout 'mailer'
 
-  private
+  helper_method :format_booking_time, :time_duration
 
   def format_booking_time(booking)
     booking.event_date.strftime('%B %d, %Y at %I:%M %p')

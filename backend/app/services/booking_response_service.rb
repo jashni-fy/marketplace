@@ -1,0 +1,78 @@
+# frozen_string_literal: true
+
+class BookingResponseService
+  include Callable
+
+  RESPONSE_STATUS = {
+    'accept' => 'accepted',
+    'decline' => 'declined',
+    'counter_offer' => 'counter_offered'
+  }.freeze
+
+  RESPONSE_NOTIFICATION = {
+    'accept' => 'booking_approved',
+    'decline' => 'booking_rejected',
+    'counter_offer' => 'booking_changes_requested'
+  }.freeze
+
+  def initialize(booking, vendor, response_action, options = {})
+    @booking = booking
+    @vendor = vendor
+    @response_action = response_action
+    @counter_amount = options[:counter_amount]
+    @counter_message = options[:counter_message]
+  end
+
+  def call
+    return { success: false, errors: ['Unauthorized'] } unless authorized?
+    return { success: false, errors: ['Invalid response type'] } unless valid_response_type?
+    return { success: false, errors: ['Booking cannot be modified'] } unless booking_modifiable?
+
+    ActiveRecord::Base.transaction do
+      update_booking_status
+      create_response_message
+      send_customer_notification
+      log_status_change
+    end
+
+    { success: true, booking: @booking.reload }
+  rescue StandardError => e
+    { success: false, errors: [e.message] }
+  end
+
+  private
+
+  def authorized?
+    @booking.vendor == @vendor
+  end
+
+  def valid_response_type?
+    RESPONSE_STATUS.key?(@response_action)
+  end
+
+  def booking_modifiable?
+    %w[pending counter_offered].include?(@booking.status)
+  end
+
+  def update_booking_status
+    new_status = RESPONSE_STATUS.fetch(@response_action)
+    attrs = { status: new_status }
+    attrs[:total_amount] = @counter_amount if @response_action == 'counter_offer' && @counter_amount.present?
+    @booking.update!(attrs)
+  end
+
+  def create_response_message
+    Rails.logger.info "Vendor #{@vendor.id} responded to booking #{@booking.id} with #{@response_action}"
+  end
+
+  def send_customer_notification
+    notification_type = RESPONSE_NOTIFICATION.fetch(@response_action)
+    NotificationJob.perform_later(notification_type, @booking.customer.id, { 'booking_id' => @booking.id })
+  rescue StandardError => e
+    Rails.logger.warn("Failed to send notification: #{e.message}")
+  end
+
+  def log_status_change
+    Rails.logger.info "Booking #{@booking.id} status changed to #{@booking.status} by vendor #{@vendor.id}"
+  end
+end

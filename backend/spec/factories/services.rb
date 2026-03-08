@@ -1,0 +1,84 @@
+# frozen_string_literal: true
+
+FactoryBot.define do
+  factory :service do
+    sequence(:name) { |n| "Service #{n}" }
+    description do
+      'This is a comprehensive description of the service that provides detailed ' \
+        'information about what is offered and meets the minimum length requirement for validation.'
+    end
+    base_price { 150.00 }
+    pricing_type { :hourly }
+    status { :active }
+
+    # Support backward compatibility - accept vendor_profile and service_category parameters
+    # and create the associations automatically
+    transient do
+      vendor_profile { nil }
+      service_category { nil }
+    end
+
+    after(:create) do |service, evaluator|
+      if evaluator.vendor_profile.present?
+        create(:vendor_service, service: service, vendor_profile: evaluator.vendor_profile)
+      end
+
+      # service_category is now a join table, but this support is for backward compat
+      # If a Category model instance is passed, create the join record
+      if evaluator.service_category.present? && evaluator.service_category.is_a?(Category)
+        create(:service_category, service: service, category: evaluator.service_category)
+      end
+    end
+
+    trait :draft do
+      status { :draft }
+    end
+
+    trait :inactive do
+      status { :inactive }
+    end
+
+    trait :archived do
+      status { :archived }
+    end
+
+    trait :package_pricing do
+      pricing_type { :package }
+      base_price { 500.00 }
+    end
+
+    trait :custom_pricing do
+      pricing_type { :custom }
+      base_price { nil }
+    end
+
+    trait :photography do
+      name { 'Wedding Photography' }
+      description do
+        'Professional wedding photography service capturing your special moments with artistic flair ' \
+          'and attention to detail. Includes pre-wedding consultation, full day coverage, ' \
+          'and edited high-resolution images.'
+      end
+      base_price { 1200.00 }
+      pricing_type { :package }
+    end
+
+    trait :videography do
+      name { 'Event Videography' }
+      description do
+        'Complete event videography service including multi-camera setup, professional audio recording, ' \
+          'and post-production editing to create a memorable video of your special event.'
+      end
+      base_price { 80.00 }
+      pricing_type { :hourly }
+    end
+
+    trait :expensive do
+      base_price { 2000.00 }
+    end
+
+    trait :cheap do
+      base_price { 50.00 }
+    end
+  end
+end

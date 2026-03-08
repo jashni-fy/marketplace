@@ -30,7 +30,7 @@ const BookingCalendar = ({ bookings: initialBookings }: any) => {
       const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
       
-      const res = await api.get('/api/availability_slots', {
+      const res = await api.get('/availability_slots', {
         params: {
           start_date: startDate.toISOString().split('T')[0],
           end_date: endDate.toISOString().split('T')[0]

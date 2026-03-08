@@ -163,6 +163,8 @@ This is the foundation setup. Future tasks will implement:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `REACT_APP_API_URL` | Backend API URL | `http://localhost:3000/api` |
+| `NEXT_PUBLIC_API_URL` | Backend API URL | `http://localhost:3001` |
 | `REACT_APP_NAME` | Application name | `Marketplace` |
 | `REACT_APP_VERSION` | Application version | `1.0.0` |
+
+> When the frontend and backend share a hostname (for example via the local nginx proxy), you may point this variable at `/api` and let the proxy strip the prefix. For standalone deployments, configure it with the backend origin (`https://api.jashnify.in` on production).

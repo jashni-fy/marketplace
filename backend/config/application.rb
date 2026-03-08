@@ -18,7 +18,7 @@ require 'action_cable/engine'
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
-module Marketplace # rubocop:disable Style/ClassAndModuleChildren
+module Marketplace
   class Application < Rails::Application
     config.active_record.query_log_tags_enabled = true
     config.active_record.query_log_tags = [
@@ -43,7 +43,13 @@ module Marketplace # rubocop:disable Style/ClassAndModuleChildren
     # in config/environments, which are processed later.
     #
     # config.time_zone = "Central Time (US & Canada)"
-    # config.eager_load_paths << Rails.root.join("extras")
+
+    # Opt in to Rails 8.1 to_time behavior
+    config.active_support.to_time_preserves_timezone = :zone
+
+    # Auto-load query objects and domain services
+    config.eager_load_paths << Rails.root.join('app/models/queries')
+    config.eager_load_paths << Rails.root.join('app/domain')
 
     # Only loads a smaller set of middleware suitable for API only apps.
     # Middleware like session, flash, cookies can be added back manually.
@@ -56,14 +62,7 @@ module Marketplace # rubocop:disable Style/ClassAndModuleChildren
       url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/0'),
       namespace: 'marketplace_cache'
     }
-
     # Configure Active Job to use Sidekiq
     config.active_job.queue_adapter = :sidekiq
-
-    # Configure packs-rails for domain separation
-    config.paths.add 'packs/*/app', glob: '*/{*,*/concerns}', eager_load: true
-    config.paths.add 'packs/*/app/controllers', eager_load: true
-    config.paths.add 'packs/*/app/models', eager_load: true
-    config.paths.add 'packs/*/app/services', eager_load: true
   end
 end

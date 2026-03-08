@@ -9,7 +9,7 @@ class Types::VendorProfileType < Types::BaseObject
   field :created_at, GraphQL::Types::ISO8601DateTime, null: false, description: 'When the vendor profile was created'
   field :description, String, null: true, description: 'Public-facing description provided by the vendor'
   field :id, ID, null: false, description: 'Unique identifier for the vendor profile'
-  field :is_verified, Boolean, null: false, description: 'Indicates whether the vendor is verified'
+  field :is_verified, Boolean, null: false, description: 'Indicates whether the vendor is verified', method: :verified?
   field :latitude, Float, null: true, description: 'Latitude portion of the vendor coordinates'
   field :location, String, null: false, description: 'Human-readable location for the vendor'
   field :longitude, Float, null: true, description: 'Longitude portion of the vendor coordinates'
