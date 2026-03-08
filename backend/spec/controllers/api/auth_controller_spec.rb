@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Api::AuthController do
+RSpec.describe AuthController do
   let(:user) { create(:user, confirmed_at: Time.current) }
   let(:unconfirmed_user) { create(:user, confirmed_at: nil) }
 
