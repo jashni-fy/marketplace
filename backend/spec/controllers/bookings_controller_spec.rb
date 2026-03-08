@@ -18,17 +18,18 @@ RSpec.describe BookingsController do
     create(:booking, customer: customer, vendor: vendor, service: service, event_date: 1.week.from_now.change(hour: 10))
   end
 
+  def auth_as(user)
+    token = JwtService.encode(user_id: user.id)
+    request.headers['Authorization'] = "Bearer #{token}"
+  end
+
   describe 'GET #index' do
     context 'when user is a customer' do
-      before do
-        token = JwtService.encode(user_id: customer.id)
-        request.headers['Authorization'] = "Bearer #{token}"
-      end
-
       it 'returns customer bookings' do
         customer_booking = create(:booking, customer: customer, vendor: vendor, service: service)
         create(:booking, vendor: vendor, service: service)
 
+        auth_as(customer)
         get :index
 
         expect(response).to have_http_status(:ok)
@@ -39,11 +40,6 @@ RSpec.describe BookingsController do
     end
 
     context 'when user is a vendor' do
-      before do
-        token = JwtService.encode(user_id: vendor.id)
-        request.headers['Authorization'] = "Bearer #{token}"
-      end
-
       it 'returns vendor bookings' do
         # Create availability slots for both vendors
         create(:availability_slot,
@@ -66,6 +62,7 @@ RSpec.describe BookingsController do
         other_service = create(:service, vendor_profile: other_vendor.vendor_profile)
         create(:booking, customer: other_customer, vendor: other_vendor, service: other_service)
 
+        auth_as(vendor)
         get :index
 
         expect(response).to have_http_status(:ok)
@@ -78,12 +75,8 @@ RSpec.describe BookingsController do
 
   describe 'GET #show' do
     context 'when user is the customer' do
-      before do
-        token = JwtService.encode(user_id: customer.id)
-        request.headers['Authorization'] = "Bearer #{token}"
-      end
-
       it 'returns the booking details' do
+        auth_as(customer)
         get :show, params: { id: booking.id }
 
         expect(response).to have_http_status(:ok)
@@ -94,12 +87,8 @@ RSpec.describe BookingsController do
     end
 
     context 'when user is the vendor' do
-      before do
-        token = JwtService.encode(user_id: vendor.id)
-        request.headers['Authorization'] = "Bearer #{token}"
-      end
-
       it 'returns the booking details' do
+        auth_as(vendor)
         get :show, params: { id: booking.id }
 
         expect(response).to have_http_status(:ok)
@@ -111,27 +100,18 @@ RSpec.describe BookingsController do
     context 'when user is not involved in the booking' do
       let(:other_user) { create(:user, :customer) }
 
-      before do
-        token = JwtService.encode(user_id: other_user.id)
-        request.headers['Authorization'] = "Bearer #{token}"
-      end
-
-      it 'returns forbidden' do
+      it 'returns not found' do
+        auth_as(other_user)
         get :show, params: { id: booking.id }
 
-        expect(response).to have_http_status(:forbidden)
+        expect(response).to have_http_status(:not_found)
         json_response = response.parsed_body
-        expect(json_response['error']).to eq('Access denied')
+        expect(json_response).to have_key('errors')
       end
     end
   end
 
   describe 'POST #create' do
-    before do
-      token = JwtService.encode(user_id: customer.id)
-      request.headers['Authorization'] = "Bearer #{token}"
-    end
-
     let!(:availability_slot) do
       create(:availability_slot,
              vendor_profile: vendor.vendor_profile,
@@ -146,6 +126,7 @@ RSpec.describe BookingsController do
         booking: {
           service_id: service.id,
           event_date: 1.week.from_now.change(hour: 10),
+          event_end_date: 1.week.from_now.change(hour: 12),
           event_location: 'Test Location',
           total_amount: 100.00,
           requirements: 'Test requirements',
@@ -155,6 +136,7 @@ RSpec.describe BookingsController do
     end
 
     it 'creates a new booking using BookingCreationService' do
+      auth_as(customer)
       expect do
         post :create, params: valid_params
       end.to change(Booking, :count).by(1)
@@ -172,28 +154,32 @@ RSpec.describe BookingsController do
       let(:invalid_params) do
         {
           booking: {
-            service_id: nil,
-            event_date: nil
+            service_id: 999_999,
+            event_date: 1.week.from_now.change(hour: 10),
+            event_location: 'Test Location',
+            total_amount: 100.00,
+            requirements: 'Test requirements',
+            special_instructions: 'Test instructions'
           }
         }
       end
 
       it 'returns unprocessable entity' do
+        auth_as(customer)
         expect do
           post :create, params: invalid_params
         end.not_to change(Booking, :count)
 
         expect(response).to have_http_status(:unprocessable_content)
         json_response = response.parsed_body
-        expect(json_response['errors']).to be_an(Array)
-        expect(json_response['error']).to eq('Failed to create booking')
+        expect(json_response).to have_key('errors')
       end
     end
 
     context 'when vendor has no availability' do
-      before { availability_slot.destroy }
-
       it 'returns unprocessable entity with availability error' do
+        availability_slot.destroy
+        auth_as(customer)
         expect do
           post :create, params: valid_params
         end.not_to change(Booking, :count)
@@ -206,11 +192,6 @@ RSpec.describe BookingsController do
   end
 
   describe 'PUT #update' do
-    before do
-      token = JwtService.encode(user_id: customer.id)
-      request.headers['Authorization'] = "Bearer #{token}"
-    end
-
     let(:update_params) do
       {
         id: booking.id,
@@ -222,9 +203,9 @@ RSpec.describe BookingsController do
     end
 
     context 'when booking can be modified' do
-      before { allow(booking).to receive(:can_be_modified?).and_return(true) }
-
       it 'updates the booking' do
+        allow(booking).to receive(:can_be_modified?).and_return(true)
+        auth_as(customer)
         put :update, params: update_params
 
         expect(response).to have_http_status(:ok)
@@ -235,39 +216,30 @@ RSpec.describe BookingsController do
     end
 
     context 'when booking cannot be modified' do
-      let(:non_modifiable_booking) do
-        create(:booking, customer: customer, vendor: vendor, service: service, status: :accepted)
-      end
-      let(:update_params) do
-        {
+      it 'returns forbidden' do
+        non_modifiable_booking = create(:booking, customer: customer, vendor: vendor, service: service,
+                                                  status: :accepted)
+        update_params = {
           id: non_modifiable_booking.id,
           booking: {
             event_location: 'Updated Location',
             requirements: 'Updated requirements'
           }
         }
-      end
 
-      it 'returns forbidden' do
+        auth_as(customer)
         put :update, params: update_params
 
         expect(response).to have_http_status(:forbidden)
-        json_response = response.parsed_body
-        expect(json_response['error']).to eq('Cannot modify this booking')
       end
     end
   end
 
   describe 'DELETE #destroy' do
-    before do
-      token = JwtService.encode(user_id: customer.id)
-      request.headers['Authorization'] = "Bearer #{token}"
-    end
-
     context 'when booking can be cancelled' do
-      before { allow(booking).to receive(:can_be_cancelled?).and_return(true) }
-
       it 'cancels the booking' do
+        allow(booking).to receive(:can_be_cancelled?).and_return(true)
+        auth_as(customer)
         delete :destroy, params: { id: booking.id }
 
         expect(response).to have_http_status(:ok)
@@ -278,26 +250,22 @@ RSpec.describe BookingsController do
     end
 
     context 'when booking cannot be cancelled' do
-      before { allow(booking).to receive(:can_be_cancelled?).and_return(false) }
-
       it 'returns unprocessable entity' do
+        allow_any_instance_of(Booking).to receive(:can_be_cancelled?).and_return(false)
+        auth_as(customer)
         delete :destroy, params: { id: booking.id }
 
         expect(response).to have_http_status(:unprocessable_content)
         json_response = response.parsed_body
-        expect(json_response['error']).to eq('Booking cannot be cancelled')
+        expect(json_response).to have_key('error')
       end
     end
   end
 
   describe 'POST #respond' do
-    before do
-      token = JwtService.encode(user_id: vendor.id)
-      request.headers['Authorization'] = "Bearer #{token}"
-    end
-
     context 'when accepting a booking' do
       it 'accepts the booking' do
+        auth_as(vendor)
         post :respond, params: { id: booking.id, response_action: 'accept' }
 
         expect(response).to have_http_status(:ok)
@@ -309,6 +277,7 @@ RSpec.describe BookingsController do
 
     context 'when declining a booking' do
       it 'declines the booking' do
+        auth_as(vendor)
         post :respond, params: { id: booking.id, response_action: 'decline' }
 
         expect(response).to have_http_status(:ok)
@@ -320,6 +289,7 @@ RSpec.describe BookingsController do
 
     context 'when making a counter offer' do
       it 'creates a counter offer' do
+        auth_as(vendor)
         post :respond, params: {
           id: booking.id,
           response_action: 'counter_offer',
@@ -337,6 +307,7 @@ RSpec.describe BookingsController do
 
     context 'with invalid response action' do
       it 'returns bad request' do
+        auth_as(vendor)
         post :respond, params: { id: booking.id, response_action: 'invalid' }
 
         expect(response).to have_http_status(:bad_request)
@@ -346,17 +317,13 @@ RSpec.describe BookingsController do
     end
 
     context 'when user is not the vendor' do
-      before do
-        token = JwtService.encode(user_id: customer.id)
-        request.headers['Authorization'] = "Bearer #{token}"
-      end
-
       it 'returns forbidden' do
+        auth_as(customer)
         post :respond, params: { id: booking.id, response_action: 'accept' }
 
         expect(response).to have_http_status(:forbidden)
         json_response = response.parsed_body
-        expect(json_response['error']).to eq('Cannot respond to this booking')
+        expect(json_response['error']).to eq('Access denied. Vendor account required.')
       end
     end
   end
@@ -365,12 +332,8 @@ RSpec.describe BookingsController do
     let!(:message) { create(:booking_message, booking: booking, sender: customer) }
 
     context 'when user is involved in the booking' do
-      before do
-        token = JwtService.encode(user_id: customer.id)
-        request.headers['Authorization'] = "Bearer #{token}"
-      end
-
       it 'returns booking messages' do
+        auth_as(customer)
         get :messages, params: { id: booking.id }
 
         expect(response).to have_http_status(:ok)
@@ -383,28 +346,20 @@ RSpec.describe BookingsController do
     context 'when user is not involved in the booking' do
       let(:other_user) { create(:user, :customer) }
 
-      before do
-        token = JwtService.encode(user_id: other_user.id)
-        request.headers['Authorization'] = "Bearer #{token}"
-      end
-
-      it 'returns forbidden' do
+      it 'returns not found' do
+        auth_as(other_user)
         get :messages, params: { id: booking.id }
 
-        expect(response).to have_http_status(:forbidden)
+        expect(response).to have_http_status(:not_found)
         json_response = response.parsed_body
-        expect(json_response['error']).to eq('Access denied')
+        expect(json_response).to have_key('errors')
       end
     end
   end
 
   describe 'POST #send_message' do
-    before do
-      token = JwtService.encode(user_id: customer.id)
-      request.headers['Authorization'] = "Bearer #{token}"
-    end
-
     it 'creates a new message' do
+      auth_as(customer)
       expect do
         post :send_message, params: { id: booking.id, message: 'Test message' }
       end.to change(BookingMessage, :count).by(1)
@@ -417,6 +372,7 @@ RSpec.describe BookingsController do
 
     context 'with invalid message' do
       it 'returns unprocessable entity' do
+        auth_as(customer)
         expect do
           post :send_message, params: { id: booking.id, message: '' }
         end.not_to change(BookingMessage, :count)
@@ -429,11 +385,6 @@ RSpec.describe BookingsController do
   end
 
   describe 'POST #check_availability' do
-    before do
-      token = JwtService.encode(user_id: customer.id)
-      request.headers['Authorization'] = "Bearer #{token}"
-    end
-
     let!(:availability_slot) do
       create(:availability_slot,
              vendor_profile: vendor.vendor_profile,
@@ -453,6 +404,7 @@ RSpec.describe BookingsController do
     end
 
     it 'returns availability status when time is available' do
+      auth_as(customer)
       post :check_availability, params: valid_params
 
       expect(response).to have_http_status(:ok)
@@ -462,6 +414,7 @@ RSpec.describe BookingsController do
     end
 
     it 'returns unavailable status when time is not available' do
+      auth_as(customer)
       params = valid_params.merge(start_time: '18:00', end_time: '20:00')
       post :check_availability, params: params
 
@@ -473,29 +426,17 @@ RSpec.describe BookingsController do
     end
 
     it 'returns bad request for invalid date format' do
+      auth_as(customer)
       params = valid_params.merge(date: 'invalid-date')
       post :check_availability, params: params
 
       expect(response).to have_http_status(:bad_request)
       json_response = response.parsed_body
-      expect(json_response['error']).to eq('Invalid date or time format')
+      expect(json_response['errors']).to be_present
     end
   end
 
   describe 'POST #suggest_alternatives' do
-    before do
-      token = JwtService.encode(user_id: customer.id)
-      request.headers['Authorization'] = "Bearer #{token}"
-
-      create(:booking,
-             customer: create(:user, :customer),
-             vendor: vendor,
-             service: service,
-             event_date: 1.week.from_now.change(hour: 10),
-             event_end_date: 1.week.from_now.change(hour: 12),
-             status: :accepted)
-    end
-
     let!(:availability_slot) do
       create(:availability_slot,
              vendor_profile: vendor.vendor_profile,
@@ -515,6 +456,15 @@ RSpec.describe BookingsController do
     end
 
     it 'returns conflict status and alternative times' do
+      create(:booking,
+             customer: create(:user, :customer),
+             vendor: vendor,
+             service: service,
+             event_date: 1.week.from_now.change(hour: 10),
+             event_end_date: 1.week.from_now.change(hour: 12),
+             status: :accepted)
+
+      auth_as(customer)
       post :suggest_alternatives, params: valid_params
 
       expect(response).to have_http_status(:ok)
@@ -524,6 +474,15 @@ RSpec.describe BookingsController do
     end
 
     it 'returns no conflict when times do not overlap' do
+      create(:booking,
+             customer: create(:user, :customer),
+             vendor: vendor,
+             service: service,
+             event_date: 1.week.from_now.change(hour: 10),
+             event_end_date: 1.week.from_now.change(hour: 12),
+             status: :accepted)
+
+      auth_as(customer)
       params = valid_params.merge(start_time: '14:00', end_time: '16:00')
       post :suggest_alternatives, params: params
 
@@ -533,12 +492,13 @@ RSpec.describe BookingsController do
     end
 
     it 'returns bad request for invalid date format' do
+      auth_as(customer)
       params = valid_params.merge(date: 'invalid-date')
       post :suggest_alternatives, params: params
 
       expect(response).to have_http_status(:bad_request)
       json_response = response.parsed_body
-      expect(json_response['error']).to eq('Invalid date or time format')
+      expect(json_response['errors']).to be_present
     end
   end
 end

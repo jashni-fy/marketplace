@@ -89,7 +89,7 @@ RSpec.describe JsonResponse do
     it 'renders with bad_request status' do
       controller.render_bad_request('Invalid input')
       expect(controller).to have_received(:render).with(
-        json: { errors: 'Invalid input' },
+        json: { errors: { message: 'Invalid input' } },
         status: :bad_request
       )
     end
@@ -99,7 +99,7 @@ RSpec.describe JsonResponse do
     it 'renders with forbidden status' do
       controller.render_forbidden('Not authorized')
       expect(controller).to have_received(:render).with(
-        json: { errors: 'Not authorized' },
+        json: { errors: { message: 'Not authorized' } },
         status: :forbidden
       )
     end
@@ -107,7 +107,7 @@ RSpec.describe JsonResponse do
     it 'uses default message' do
       controller.render_forbidden
       expect(controller).to have_received(:render).with(
-        json: { errors: 'Access denied' },
+        json: { errors: { message: 'Access denied' } },
         status: :forbidden
       )
     end
@@ -117,7 +117,7 @@ RSpec.describe JsonResponse do
     it 'renders with not_found status' do
       controller.render_not_found('Booking')
       expect(controller).to have_received(:render).with(
-        json: { errors: 'Booking not found' },
+        json: { errors: { message: 'Booking not found' } },
         status: :not_found
       )
     end
@@ -125,7 +125,7 @@ RSpec.describe JsonResponse do
     it 'uses default resource name' do
       controller.render_not_found
       expect(controller).to have_received(:render).with(
-        json: { errors: 'Resource not found' },
+        json: { errors: { message: 'Resource not found' } },
         status: :not_found
       )
     end

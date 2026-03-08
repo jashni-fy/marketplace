@@ -31,8 +31,13 @@ class BookingCreationService
 
       if @booking.save
         # Send notification to vendor about new booking
-        if defined?(NotificationJob)
-          NotificationJob.perform_later('booking_created', @vendor_profile.user_id, { 'booking_id' => @booking.id })
+        begin
+          if defined?(NotificationJob)
+            NotificationJob.perform_later('booking_created', @vendor_profile.user_id, { 'booking_id' => @booking.id })
+          end
+        rescue Redis::ConnectionError, Errno::ECONNREFUSED => e
+          Rails.logger.warn("Failed to send booking notification: #{e.message}")
+          # Don't fail the booking creation if notification fails
         end
         { success: true, booking: @booking }
       else
@@ -45,6 +50,12 @@ class BookingCreationService
   rescue ActiveRecord::RecordInvalid => e
     @errors.add(:base, e.message)
     { success: false, errors: errors.full_messages }
+  rescue ActiveRecord::RecordNotFound => e
+    @errors.add(:base, e.message)
+    { success: false, errors: errors.full_messages }
+  rescue StandardError => e
+    @errors.add(:base, e.message)
+    { success: false, errors: errors.full_messages }
   end
 
   attr_reader :booking, :errors
@@ -53,7 +64,7 @@ class BookingCreationService
 
   def create_booking
     @service = Service.find(service_id)
-    @vendor_profile = @service.vendor_profile
+    @vendor_profile = @service.vendor_profiles.first
 
     @booking = Booking.new(
       customer: customer,

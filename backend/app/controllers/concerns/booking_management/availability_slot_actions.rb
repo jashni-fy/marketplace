@@ -4,10 +4,6 @@ module BookingManagement::AvailabilitySlotActions
   extend ActiveSupport::Concern
   include BookingManagement::PaginationHelper
 
-  included do
-    before_action :set_availability_slot, only: %i[show update destroy]
-  end
-
   def index
     slots = AvailabilitySlots::FilterForVendor.call(
       vendor_profile: current_user.vendor_profile,

@@ -6,8 +6,8 @@ RSpec.describe ServicesController do
   let(:vendor_user) { create(:user, role: 'vendor') }
   let(:customer_user) { create(:user, role: 'customer') }
   let(:vendor_profile) { vendor_user.vendor_profile }
-  let(:service_category) { create(:service_category, :photography) }
-  let(:videography_category) { create(:service_category, :videography) }
+  let(:service_category) { create(:category, :photography) }
+  let(:videography_category) { create(:category, :videography) }
 
   let(:photography_service) do
     create(:service,

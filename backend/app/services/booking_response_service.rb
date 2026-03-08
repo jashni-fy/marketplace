@@ -4,9 +4,9 @@ class BookingResponseService
   include Callable
 
   RESPONSE_STATUS = {
-    'accept' => 'confirmed',
-    'decline' => 'cancelled',
-    'counter_offer' => 'requested_changes'
+    'accept' => 'accepted',
+    'decline' => 'declined',
+    'counter_offer' => 'counter_offered'
   }.freeze
 
   RESPONSE_NOTIFICATION = {
@@ -15,11 +15,12 @@ class BookingResponseService
     'counter_offer' => 'booking_changes_requested'
   }.freeze
 
-  def initialize(booking, vendor, response_action, message = nil)
+  def initialize(booking, vendor, response_action, options = {})
     @booking = booking
     @vendor = vendor
     @response_action = response_action
-    @message = message
+    @counter_amount = options[:counter_amount]
+    @counter_message = options[:counter_message]
   end
 
   def call
@@ -50,23 +51,25 @@ class BookingResponseService
   end
 
   def booking_modifiable?
-    %w[pending requested_changes].include?(@booking.status)
+    %w[pending counter_offered].include?(@booking.status)
   end
 
   def update_booking_status
     new_status = RESPONSE_STATUS.fetch(@response_action)
-    @booking.update!(status: new_status)
+    attrs = { status: new_status }
+    attrs[:total_amount] = @counter_amount if @response_action == 'counter_offer' && @counter_amount.present?
+    @booking.update!(attrs)
   end
 
   def create_response_message
-    # Create a booking message for the response
-    # This would need to be implemented based on your BookingMessage model
-    Rails.logger.info "Vendor #{@vendor.id} responded to booking #{@booking.id} with #{@response_type}"
+    Rails.logger.info "Vendor #{@vendor.id} responded to booking #{@booking.id} with #{@response_action}"
   end
 
   def send_customer_notification
     notification_type = RESPONSE_NOTIFICATION.fetch(@response_action)
     NotificationJob.perform_later(notification_type, @booking.customer.id, { 'booking_id' => @booking.id })
+  rescue StandardError => e
+    Rails.logger.warn("Failed to send notification: #{e.message}")
   end
 
   def log_status_change

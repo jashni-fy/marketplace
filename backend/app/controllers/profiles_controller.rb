@@ -71,7 +71,7 @@ class ProfilesController < ApiController
   end
 
   def service_categories
-    categories = ServiceCategory.where(active: true)
+    categories = Category.where(active: true)
     render json: {
       service_categories: categories.map { |cat| { id: cat.id, name: cat.name, description: cat.description } }
     }
@@ -102,8 +102,8 @@ class ProfilesController < ApiController
   end
 
   def profile_params
-    params.require(:vendor_profile).permit(:business_name, :description, :location, :phone, :website,
-                                           :years_experience, service_categories_list: [])
+    params.expect(vendor_profile: [:business_name, :description, :location, :phone, :website,
+                                   :years_experience, { service_categories_list: [] }])
   end
 
   def profile_response(profile)

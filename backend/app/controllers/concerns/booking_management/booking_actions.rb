@@ -42,7 +42,7 @@ module BookingManagement::BookingActionHelpers
     Rails.logger.warn 'build_availability_checker is deprecated, use domain services instead'
     service = Service.find(params[:service_id])
     AvailabilityCheckerService.new(
-      vendor_profile: service.vendor_profile,
+      vendor_profile: service.vendor_profiles.first,
       date: Date.parse(params[:date]),
       start_time: params[:start_time],
       end_time: params[:end_time]
@@ -51,8 +51,15 @@ module BookingManagement::BookingActionHelpers
 
   def build_conflict_resolver
     Rails.logger.warn 'build_conflict_resolver is deprecated, use domain services instead'
+    # Validate date format explicitly since DateTime.parse is very lenient
+    Date.parse(params[:date])
+    vendor_profile = if params[:vendor_profile_id]
+                       VendorProfile.find(params[:vendor_profile_id])
+                     elsif params[:vendor_id]
+                       User.find(params[:vendor_id]).vendor_profile
+                     end
     ConflictResolutionService.new(
-      vendor_profile: VendorProfile.find(params[:vendor_profile_id]),
+      vendor_profile: vendor_profile,
       event_date: DateTime.parse("#{params[:date]} #{params[:start_time]}"),
       event_end_date: DateTime.parse("#{params[:date]} #{params[:end_time]}")
     )
@@ -115,14 +122,15 @@ module BookingManagement::ModificationActions
 
   def create
     service = BookingCreationService.new(booking_params.merge(customer: current_user))
-    if service.call
+    result = service.call
+    if result[:success]
       render json: {
-        booking: BookingManagement::BookingPresenter.new(service.booking).as_json,
+        booking: BookingManagement::BookingPresenter.new(result[:booking]).as_json,
         message: 'Booking created successfully'
       }, status: :created
     else
       render json: {
-        errors: service.errors.full_messages,
+        errors: result[:errors],
         error: 'Failed to create booking'
       }, status: :unprocessable_content
     end
@@ -153,12 +161,30 @@ module BookingManagement::ModificationActions
     return unless vendor_response_authorized?
 
     response_action = params[:response_action]
-    result = BookingResponseService.call(@booking, current_user, response_action)
+    unless BookingResponseService::RESPONSE_STATUS.key?(response_action)
+      return render json: { error: 'Invalid response action' }, status: :bad_request
+    end
+
+    options = {
+      counter_amount: params[:counter_amount],
+      counter_message: params[:counter_message]
+    }
+    result = BookingResponseService.call(@booking, current_user, response_action, options)
 
     if result[:success]
+      message = case response_action
+                when 'accept'
+                  'Booking accepted successfully'
+                when 'decline'
+                  'Booking declined'
+                when 'counter_offer'
+                  'Counter offer sent'
+                else
+                  "Booking #{response_action}ed successfully"
+                end
       render json: {
         booking: BookingManagement::BookingPresenter.new(result[:booking]).as_json,
-        message: "Booking #{response_action}ed successfully"
+        message: message
       }
     else
       render json: { errors: result[:errors] }, status: :unprocessable_content

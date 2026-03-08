@@ -43,6 +43,8 @@ class ServiceSearchService
       page: page,
       per_page: per_page,
       total_pages: total_pages,
+      pagination: pagination_info,
+      filters: applied_filters,
       facets: facets,
       applied_filters: applied_filters
     }
@@ -50,8 +52,9 @@ class ServiceSearchService
 
   def base_scope
     Service.active
-           .joins(vendor_profile: :user)
+           .joins(vendor_services: { vendor_profile: :user })
            .where(users: { role: 'vendor' })
+           .distinct
   end
 
   # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
@@ -68,7 +71,9 @@ class ServiceSearchService
     end
 
     # Category filter
-    scope = scope.where(service_category_id: category_id) if category_id.present?
+    if category_id.present?
+      scope = scope.joins(:service_categories).where(service_categories: { category_id: category_id })
+    end
 
     # Location filter
     scope = scope.where('vendor_profiles.location ILIKE ?', "%#{location}%") if location.present?
@@ -82,7 +87,7 @@ class ServiceSearchService
     scope = scope.where(pricing_type: pricing_type) if pricing_type.present? && Service.pricing_types.key?(pricing_type)
 
     # Vendor filter
-    scope = scope.where(vendor_profile_id: vendor_id) if vendor_id.present?
+    scope = scope.where(vendor_services: { vendor_profile_id: vendor_id }) if vendor_id.present?
 
     scope
   end
@@ -122,7 +127,7 @@ class ServiceSearchService
       total_count: total_count,
       total_pages: total_pages,
       has_next_page: page < total_pages,
-      has_previous_page: page > 1
+      has_prev_page: page > 1
     }
   end
 
@@ -174,10 +179,11 @@ class ServiceSearchService
 
   def category_facets
     filtered_services.except(:limit, :offset, :order)
-                     .group(:service_category_id)
+                     .joins(:service_categories)
+                     .group('service_categories.category_id')
                      .count
                      .map do |cat_id, count|
-                       category = ServiceCategory.find_by(id: cat_id)
+                       category = Category.find_by(id: cat_id)
                        { id: cat_id, name: category&.name, count: count }
     end
   end
@@ -190,7 +196,6 @@ class ServiceSearchService
 
   def location_facets
     filtered_services.except(:limit, :offset, :order)
-                     .joins(:vendor_profile)
                      .group('vendor_profiles.location')
                      .count
                      .map { |loc, count| { location: loc, count: count } }

@@ -42,7 +42,6 @@ RSpec.describe ProfilesController do
 
   describe 'POST #create' do
     context 'when user is a vendor without existing profile' do
-      let(:user_without_profile) { create(:user, :vendor) }
       let(:valid_params) do
         {
           vendor_profile: {
@@ -56,12 +55,11 @@ RSpec.describe ProfilesController do
         }
       end
 
-      before do
-        user_without_profile.vendor_profile&.destroy
-        user_without_profile.reload
-      end
-
       it 'creates a new vendor profile' do
+        user_without_profile = create(:user, :vendor)
+        user_without_profile.vendor_profile.destroy!
+        user_without_profile.reload
+
         request.headers.merge!(auth_headers(user_without_profile))
 
         expect do
@@ -201,15 +199,15 @@ RSpec.describe ProfilesController do
 
         expect(response).to have_http_status(:not_found)
         json_response = response.parsed_body
-        expect(json_response['error']).to eq('Vendor profile not found')
+        expect(json_response['error']).to eq('No profile found')
       end
     end
   end
 
   describe 'GET #service_categories' do
     before do
-      create(:service_category, name: 'Active Category', active: true)
-      create(:service_category, name: 'Inactive Category', active: false)
+      create(:category, name: 'Active Category', active: true)
+      create(:category, name: 'Inactive Category', active: false)
     end
 
     it 'returns active service categories without authentication' do

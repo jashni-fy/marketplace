@@ -71,6 +71,15 @@ class Service < ApplicationRecord
   scope :ordered_by_price, -> { order(:base_price) }
   scope :ordered_by_created, -> { order(created_at: :desc) }
 
+  # Convenience accessors for singular vendor_profile and category (through join tables)
+  def vendor_profile
+    vendor_profiles.first
+  end
+
+  def service_category
+    categories.first
+  end
+
   # Instance methods
   def active?
     status == 'active'

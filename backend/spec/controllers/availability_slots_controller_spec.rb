@@ -3,6 +3,11 @@
 require 'rails_helper'
 
 RSpec.describe AvailabilitySlotsController do
+  def auth_as(user)
+    token = JwtService.encode(user_id: user.id)
+    request.headers['Authorization'] = "Bearer #{token}"
+  end
+
   describe 'authentication and authorization' do
     let(:vendor_user) { create(:user, :vendor) }
     let(:customer_user) { create(:user, :customer) }
@@ -15,9 +20,8 @@ RSpec.describe AvailabilitySlotsController do
     end
 
     context 'when authenticated as customer' do
-      before { sign_in customer_user }
-
       it 'returns forbidden for index' do
+        auth_as(customer_user)
         get :index
         expect(response).to have_http_status(:forbidden)
         expect(parsed_response['error']).to eq('Access denied. Vendor account required.')
@@ -29,17 +33,21 @@ RSpec.describe AvailabilitySlotsController do
     let(:vendor_user) { create(:user, :vendor) }
     let!(:today_slot) { create(:availability_slot, vendor_profile: vendor_user.vendor_profile, date: Date.current) }
     let!(:future_slot) { create(:availability_slot, vendor_profile: vendor_user.vendor_profile, date: 1.week.from_now) }
-    let!(:past_slot) { create(:availability_slot, vendor_profile: vendor_user.vendor_profile, date: 1.week.ago) }
-
-    before { sign_in vendor_user }
+    let!(:past_slot) do
+      slot = build(:availability_slot, vendor_profile: vendor_user.vendor_profile, date: 1.week.ago)
+      slot.save(validate: false)
+      slot
+    end
 
     it 'returns upcoming availability slots by default' do
+      auth_as(vendor_user)
       get_index
       expect_upcoming_slots(today_slot, future_slot, past_slot)
     end
 
     context 'with date range filter' do
       it 'filters by date range' do
+        auth_as(vendor_user)
         get_index(start_date: Date.current, end_date: Date.current + 3.days)
         expect_array_to_include(today_slot, exclude: [future_slot, past_slot])
       end
@@ -47,12 +55,14 @@ RSpec.describe AvailabilitySlotsController do
 
     context 'with specific date filter' do
       it 'filters by specific date' do
+        auth_as(vendor_user)
         get_index(date: Date.current)
         expect_specific_date_slot(today_slot)
       end
     end
 
     it 'includes pagination metadata' do
+      auth_as(vendor_user)
       get_index
       expect_pagination_meta
     end
@@ -62,15 +72,15 @@ RSpec.describe AvailabilitySlotsController do
     let(:vendor_user) { create(:user, :vendor) }
     let(:availability_slot) { create(:availability_slot, vendor_profile: vendor_user.vendor_profile) }
 
-    before { sign_in vendor_user }
-
     it 'returns the availability slot' do
+      auth_as(vendor_user)
       get :show, params: { id: availability_slot.id }
       expect_show_slot(availability_slot)
     end
 
     context 'when slot does not exist' do
       it 'returns not found' do
+        auth_as(vendor_user)
         get :show, params: { id: 999_999 }
         expect(response).to have_http_status(:not_found)
         expect(parsed_response['error']).to eq('Availability slot not found')
@@ -91,9 +101,8 @@ RSpec.describe AvailabilitySlotsController do
       }
     end
 
-    before { sign_in vendor_user }
-
     it 'creates a new availability slot' do
+      auth_as(vendor_user)
       expect { create_slot_request(valid_params) }.to change(AvailabilitySlot, :count).by(1)
       expect_slot_created(valid_params[:availability_slot])
     end
@@ -110,6 +119,7 @@ RSpec.describe AvailabilitySlotsController do
       end
 
       it 'returns unprocessable entity' do
+        auth_as(vendor_user)
         expect { create_slot_request(invalid_params) }.not_to(change(AvailabilitySlot, :count))
         expect(response).to have_http_status(:unprocessable_content)
         expect(parsed_response['errors']).to be_an(Array)
@@ -131,9 +141,8 @@ RSpec.describe AvailabilitySlotsController do
       }
     end
 
-    before { sign_in vendor_user }
-
     it 'updates the availability slot' do
+      auth_as(vendor_user)
       update_slot_request(update_params)
       expect_slot_updated('10:00', '18:00', false)
     end
@@ -142,13 +151,11 @@ RSpec.describe AvailabilitySlotsController do
   describe 'DELETE #destroy' do
     let(:vendor_user) { create(:user, :vendor) }
 
-    before { sign_in vendor_user }
-
     context 'when slot has no booking conflicts' do
       it 'deletes the availability slot' do
         slot_to_delete = create_slot(vendor_user)
-        allow(slot_to_delete).to receive(:booking_conflict?).and_return(false)
 
+        auth_as(vendor_user)
         expect { delete_slot(slot_to_delete) }.to change(AvailabilitySlot, :count).by(-1)
         expect(parsed_response['message']).to eq('Availability slot deleted successfully')
       end
@@ -157,10 +164,12 @@ RSpec.describe AvailabilitySlotsController do
     context 'when slot has booking conflicts' do
       it 'returns unprocessable entity' do
         slot_to_delete = create_slot(vendor_user)
-        allow(slot_to_delete).to receive(:booking_conflict?).and_return(true)
+        allow_any_instance_of(AvailabilitySlot).to receive(:booking_conflict?).and_return(true)
 
+        auth_as(vendor_user)
         expect { delete_slot(slot_to_delete) }.not_to(change(AvailabilitySlot, :count))
         expect(response).to have_http_status(:unprocessable_content)
+        expect(parsed_response['error']).to eq('Cannot delete availability slot with existing bookings')
       end
     end
   end
