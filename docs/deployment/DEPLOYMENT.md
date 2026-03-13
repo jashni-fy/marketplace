@@ -45,8 +45,9 @@ This guide explains how to deploy the Jashnify full-stack application for free u
 
 ---
 
-## Phase 3: Frontend Deployment (Vercel)
+## Phase 3: Frontend Deployment (Vercel or Render)
 
+### Option A: Vercel (Recommended)
 1. Sign up for [Vercel](https://vercel.com) and click **Add New > Project**.
 2. Import your GitHub repository.
 3. **Configuration:**
@@ -54,6 +55,19 @@ This guide explains how to deploy the Jashnify full-stack application for free u
    - **Framework Preset:** Next.js.
 4. **Environment Variables:**
    - `NEXT_PUBLIC_API_URL`: `https://api.jashnify.in`
+5. Click **Deploy**.
+
+### Option B: Render.com
+1. Sign up for [Render](https://render.com) and click **New > Web Service**.
+2. Connect your GitHub repository.
+3. **Configuration:**
+   - **Name:** `jashnify-frontend`
+   - **Root Directory:** `frontend`
+   - **Build Command:** `./render-build.sh`
+   - **Start Command:** `npm run start`
+4. **Environment Variables:**
+   - `NEXT_PUBLIC_API_URL`: `https://api.jashnify.in`
+   - `NODE_VERSION`: `20.0.0` or higher
 5. Click **Deploy**.
 
 ---

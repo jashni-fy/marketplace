@@ -29,7 +29,8 @@ class BookingManagement::BookingPresenter
     core_payload.merge(
       service: service_hash,
       customer: customer_hash,
-      vendor: vendor_hash
+      vendor: vendor_hash,
+      review: review_hash
     )
   end
 
@@ -74,6 +75,21 @@ class BookingManagement::BookingPresenter
       name: vendor_profile.user.full_name,
       business_name: vendor_profile.business_name,
       profile_id: vendor_profile.id
+    }
+  end
+
+  def review_hash
+    return nil unless booking.review
+
+    {
+      id: booking.review.id,
+      rating: booking.review.rating,
+      quality_rating: booking.review.quality_rating,
+      communication_rating: booking.review.communication_rating,
+      value_rating: booking.review.value_rating,
+      punctuality_rating: booking.review.punctuality_rating,
+      comment: booking.review.comment,
+      created_at: booking.review.created_at
     }
   end
 end

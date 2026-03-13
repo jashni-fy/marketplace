@@ -23,15 +23,7 @@ class UsersController < ApiController
   end
 
   def upload_avatar
-    if params[:avatar].present?
-      @user.avatar.attach(params[:avatar])
-      render json: {
-        message: 'Avatar uploaded successfully',
-        avatar_url: @user.avatar.attached? ? url_for(@user.avatar) : nil
-      }
-    else
-      render json: { error: 'No avatar file provided' }, status: :bad_request
-    end
+    render json: { error: 'Avatar upload not yet implemented' }, status: :not_implemented
   end
 
   private
@@ -41,7 +33,7 @@ class UsersController < ApiController
   end
 
   def user_params
-    params.require(:user).permit(:first_name, :last_name, :phone, :bio)
+    params.expect(user: %i[first_name last_name])
   end
 
   def user_response(user)
@@ -50,11 +42,8 @@ class UsersController < ApiController
       email: user.email,
       first_name: user.first_name,
       last_name: user.last_name,
-      phone: user.phone,
-      bio: user.bio,
       role: user.role,
       confirmed: user.confirmed?,
-      avatar_url: user.avatar.attached? ? url_for(user.avatar) : nil,
       created_at: user.created_at,
       updated_at: user.updated_at
     }

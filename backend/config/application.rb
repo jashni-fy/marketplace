@@ -25,9 +25,9 @@ module Marketplace
       # Rails query log tags:
       :application, :controller, :action, :job,
       # GraphQL-Ruby query log tags:
-      { current_graphql_operation: -> { GraphQL::Current.operation_name },
-        current_graphql_field: -> { GraphQL::Current.field&.path },
-        current_dataloader_source: -> { GraphQL::Current.dataloader_source_class } }
+      { current_graphql_operation: ->(*) { GraphQL::Current.operation_name },
+        current_graphql_field: ->(*) { GraphQL::Current.field&.path },
+        current_dataloader_source: ->(*) { GraphQL::Current.dataloader_source_class } }
     ]
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 7.1
@@ -44,8 +44,8 @@ module Marketplace
     #
     # config.time_zone = "Central Time (US & Canada)"
 
-    # Opt in to Rails 8.1 to_time behavior
-    config.active_support.to_time_preserves_timezone = :zone
+    # Opt in to Rails 8.0 to_time behavior
+    config.active_support.to_time_preserves_timezone = true
 
     # Auto-load query objects and domain services
     config.eager_load_paths << Rails.root.join('app/models/queries')

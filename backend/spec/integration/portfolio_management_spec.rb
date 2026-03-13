@@ -34,7 +34,7 @@ RSpec.describe 'Portfolio Management Integration' do
           }
         }
 
-        post '/api/portfolio_items', params: portfolio_params, headers: auth_headers(vendor_user), as: :json
+        post '/portfolio_items', params: portfolio_params, headers: auth_headers(vendor_user), as: :json
 
         expect(response).to have_http_status(:created)
         json_response = JSON.parse(response.body)
@@ -45,7 +45,7 @@ RSpec.describe 'Portfolio Management Integration' do
       it 'allows vendor to view their portfolio items' do
         create(:portfolio_item, vendor_profile: vendor_profile)
 
-        get '/api/portfolio_items', headers: auth_headers(vendor_user), as: :json
+        get '/portfolio_items', headers: auth_headers(vendor_user), as: :json
 
         expect(response).to have_http_status(:success)
         json_response = JSON.parse(response.body)
@@ -62,8 +62,8 @@ RSpec.describe 'Portfolio Management Integration' do
           }
         }
 
-        patch "/api/portfolio_items/#{portfolio_item.id}", params: update_params, headers: auth_headers(vendor_user),
-                                                           as: :json
+        patch "/portfolio_items/#{portfolio_item.id}", params: update_params, headers: auth_headers(vendor_user),
+                                                       as: :json
 
         expect(response).to have_http_status(:success)
         json_response = JSON.parse(response.body)
@@ -74,7 +74,7 @@ RSpec.describe 'Portfolio Management Integration' do
       it 'allows vendor to delete their portfolio item' do
         portfolio_item = create(:portfolio_item, vendor_profile: vendor_profile)
 
-        delete "/api/portfolio_items/#{portfolio_item.id}", headers: auth_headers(vendor_user), as: :json
+        delete "/portfolio_items/#{portfolio_item.id}", headers: auth_headers(vendor_user), as: :json
 
         expect(response).to have_http_status(:success)
         json_response = JSON.parse(response.body)
@@ -91,7 +91,7 @@ RSpec.describe 'Portfolio Management Integration' do
           }
         }
 
-        post '/api/portfolio_items', params: portfolio_params, headers: auth_headers(customer_user), as: :json
+        post '/portfolio_items', params: portfolio_params, headers: auth_headers(customer_user), as: :json
 
         expect(response).to have_http_status(:forbidden)
         json_response = JSON.parse(response.body)
@@ -101,7 +101,7 @@ RSpec.describe 'Portfolio Management Integration' do
       it 'allows customer to view vendor portfolio items' do
         create(:portfolio_item, vendor_profile: vendor_profile)
 
-        get "/api/vendors/#{vendor_profile.id}/portfolio_items", headers: auth_headers(customer_user), as: :json
+        get "/vendors/#{vendor_profile.id}/portfolio_items", headers: auth_headers(customer_user), as: :json
 
         expect(response).to have_http_status(:success)
         json_response = JSON.parse(response.body)
@@ -117,7 +117,7 @@ RSpec.describe 'Portfolio Management Integration' do
 
     it 'filters portfolio items by category' do
       # Test photography category
-      get "/api/vendors/#{vendor_profile.id}/portfolio_items",
+      get "/vendors/#{vendor_profile.id}/portfolio_items",
           params: { category: 'photography' }, headers: auth_headers(customer_user), as: :json
 
       expect(response).to have_http_status(:success)
@@ -126,14 +126,14 @@ RSpec.describe 'Portfolio Management Integration' do
       expect(json_response['portfolio_items'].first['id']).to eq(photo_item.id)
 
       # Test videography category to reference video_item
-      get "/api/vendors/#{vendor_profile.id}/portfolio_items",
+      get "/vendors/#{vendor_profile.id}/portfolio_items",
           params: { category: 'videography' }, headers: auth_headers(customer_user), as: :json
       json_response = JSON.parse(response.body)
       expect(json_response['portfolio_items'].first['id']).to eq(video_item.id)
     end
 
     it 'filters featured portfolio items' do
-      get "/api/vendors/#{vendor_profile.id}/portfolio_items",
+      get "/vendors/#{vendor_profile.id}/portfolio_items",
           params: { featured: 'true' }, headers: auth_headers(customer_user), as: :json
 
       expect(response).to have_http_status(:success)
@@ -149,7 +149,7 @@ RSpec.describe 'Portfolio Management Integration' do
       create_list(:portfolio_item, 3, vendor_profile: vendor_profile, is_featured: false)
       create(:portfolio_item, :featured, vendor_profile: vendor_profile)
 
-      get '/api/portfolio_items/summary', headers: auth_headers(vendor_user), as: :json
+      get '/portfolio_items/summary', headers: auth_headers(vendor_user), as: :json
 
       expect(response).to have_http_status(:success)
       json_response = JSON.parse(response.body)
@@ -162,7 +162,7 @@ RSpec.describe 'Portfolio Management Integration' do
       items = create_list(:portfolio_item, 2, vendor_profile: vendor_profile, is_featured: false)
       item_ids = items.map(&:id)
 
-      patch '/api/portfolio_items/set_featured',
+      patch '/portfolio_items/set_featured',
             params: { item_ids: item_ids, featured: true }, headers: auth_headers(vendor_user), as: :json
 
       expect(response).to have_http_status(:success)
@@ -175,7 +175,7 @@ RSpec.describe 'Portfolio Management Integration' do
     let(:portfolio_item) { create(:portfolio_item, vendor_profile: vendor_profile) }
 
     it 'prevents vendors from accessing other vendors portfolio items' do
-      patch "/api/portfolio_items/#{portfolio_item.id}",
+      patch "/portfolio_items/#{portfolio_item.id}",
             params: { portfolio_item: { title: 'Hacked' } }, headers: auth_headers(other_vendor), as: :json
 
       expect(response).to have_http_status(:forbidden)
@@ -184,7 +184,7 @@ RSpec.describe 'Portfolio Management Integration' do
     end
 
     it 'requires authentication for portfolio management' do
-      post '/api/portfolio_items',
+      post '/portfolio_items',
            params: { portfolio_item: { title: 'Test' } }, as: :json
 
       expect(response).to have_http_status(:unauthorized)

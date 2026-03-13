@@ -1,41 +1,5 @@
 # frozen_string_literal: true
 
-# == Schema Information
-#
-# Table name: vendor_profiles
-#
-#  id                  :bigint           not null, primary key
-#  average_rating      :decimal(3, 2)    default(0.0)
-#  business_license    :string
-#  business_name       :string           not null
-#  description         :text
-#  latitude            :decimal(10, 6)
-#  location            :string
-#  longitude           :decimal(10, 6)
-#  phone               :string
-#  rejection_reason    :text
-#  service_categories  :text
-#  total_reviews       :integer          default(0)
-#  verification_status :integer          default("unverified")
-#  verified_at         :datetime
-#  website             :string
-#  years_experience    :integer          default(0)
-#  created_at          :datetime         not null
-#  updated_at          :datetime         not null
-#  user_id             :bigint           not null
-#
-# Indexes
-#
-#  index_vendor_profiles_on_business_name        (business_name)
-#  index_vendor_profiles_on_coordinates          (latitude,longitude)
-#  index_vendor_profiles_on_location             (location)
-#  index_vendor_profiles_on_user_id              (user_id)
-#  index_vendor_profiles_on_verification_status  (verification_status)
-#
-# Foreign Keys
-#
-#  fk_rails_...  (user_id => users.id)
-#
 FactoryBot.define do
   factory :vendor_profile do
     # Use the auto-created vendor profile from User model

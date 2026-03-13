@@ -9,13 +9,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Calendar as CalendarIcon, 
-  Heart, 
-  ShoppingBag, 
-  Clock, 
-  Star, 
-  MapPin, 
+import { ReviewFormModal } from '@/components/ReviewFormModal';
+import {
+  Calendar as CalendarIcon,
+  Heart,
+  ShoppingBag,
+  Clock,
+  Star,
+  MapPin,
   ArrowRight,
   User,
   Settings,
@@ -31,20 +32,30 @@ const CustomerDashboard = () => {
   const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
-  const [bookings, setBookings] = useState([]);
-  
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [selectedBookingForReview, setSelectedBookingForReview] = useState<any>(null);
+
   useEffect(() => {
-    // Simulate loading data
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
+    fetchCompletedBookings();
   }, []);
 
+  const fetchCompletedBookings = async () => {
+    try {
+      setLoading(true);
+      const response = await apiService.bookings.getAll({ status: 'completed' });
+      setBookings(response.data.bookings || []);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const stats = [
-    { label: 'Upcoming Events', value: '0', icon: CalendarIcon, trend: 'No events' },
+    { label: 'Completed Bookings', value: bookings.length.toString(), icon: CalendarIcon, trend: 'Lifetime' },
     { label: 'Saved Pros', value: '0', icon: Heart, trend: 'Explore now' },
-    { label: 'Total Spent', value: '₹0', icon: ShoppingBag, trend: 'Lifetime' },
+    { label: 'Total Spent', value: bookings.length > 0 ? '₹' + bookings.reduce((sum, b) => sum + (b.total_amount || 0), 0).toLocaleString() : '₹0', icon: ShoppingBag, trend: 'Lifetime' },
   ];
 
   const renderOverview = () => (
@@ -70,23 +81,73 @@ const CustomerDashboard = () => {
         <div className="lg:col-span-2 space-y-6">
           <div className="p-6 rounded-2xl border border-white/[0.03] bg-[#16191e]">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-sm font-bold text-white uppercase tracking-widest">Recent Bookings</h3>
+              <h3 className="text-sm font-bold text-white uppercase tracking-widest">Completed Bookings</h3>
             </div>
 
-            <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-2 border-dashed border-white/[0.03] rounded-xl">
-              <div className="size-12 rounded-full bg-secondary flex items-center justify-center mb-4 opacity-30">
-                <ShoppingBag className="size-5 text-slate-400" strokeWidth={2} />
+            {bookings.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-2 border-dashed border-white/[0.03] rounded-xl">
+                <div className="size-12 rounded-full bg-secondary flex items-center justify-center mb-4 opacity-30">
+                  <ShoppingBag className="size-5 text-slate-400" strokeWidth={2} />
+                </div>
+                <h4 className="text-sm font-bold text-white mb-1">No completed bookings yet</h4>
+                <p className="text-xs text-slate-500 mb-6 max-w-xs">
+                  Find the perfect photographer for your next special occasion.
+                </p>
+                <Link href="/marketplace">
+                  <Button size="sm" className="rounded-lg font-bold text-xs">
+                    Explore Marketplace
+                  </Button>
+                </Link>
               </div>
-              <h4 className="text-sm font-bold text-white mb-1">No bookings yet</h4>
-              <p className="text-xs text-slate-500 mb-6 max-w-xs">
-                Find the perfect photographer for your next special occasion.
-              </p>
-              <Link href="/marketplace">
-                <Button size="sm" className="rounded-lg font-bold text-xs">
-                  Explore Marketplace
-                </Button>
-              </Link>
-            </div>
+            ) : (
+              <div className="space-y-3">
+                {bookings.map((booking) => (
+                  <div
+                    key={booking.id}
+                    className="p-4 rounded-xl border border-white/[0.03] bg-[#0f1115] hover:border-white/10 transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <h4 className="text-sm font-bold text-white mb-1">{booking.service?.name}</h4>
+                        <p className="text-xs text-slate-400 mb-2">{booking.vendor?.business_name}</p>
+                        <div className="flex items-center gap-4">
+                          <span className="text-xs text-slate-500 flex items-center gap-1">
+                            <CalendarIcon className="size-3" />
+                            {new Date(booking.event_date).toLocaleDateString()}
+                          </span>
+                          <span className="text-sm font-bold text-white">₹{booking.total_amount?.toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
+                          Completed
+                        </Badge>
+
+                        {booking.review ? (
+                          <Badge variant="outline" className="bg-slate-500/10 border-slate-500/30 text-slate-400">
+                            <Star className="size-3 fill-current mr-1" />
+                            Reviewed
+                          </Badge>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedBookingForReview(booking);
+                              setReviewModalOpen(true);
+                            }}
+                            className="text-xs"
+                          >
+                            Write Review
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -133,7 +194,21 @@ const CustomerDashboard = () => {
   return (
     <div className="min-h-screen bg-[#0f1115] text-foreground font-sans">
       <Header />
-      
+
+      <ReviewFormModal
+        open={reviewModalOpen}
+        onClose={() => {
+          setReviewModalOpen(false);
+          setSelectedBookingForReview(null);
+        }}
+        onSuccess={() => {
+          fetchCompletedBookings();
+        }}
+        bookingId={selectedBookingForReview?.id || 0}
+        vendorName={selectedBookingForReview?.vendor?.business_name || ''}
+        serviceName={selectedBookingForReview?.service?.name || ''}
+      />
+
       <main className="max-w-7xl mx-auto px-6 py-10">
         {/* Dashboard Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-6">

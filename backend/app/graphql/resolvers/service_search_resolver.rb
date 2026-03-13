@@ -122,7 +122,7 @@ class Resolvers::ServiceSearchResolver < Resolvers::BaseResolver
     end
 
     # Verified vendors only
-    services = services.where(vendor_profiles: { is_verified: true }) if filters[:verified_vendors_only]
+    services = services.where(vendor_profiles: { verification_status: :verified }) if filters[:verified_vendors_only]
 
     # Status filter
     services = services.where(status: filters[:status]) if filters[:status].present?

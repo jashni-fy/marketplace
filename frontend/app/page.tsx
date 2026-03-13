@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Camera, LogIn, UserPlus, ArrowRight, Check, Sparkles } from 'lucide-react';
+import { Camera, ArrowRight, Check, Sparkles, Search, Star, Shield, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
@@ -52,7 +52,7 @@ export default function Landing() {
 
             <div className="flex items-center gap-2">
               <Link href="/login">
-                <Button variant="ghost" size="sm" className="rounded-full text-slate-400 hover:text-white">Sign In</Button>
+                <Button variant="ghost" size="sm" className="rounded-full text-muted-foreground hover:text-white">Sign In</Button>
               </Link>
               <Link href="/register">
                 <Button size="sm" className="bg-primary text-primary-foreground rounded-full font-bold px-5">Join</Button>
@@ -98,7 +98,7 @@ export default function Landing() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-base md:text-lg text-slate-400 mb-10 max-w-xl mx-auto leading-relaxed font-light"
+            className="text-base md:text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed font-light"
           >
             Find and book premium professional photographers for your special events with ease.
           </motion.p>
@@ -107,15 +107,60 @@ export default function Landing() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+            className="w-full max-w-lg flex flex-col items-center gap-6"
           >
-            <Button size="lg" onClick={() => router.push('/register')} className="rounded-full font-bold px-10 h-12 shadow-xl shadow-primary/10">
-              Get Started
-            </Button>
-            <Button size="lg" variant="outline" onClick={() => router.push('/marketplace')} className="rounded-full font-bold px-10 h-12 bg-transparent border-border/50 text-slate-300 hover:bg-secondary">
-              Browse Pros
-            </Button>
+            {/* Search Bar */}
+            <div onClick={() => router.push('/marketplace')} className="flex items-center gap-3 px-5 py-3.5 bg-card/60 backdrop-blur-md rounded-2xl border border-border/50 cursor-pointer hover:border-primary/40 transition-all group shadow-xl shadow-black/20 w-full">
+              <Search className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+              <span className="text-sm text-muted-foreground flex-1 text-left">Find photographers, videographers, planners...</span>
+              <div className="px-3 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-bold">Search</div>
+            </div>
+
+            {/* Secondary Links */}
+            <div className="flex items-center justify-center gap-6 pt-2">
+              <button onClick={() => router.push('/register')} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Create free account
+              </button>
+              <div className="w-1 h-1 rounded-full bg-border" />
+              <button onClick={() => router.push('/marketplace')} className="text-sm font-medium text-primary inline-flex items-center gap-1">
+                Browse professionals <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Trust Stats Bar */}
+      <section className="border-y border-border/20 bg-secondary/10 py-12 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {[
+              { icon: Users, label: '2,700+', text: 'Verified Professionals' },
+              { icon: Camera, label: '15,000+', text: 'Events Captured' },
+              { icon: Star, label: '98%', text: 'Client Satisfaction' },
+              { icon: Check, label: '₹0', text: 'Platform Fee' },
+            ].map((stat, index) => {
+              const Icon = stat.icon;
+              return (
+                <motion.div
+                  key={stat.text}
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  className="text-center"
+                >
+                  <div className="flex justify-center mb-3">
+                    <div className="p-2.5 rounded-lg bg-primary/10 border border-primary/20">
+                      <Icon className="w-5 h-5 text-primary" />
+                    </div>
+                  </div>
+                  <div className="text-2xl md:text-3xl font-bold text-white mb-1">{stat.label}</div>
+                  <div className="text-xs md:text-sm text-muted-foreground font-medium uppercase tracking-widest">{stat.text}</div>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
@@ -125,7 +170,7 @@ export default function Landing() {
           <div className="flex justify-between items-end mb-12">
             <div>
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Popular Categories</h2>
-              <p className="text-slate-400 text-sm font-light">Tailored services for every need</p>
+              <p className="text-muted-foreground text-sm font-light">Tailored services for every need</p>
             </div>
             <Link href="/marketplace" className="text-primary text-sm font-bold hover:underline underline-offset-4 flex items-center gap-1">
               View all <ArrowRight className="size-3.5" />
@@ -160,6 +205,44 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* How It Works */}
+      <section className="py-20 px-6 bg-background">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">How It Works</h2>
+            <p className="text-muted-foreground font-light">Three simple steps to find the perfect professional</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+            {/* Connector Line (desktop only) */}
+            <div className="hidden md:block absolute top-14 left-[16.67%] right-[16.67%] h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent pointer-events-none" />
+
+            {[
+              { step: 1, title: 'Search & Filter', desc: 'Browse verified professionals in your area' },
+              { step: 2, title: 'Review Portfolios', desc: 'Check past work and client reviews' },
+              { step: 3, title: 'Book Instantly', desc: 'Secure your booking with just a few clicks' },
+            ].map((item, index) => (
+              <motion.div
+                key={item.step}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.15 }}
+                className="relative text-center"
+              >
+                <div className="flex justify-center mb-6">
+                  <div className="w-14 h-14 rounded-full bg-secondary border border-border/50 flex items-center justify-center relative z-10">
+                    <span className="text-lg font-bold text-primary">{item.step}</span>
+                  </div>
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">{item.title}</h3>
+                <p className="text-muted-foreground text-sm font-light">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Features - Simplified Layout */}
       <section className="py-20 px-6 bg-secondary/20 border-y border-border/30">
         <div className="max-w-5xl mx-auto">
@@ -168,7 +251,7 @@ export default function Landing() {
               <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight">
                 Quality meets <br /><span className="text-primary">Simplicity.</span>
               </h2>
-              <p className="text-slate-400 font-light leading-relaxed">
+              <p className="text-muted-foreground font-light leading-relaxed">
                 The modern way to handle event photography. No more endless back-and-forth emails or unverified portfolios.
               </p>
               <div className="grid grid-cols-2 gap-4">
@@ -177,7 +260,7 @@ export default function Landing() {
                     <div className="size-5 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
                       <Check className="size-3 text-primary" strokeWidth={3} />
                     </div>
-                    <span className="text-sm font-medium text-slate-300">{feature}</span>
+                    <span className="text-sm font-medium text-foreground/80">{feature}</span>
                   </div>
                 ))}
               </div>
@@ -195,6 +278,74 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Testimonials */}
+      <section className="py-20 px-6 bg-background">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">Loved by Users</h2>
+            <p className="text-muted-foreground font-light">See what professionals and customers are saying</p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                quote: 'Jashnify made finding photographers so easy. Booked someone amazing for my wedding!',
+                author: 'Priya Sharma',
+                role: 'Bride',
+                initials: 'PS',
+                rating: 5,
+              },
+              {
+                quote: 'As a photographer, this platform helps me get consistent bookings. Highly recommended!',
+                author: 'Rahul Kapoor',
+                role: 'Professional Photographer',
+                initials: 'RK',
+                rating: 5,
+              },
+              {
+                quote: 'Best decision for our corporate event. The vendor matching is incredible.',
+                author: 'Anjali Patel',
+                role: 'Event Manager',
+                initials: 'AP',
+                rating: 5,
+              },
+            ].map((testimonial, index) => (
+              <motion.div
+                key={testimonial.author}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="p-6 rounded-2xl bg-card/50 backdrop-blur-sm border border-border/30"
+              >
+                <div className="flex gap-1 mb-4">
+                  {Array(testimonial.rating)
+                    .fill(0)
+                    .map((_, i) => (
+                      <Star
+                        key={i}
+                        className="w-4 h-4 fill-primary text-primary"
+                      />
+                    ))}
+                </div>
+                <p className="text-foreground/90 text-sm font-light mb-4">
+                  "{testimonial.quote}"
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-bold text-primary">{testimonial.initials}</span>
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-foreground">{testimonial.author}</div>
+                    <div className="text-xs text-muted-foreground">{testimonial.role}</div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Compact CTA */}
       <section className="py-24 px-6 text-center">
         <motion.div
@@ -204,7 +355,7 @@ export default function Landing() {
           className="max-w-2xl mx-auto space-y-8 p-12 glass rounded-3xl border border-primary/10 shadow-2xl"
         >
           <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight">Ready to begin?</h2>
-          <p className="text-slate-400 font-light">Join Jashnify today and connect with professional photographers.</p>
+          <p className="text-muted-foreground font-light">Join Jashnify today and connect with professional photographers.</p>
           <Button size="lg" onClick={() => router.push('/register')} className="rounded-full px-12 font-bold h-12 shadow-lg shadow-primary/20">
             Create Account
           </Button>
