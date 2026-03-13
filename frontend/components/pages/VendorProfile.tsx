@@ -196,40 +196,79 @@ const VendorProfile = ({ params }: { params: { id: string } }) => {
 
             {/* Reviews Summary */}
             <section className="p-8 rounded-[2rem] border border-white/[0.03] bg-[#16191e]">
-               <div className="flex flex-col md:flex-row justify-between gap-8 mb-10 pb-10 border-b border-white/[0.03]">
-                  <div>
-                     <h2 className="text-4xl font-bold text-white mb-2">{vendor.average_rating}</h2>
-                     <div className="flex gap-1 mb-2">
-                        {[1,2,3,4,5].map(i => <Star key={i} className="size-4 fill-primary text-primary" />)}
-                     </div>
-                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Based on {vendor.total_reviews} client reviews</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-x-12 gap-y-4">
-                     {['Quality', 'Speed', 'Communication', 'Value'].map(label => (
-                        <div key={label} className="space-y-1">
-                           <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                              <span>{label}</span>
-                              <span className="text-white">4.9</span>
+               {reviews.length > 0 ? (
+                  <>
+                     <div className="flex flex-col md:flex-row justify-between gap-8 mb-10 pb-10 border-b border-white/[0.03]">
+                        <div>
+                           <h2 className="text-4xl font-bold text-white mb-2">{vendor.average_rating || 'N/A'}</h2>
+                           <div className="flex gap-1 mb-2">
+                              {[1, 2, 3, 4, 5].map((i) => (
+                                 <Star
+                                    key={i}
+                                    className={`size-4 ${i <= Math.round(vendor.average_rating || 0) ? 'fill-primary text-primary' : 'text-slate-600'}`}
+                                 />
+                              ))}
                            </div>
-                           <div className="h-1 w-32 bg-white/5 rounded-full overflow-hidden">
-                              <div className="h-full bg-primary w-[95%]" />
-                           </div>
+                           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Based on {vendor.total_reviews} client reviews</p>
                         </div>
-                     ))}
+                        <div className="grid grid-cols-2 gap-x-12 gap-y-4">
+                           {[
+                              { label: 'Quality', key: 'quality_rating' },
+                              { label: 'Communication', key: 'communication_rating' },
+                              { label: 'Value', key: 'value_rating' },
+                              { label: 'Punctuality', key: 'punctuality_rating' },
+                           ].map(({ label, key }) => {
+                              const avg =
+                                 reviews.length > 0
+                                    ? (reviews.reduce((sum, r) => sum + (r[key] || 0), 0) / reviews.length).toFixed(1)
+                                    : 'N/A';
+                              const percentage = avg !== 'N/A' ? Math.round((parseFloat(avg) / 5) * 100) : 0;
+                              return (
+                                 <div key={label} className="space-y-1">
+                                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                       <span>{label}</span>
+                                       <span className="text-white">{avg}</span>
+                                    </div>
+                                    <div className="h-1 w-32 bg-white/5 rounded-full overflow-hidden">
+                                       <div className="h-full bg-primary" style={{ width: `${percentage}%` }} />
+                                    </div>
+                                 </div>
+                              );
+                           })}
+                        </div>
+                     </div>
+
+                     <div className="space-y-6">
+                        {reviews.slice(0, 3).map((review, i) => (
+                           <div key={i} className="space-y-3">
+                              <div className="flex justify-between items-start">
+                                 <div>
+                                    <p className="text-sm font-bold text-white">{review.customer?.name || 'Verified Client'}</p>
+                                    <div className="flex gap-1 mt-1">
+                                       {[1, 2, 3, 4, 5].map((star) => (
+                                          <Star
+                                             key={star}
+                                             className={`size-3 ${star <= review.rating ? 'fill-primary text-primary' : 'text-slate-600'}`}
+                                          />
+                                       ))}
+                                    </div>
+                                 </div>
+                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
+                                    {new Date(review.created_at).toLocaleDateString()}
+                                 </span>
+                              </div>
+                              {review.comment && (
+                                 <p className="text-sm text-slate-400 font-light italic leading-relaxed">"{review.comment}"</p>
+                              )}
+                           </div>
+                        ))}
+                     </div>
+                  </>
+               ) : (
+                  <div className="text-center py-8">
+                     <p className="text-slate-400">No reviews yet. Be the first to review this professional!</p>
                   </div>
-               </div>
-               
-               <div className="space-y-6">
-                  {reviews.slice(0, 3).map((review, i) => (
-                    <div key={i} className="space-y-3">
-                       <div className="flex justify-between">
-                          <p className="text-sm font-bold text-white">{review.customer?.name || 'Verified Client'}</p>
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">{new Date().toLocaleDateString()}</span>
-                       </div>
-                       <p className="text-sm text-slate-400 font-light italic leading-relaxed">"{review.comment}"</p>
-                    </div>
-                  ))}
-               </div>
+               )}
             </section>
           </div>
 
