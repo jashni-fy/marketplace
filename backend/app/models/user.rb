@@ -44,15 +44,15 @@ class User < ApplicationRecord
   accepts_nested_attributes_for :vendor_profile
   accepts_nested_attributes_for :customer_profile
 
-  has_many :customer_bookings, class_name: 'Booking', foreign_key: 'customer_id', dependent: :destroy
+  has_many :customer_bookings, class_name: 'Booking', foreign_key: 'customer_id',
+                               dependent: :destroy, inverse_of: :customer
   has_many :vendor_bookings, through: :vendor_profile, source: :bookings
-  has_many :booking_messages, foreign_key: 'sender_id', dependent: :destroy
-  has_many :reviews, foreign_key: 'customer_id', dependent: :destroy
+  has_many :booking_messages, foreign_key: 'sender_id', dependent: :destroy, inverse_of: :sender
+  has_many :reviews, foreign_key: 'customer_id', dependent: :destroy, inverse_of: :customer
 
   # == Validations ==
   # NOTE: Ensure DB-level constraints for email and role presence/uniqueness
   before_validation :downcase_email
-  before_validation :auto_confirm_user, on: :create
 
   validates :email, presence: true, uniqueness: { case_sensitive: false }
   validates :role, presence: true
@@ -62,6 +62,8 @@ class User < ApplicationRecord
 
   # == Callbacks ==
   after_create :create_profile
+  # NOTE: auto_confirm_user is removed to enforce proper email confirmation flow
+  # Users should confirm via email, not be auto-confirmed
 
   # == Scopes ==
   scope :customers, -> { where(role: roles[:customer]) }
@@ -123,19 +125,12 @@ class User < ApplicationRecord
       vendor_profile || create_vendor_profile!(business_name: "#{full_name}'s Business", location: 'Not specified')
     when 'customer'
       customer_profile || create_customer_profile!
-    else
-      # No profile to create for other roles (e.g., admin)
-      nil
     end
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error "Failed to create profile for user #{id}: #{e.message}"
   end
 
   # Ensures email is always downcased for validation and storage
-  def auto_confirm_user
-    self.confirmed_at ||= Time.current
-  end
-
   def downcase_email
     self.email = email.downcase if email.present?
   end

@@ -6,12 +6,12 @@ RSpec.describe 'Authentication API' do
   let(:user) { create(:user, confirmed_at: Time.current) }
   let(:unconfirmed_user) { create(:user, confirmed_at: nil) }
 
-  describe 'POST /api/auth/login' do
+  describe 'POST /auth/login' do
     it 'successfully logs in a confirmed user' do
-      post '/api/auth/login', params: {
+      post '/auth/login', params: {
         auth: {
           email: user.email,
-          password: user.password
+          password: 'password123'
         }
       }, as: :json
 
@@ -24,7 +24,7 @@ RSpec.describe 'Authentication API' do
     end
 
     it 'rejects unconfirmed user login' do
-      post '/api/auth/login', params: {
+      post '/auth/login', params: {
         auth: {
           email: unconfirmed_user.email,
           password: unconfirmed_user.password
@@ -38,7 +38,7 @@ RSpec.describe 'Authentication API' do
     end
 
     it 'rejects invalid credentials' do
-      post '/api/auth/login', params: {
+      post '/auth/login', params: {
         auth: {
           email: user.email,
           password: 'wrongpassword'
@@ -52,10 +52,10 @@ RSpec.describe 'Authentication API' do
     end
   end
 
-  describe 'POST /api/auth/register' do
+  describe 'POST /auth/register' do
     it 'successfully registers a new user' do
       expect do
-        post '/api/auth/register', params: {
+        post '/auth/register', params: {
           auth: {
             email: 'newuser@example.com',
             password: 'password123',
@@ -78,7 +78,7 @@ RSpec.describe 'Authentication API' do
     end
 
     it 'rejects registration with invalid data' do
-      post '/api/auth/register', params: {
+      post '/auth/register', params: {
         auth: {
           email: 'invalid-email',
           password: '123',
@@ -98,9 +98,9 @@ RSpec.describe 'Authentication API' do
     end
   end
 
-  describe 'DELETE /api/auth/logout' do
+  describe 'DELETE /auth/logout' do
     it 'successfully logs out' do
-      delete '/api/auth/logout', as: :json
+      delete '/auth/logout', as: :json
 
       expect(response).to have_http_status(:ok)
 
@@ -112,17 +112,17 @@ RSpec.describe 'Authentication API' do
   describe 'JWT token usage' do
     it 'allows access to protected endpoints with valid token' do
       # Login to get a token
-      post '/api/auth/login', params: {
+      post '/auth/login', params: {
         auth: {
           email: user.email,
-          password: user.password
+          password: 'password123'
         }
       }, as: :json
 
       token = JSON.parse(response.body)['token']
 
       # Use the token to access a protected endpoint (we'll use a simple endpoint)
-      get '/api/users/show', headers: {
+      get '/users/show', headers: {
         'Authorization' => "Bearer #{token}"
       }, as: :json
 

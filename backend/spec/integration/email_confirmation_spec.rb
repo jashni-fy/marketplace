@@ -6,7 +6,7 @@ RSpec.describe 'Email Confirmation Flow' do
   describe 'User registration and confirmation' do
     it 'creates unconfirmed user and allows confirmation' do
       # Register a new user
-      post '/api/auth/register', params: {
+      post '/auth/register', params: {
         auth: {
           email: 'test@example.com',
           password: 'password123',
@@ -24,7 +24,7 @@ RSpec.describe 'Email Confirmation Flow' do
       expect(user.confirmed?).to be false
 
       # Try to login before confirmation - should fail
-      post '/api/auth/login', params: {
+      post '/auth/login', params: {
         auth: {
           email: 'test@example.com',
           password: 'password123'
@@ -39,7 +39,7 @@ RSpec.describe 'Email Confirmation Flow' do
       user.update!(confirmed_at: Time.current)
 
       # Now login should work
-      post '/api/auth/login', params: {
+      post '/auth/login', params: {
         auth: {
           email: 'test@example.com',
           password: 'password123'
@@ -54,7 +54,7 @@ RSpec.describe 'Email Confirmation Flow' do
 
     it 'creates appropriate profile based on user role' do
       # Test customer profile creation
-      post '/api/auth/register', params: {
+      post '/auth/register', params: {
         auth: {
           email: 'customer@example.com',
           password: 'password123',
@@ -70,7 +70,7 @@ RSpec.describe 'Email Confirmation Flow' do
       expect(customer.vendor_profile).to be_nil
 
       # Test vendor profile creation
-      post '/api/auth/register', params: {
+      post '/auth/register', params: {
         auth: {
           email: 'vendor@example.com',
           password: 'password123',
