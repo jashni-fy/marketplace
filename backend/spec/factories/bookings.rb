@@ -1,39 +1,5 @@
 # frozen_string_literal: true
 
-# == Schema Information
-#
-# Table name: bookings
-#
-#  id                   :bigint           not null, primary key
-#  event_date           :datetime         not null
-#  event_duration       :string
-#  event_end_date       :datetime
-#  event_location       :string           not null
-#  requirements         :text
-#  special_instructions :text
-#  status               :integer          default("pending"), not null
-#  total_amount         :decimal(10, 2)   not null
-#  created_at           :datetime         not null
-#  updated_at           :datetime         not null
-#  customer_id          :bigint           not null
-#  service_id           :bigint           not null
-#  vendor_profile_id    :bigint           not null
-#
-# Indexes
-#
-#  index_bookings_on_customer_id             (customer_id)
-#  index_bookings_on_customer_id_and_status  (customer_id,status)
-#  index_bookings_on_event_date              (event_date)
-#  index_bookings_on_service_id              (service_id)
-#  index_bookings_on_service_id_and_status   (service_id,status)
-#  index_bookings_on_vendor_profile_id       (vendor_profile_id)
-#
-# Foreign Keys
-#
-#  fk_rails_...  (customer_id => users.id)
-#  fk_rails_...  (service_id => services.id)
-#  fk_rails_...  (vendor_profile_id => vendor_profiles.id)
-#
 FactoryBot.define do
   factory :booking do
     customer factory: %i[user customer]

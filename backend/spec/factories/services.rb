@@ -1,25 +1,5 @@
 # frozen_string_literal: true
 
-# == Schema Information
-#
-# Table name: services
-#
-#  id             :bigint           not null, primary key
-#  average_rating :decimal(3, 2)    default(0.0)
-#  base_price     :decimal(10, 2)
-#  description    :text
-#  name           :string
-#  pricing_type   :integer          default("hourly")
-#  status         :integer          default("draft")
-#  total_reviews  :integer          default(0)
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
-#
-# Indexes
-#
-#  index_services_on_average_rating  (average_rating)
-#  index_services_on_status          (status)
-#
 FactoryBot.define do
   factory :service do
     sequence(:name) { |n| "Service #{n}" }
