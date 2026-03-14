@@ -1,0 +1,63 @@
+# frozen_string_literal: true
+
+module Bookings
+  class CreateBooking
+    extend Dry::Initializer
+
+    option :customer, type: Types.Instance(User)
+    option :service, type: Types.Instance(Service)
+    option :vendor_profile, type: Types.Instance(VendorProfile)
+    option :event_date, type: Types::Time
+    option :event_location, type: Types::String
+    option :event_end_date, type: Types::Time, optional: true
+    option :event_duration, type: Types::String, optional: true
+    option :total_amount, type: Types::Decimal
+    option :requirements, type: Types::String, optional: true
+    option :special_instructions, type: Types::String, optional: true
+    option :status, type: Types::String, default: proc { 'pending' }
+
+    def self.call(**)
+      new(**).call
+    end
+
+    def call
+      # 1. Create the booking record
+      booking = create_booking_record
+
+      return { success: false, error: booking.errors.full_messages.join(', ') } unless booking.persisted?
+
+      # 2. Send confirmation notification to customer and vendor
+      send_confirmation_notification(booking)
+
+      { success: true, booking: booking }
+    rescue StandardError => e
+      Rails.logger.error("Failed to create booking: #{e.class} #{e.message}")
+      { success: false, error: e.message }
+    end
+
+    private
+
+    def create_booking_record
+      Booking.new(
+        customer: customer,
+        service: service,
+        vendor_profile: vendor_profile,
+        event_date: event_date,
+        event_location: event_location,
+        event_end_date: event_end_date,
+        event_duration: event_duration,
+        total_amount: total_amount,
+        requirements: requirements,
+        special_instructions: special_instructions,
+        status: status
+      ).tap(&:save)
+    end
+
+    def send_confirmation_notification(booking)
+      Notifications::SendBookingConfirmation.call(booking: booking)
+    rescue StandardError => e
+      Rails.logger.error("Failed to send booking confirmation notification for booking #{booking.id}: #{e.message}")
+      # Don't re-raise; booking is already created
+    end
+  end
+end

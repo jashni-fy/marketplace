@@ -19,7 +19,8 @@ import {
   Info,
   Zap,
   ArrowLeft,
-  ArrowRight
+  ArrowRight,
+  AlertTriangle
 } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+// @ts-ignore
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 interface Service {
   id: string;
@@ -39,13 +42,18 @@ interface Service {
 
 const VendorProfile = ({ params }: { params: { id: string } }) => {
   const router = useRouter();
+  const { user } = useAuth();
   const [vendor, setVendor] = useState<any>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [portfolio, setPortfolio] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
+  const [ratingStats, setRatingStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [verificationLoading, setVerificationLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'services' | 'portfolio' | 'reviews'>('services');
   
+  const isOwner = user?.id === vendor?.user?.id;
+
   // Interactive Booking State
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [addons, setAddons] = useState<string[]>([]);
@@ -65,6 +73,32 @@ const VendorProfile = ({ params }: { params: { id: string } }) => {
       setPortfolio(portfolioRes.data.portfolio_items);
       setReviews(reviewsRes.data.reviews);
       
+      // Fetch advanced rating stats via GraphQL
+      const gqlQuery = `
+        query GetVendorRatingStats($id: ID!) {
+          vendorProfile(id: $id) {
+            ratingDisplay
+            ratingBreakdown {
+              quality
+              communication
+              value
+              punctuality
+            }
+            ratingDistribution {
+              fiveStar
+              fourStar
+              threeStar
+              twoStar
+              oneStar
+            }
+          }
+        }
+      `;
+      const gqlRes = await apiService.graphql(gqlQuery, { id: params.id });
+      if (gqlRes.data?.data?.vendorProfile) {
+        setRatingStats(gqlRes.data.data.vendorProfile);
+      }
+      
       if (servicesRes.data.services?.length > 0) {
         setSelectedService(servicesRes.data.services[0]);
       }
@@ -78,6 +112,19 @@ const VendorProfile = ({ params }: { params: { id: string } }) => {
   useEffect(() => {
     loadVendorData();
   }, [loadVendorData]);
+
+  const handleRequestVerification = async () => {
+    try {
+      setVerificationLoading(true);
+      await apiService.profiles.requestVerification();
+      toast.success('Verification request submitted successfully');
+      loadVendorData(); // Reload to get updated status
+    } catch (err: any) {
+      toast.error(err.extractedMessage || 'Failed to request verification');
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
 
   const totalPrice = useMemo(() => {
     if (!selectedService) return 0;
@@ -134,13 +181,43 @@ const VendorProfile = ({ params }: { params: { id: string } }) => {
             {/* Minimal Pro Header */}
             <section className="space-y-6">
                <div className="flex items-start justify-between">
-                  <div>
-                    <h1 className="text-4xl font-bold text-white tracking-tight mb-3">{vendor.business_name}</h1>
+                  <div className="space-y-4">
+                    <h1 className="text-4xl font-bold text-white tracking-tight">{vendor.business_name}</h1>
+                    
+                    {/* Verification Status Banner for Owner */}
+                    {isOwner && vendor.verification_status !== 'verified' && (
+                      <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-between gap-4 max-w-2xl">
+                        <div className="flex items-center gap-3">
+                          <AlertTriangle className="size-5 text-primary" />
+                          <div>
+                            <p className="text-xs font-bold text-white uppercase tracking-wider">Profile Verification</p>
+                            <p className="text-[11px] text-slate-400 mt-0.5">
+                              {vendor.verification_status === 'pending_verification' 
+                                ? 'Your request is currently under review by our team.' 
+                                : 'Get verified to build trust and increase your visibility in the marketplace.'}
+                            </p>
+                          </div>
+                        </div>
+                        {vendor.verification_status === 'unverified' && (
+                          <Button 
+                            size="sm" 
+                            disabled={verificationLoading}
+                            onClick={handleRequestVerification}
+                            className="bg-primary text-white font-bold text-[10px] uppercase tracking-widest px-4 h-9"
+                          >
+                            {verificationLoading ? 'Requesting...' : 'Request Now'}
+                          </Button>
+                        )}
+                      </div>
+                    )}
+
                     <div className="flex flex-wrap items-center gap-4 text-xs font-bold uppercase tracking-widest text-slate-500">
                        <span className="flex items-center gap-1.5 text-slate-300"><MapPin className="size-3.5 text-primary" /> {vendor.location}</span>
                        <span className="flex items-center gap-1.5"><Clock className="size-3.5 text-primary" /> Usually responds in 2h</span>
                        {vendor.is_verified && (
-                         <span className="flex items-center gap-1.5 text-primary"><ShieldCheck className="size-3.5" /> Verified Pro</span>
+                         <span className="flex items-center gap-1.5 text-primary border border-primary/30 px-2 py-0.5 rounded-full bg-primary/5">
+                           <ShieldCheck className="size-3.5" /> Verified Pro
+                         </span>
                        )}
                     </div>
                   </div>
@@ -187,7 +264,7 @@ const VendorProfile = ({ params }: { params: { id: string } }) => {
                        </div>
                        <div className="text-right shrink-0">
                           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Starting at</p>
-                          <p className="text-2xl font-bold text-white">₹{service.base_price.toLocaleString()}</p>
+                          <p className="text-2xl font-bold text-white">₹{service.base_price?.toLocaleString()}</p>
                        </div>
                     </div>
                   ))}
@@ -199,30 +276,61 @@ const VendorProfile = ({ params }: { params: { id: string } }) => {
                {reviews.length > 0 ? (
                   <>
                      <div className="flex flex-col md:flex-row justify-between gap-8 mb-10 pb-10 border-b border-white/[0.03]">
-                        <div>
-                           <h2 className="text-4xl font-bold text-white mb-2">{vendor.average_rating || 'N/A'}</h2>
-                           <div className="flex gap-1 mb-2">
-                              {[1, 2, 3, 4, 5].map((i) => (
-                                 <Star
-                                    key={i}
-                                    className={`size-4 ${i <= Math.round(vendor.average_rating || 0) ? 'fill-primary text-primary' : 'text-slate-600'}`}
-                                 />
-                              ))}
+                        <div className="flex flex-col md:flex-row gap-8">
+                           <div>
+                              <h2 className="text-4xl font-bold text-white mb-2">{vendor.average_rating || 'N/A'}</h2>
+                              <div className="flex gap-1 mb-2">
+                                 {[1, 2, 3, 4, 5].map((i) => (
+                                    <Star
+                                       key={i}
+                                       className={`size-4 ${i <= Math.round(vendor.average_rating || 0) ? 'fill-primary text-primary' : 'text-slate-600'}`}
+                                    />
+                                 ))}
+                              </div>
+                              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                 {ratingStats?.ratingDisplay || `Based on ${vendor.total_reviews} reviews`}
+                              </p>
                            </div>
-                           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Based on {vendor.total_reviews} client reviews</p>
+
+                           {/* Star Distribution */}
+                           {ratingStats?.ratingDistribution && (
+                              <div className="flex-1 max-w-xs space-y-1">
+                                 {[
+                                    { label: '5 star', count: ratingStats.ratingDistribution.fiveStar },
+                                    { label: '4 star', count: ratingStats.ratingDistribution.fourStar },
+                                    { label: '3 star', count: ratingStats.ratingDistribution.threeStar },
+                                    { label: '2 star', count: ratingStats.ratingDistribution.twoStar },
+                                    { label: '1 star', count: ratingStats.ratingDistribution.oneStar },
+                                 ].map((item) => {
+                                    const percentage = vendor.total_reviews > 0 
+                                       ? (item.count / vendor.total_reviews) * 100 
+                                       : 0;
+                                    return (
+                                       <div key={item.label} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-tighter text-slate-500">
+                                          <span className="w-10 shrink-0">{item.label}</span>
+                                          <div className="h-1 flex-1 bg-white/5 rounded-full overflow-hidden">
+                                             <div className="h-full bg-primary/60" style={{ width: `${percentage}%` }} />
+                                          </div>
+                                          <span className="w-4 text-right text-slate-400">{item.count}</span>
+                                       </div>
+                                    );
+                                 })}
+                              </div>
+                           )}
                         </div>
+
                         <div className="grid grid-cols-2 gap-x-12 gap-y-4">
                            {[
-                              { label: 'Quality', key: 'quality_rating' },
-                              { label: 'Communication', key: 'communication_rating' },
-                              { label: 'Value', key: 'value_rating' },
-                              { label: 'Punctuality', key: 'punctuality_rating' },
+                              { label: 'Quality', key: 'quality' },
+                              { label: 'Communication', key: 'communication' },
+                              { label: 'Value', key: 'value' },
+                              { label: 'Punctuality', key: 'punctuality' },
                            ].map(({ label, key }) => {
-                              const avg =
-                                 reviews.length > 0
-                                    ? (reviews.reduce((sum, r) => sum + (r[key] || 0), 0) / reviews.length).toFixed(1)
-                                    : 'N/A';
-                              const percentage = avg !== 'N/A' ? Math.round((parseFloat(avg) / 5) * 100) : 0;
+                              const avg = ratingStats?.ratingBreakdown?.[key] || 
+                                 (reviews.length > 0
+                                    ? (reviews.reduce((sum, r) => sum + (r[`${key}_rating`] || 0), 0) / reviews.length).toFixed(1)
+                                    : 'N/A');
+                              const percentage = avg !== 'N/A' ? Math.round((parseFloat(avg as string) / 5) * 100) : 0;
                               return (
                                  <div key={label} className="space-y-1">
                                     <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400">
@@ -300,7 +408,7 @@ const VendorProfile = ({ params }: { params: { id: string } }) => {
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Package</p>
                         <div className="flex justify-between items-center">
                            <span className="text-sm font-bold text-white">{selectedService?.name}</span>
-                           <span className="text-sm font-bold text-white">₹{selectedService?.base_price.toLocaleString()}</span>
+                           <span className="text-sm font-bold text-white">₹{selectedService?.base_price?.toLocaleString()}</span>
                         </div>
                      </div>
 

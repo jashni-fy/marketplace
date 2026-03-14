@@ -50,6 +50,14 @@ class User < ApplicationRecord
   has_many :booking_messages, foreign_key: 'sender_id', dependent: :destroy, inverse_of: :sender
   has_many :reviews, foreign_key: 'customer_id', dependent: :destroy, inverse_of: :customer
 
+  # Notifications
+  has_one :email_notification_preference, dependent: :destroy
+  has_many :in_app_notifications, dependent: :destroy
+
+  # Favorites
+  has_many :customer_favorites, dependent: :destroy
+  has_many :favorite_vendors, through: :customer_favorites, source: :vendor_profile
+
   # == Validations ==
   # NOTE: Ensure DB-level constraints for email and role presence/uniqueness
   before_validation :downcase_email
@@ -62,6 +70,7 @@ class User < ApplicationRecord
 
   # == Callbacks ==
   after_create :create_profile
+  after_create :create_email_notification_preference
   # NOTE: auto_confirm_user is removed to enforce proper email confirmation flow
   # Users should confirm via email, not be auto-confirmed
 
@@ -128,6 +137,13 @@ class User < ApplicationRecord
     end
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error "Failed to create profile for user #{id}: #{e.message}"
+  end
+
+  # Creates default email notification preferences for new user
+  def create_email_notification_preference
+    EmailNotificationPreference.create_for_user(self)
+  rescue StandardError => e
+    Rails.logger.error "Failed to create email notification preferences for user #{id}: #{e.message}"
   end
 
   # Ensures email is always downcased for validation and storage

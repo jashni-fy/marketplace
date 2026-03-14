@@ -29,9 +29,8 @@ class BookingResponseService
     return { success: false, errors: ['Booking cannot be modified'] } unless booking_modifiable?
 
     ActiveRecord::Base.transaction do
-      update_booking_status
+      update_booking_with_status_change
       create_response_message
-      send_customer_notification
       log_status_change
     end
 
@@ -54,22 +53,36 @@ class BookingResponseService
     %w[pending counter_offered].include?(@booking.status)
   end
 
-  def update_booking_status
+  def update_booking_with_status_change
     new_status = RESPONSE_STATUS.fetch(@response_action)
-    attrs = { status: new_status }
-    attrs[:total_amount] = @counter_amount if @response_action == 'counter_offer' && @counter_amount.present?
-    @booking.update!(attrs)
+
+    # Handle counter offer amount update
+    @booking.update!(total_amount: @counter_amount) if @response_action == 'counter_offer' && @counter_amount.present?
+
+    # Use explicit orchestration service to update status with side effects
+    # This sends notifications and enqueues jobs as needed
+    result = Bookings::UpdateBookingStatus.call(
+      booking: @booking,
+      new_status: new_status
+    )
+
+    raise StandardError, result[:error] unless result[:success]
+
+    @booking = result[:booking]
+
+    # Send custom notification based on response type
+    send_custom_notification_for_response
   end
 
-  def create_response_message
-    Rails.logger.info "Vendor #{@vendor.id} responded to booking #{@booking.id} with #{@response_action}"
-  end
-
-  def send_customer_notification
+  def send_custom_notification_for_response
     notification_type = RESPONSE_NOTIFICATION.fetch(@response_action)
     NotificationJob.perform_later(notification_type, @booking.customer.id, { 'booking_id' => @booking.id })
   rescue StandardError => e
     Rails.logger.warn("Failed to send notification: #{e.message}")
+  end
+
+  def create_response_message
+    Rails.logger.info "Vendor #{@vendor.id} responded to booking #{@booking.id} with #{@response_action}"
   end
 
   def log_status_change

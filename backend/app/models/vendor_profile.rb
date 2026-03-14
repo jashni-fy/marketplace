@@ -10,12 +10,18 @@
 #  average_rating      :decimal(3, 2)    default(0.0)
 #  business_license    :string
 #  business_name       :string           not null
+#  cancellation_policy :text
+#  completion_rate     :decimal(5, 4)
 #  description         :text
+#  facebook_url        :string
+#  favorites_count     :integer          default(0), not null
+#  instagram_handle    :string
 #  latitude            :decimal(10, 6)
 #  location            :string
 #  longitude           :decimal(10, 6)
 #  phone               :string
 #  rejection_reason    :text
+#  response_time_hours :decimal(5, 2)
 #  service_categories  :text
 #  total_reviews       :integer          default(0)
 #  verification_status :integer          default("unverified")
@@ -30,6 +36,7 @@
 #
 #  index_vendor_profiles_on_business_name        (business_name)
 #  index_vendor_profiles_on_coordinates          (latitude,longitude)
+#  index_vendor_profiles_on_favorites_count      (favorites_count)
 #  index_vendor_profiles_on_location             (location)
 #  index_vendor_profiles_on_user_id              (user_id)
 #  index_vendor_profiles_on_verification_status  (verification_status)
@@ -42,13 +49,17 @@ class VendorProfile < ApplicationRecord
   belongs_to :user
 
   # Service associations
+  has_many :services, dependent: :destroy
   has_many :vendor_services, dependent: :destroy
-  has_many :services, through: :vendor_services
   has_many :categories, through: :services
   has_many :portfolio_items, dependent: :destroy
   has_many :availability_slots, dependent: :destroy
   has_many :bookings, dependent: :destroy # Updated to direct association
   has_many :reviews, dependent: :destroy
+
+  # Customer favorites
+  has_many :customer_favorites, dependent: :destroy
+  has_many :favorited_by_users, through: :customer_favorites, source: :user
 
   # Enums
   enum :verification_status, {
@@ -70,6 +81,12 @@ class VendorProfile < ApplicationRecord
   validates :total_reviews, numericality: { greater_than_or_equal_to: 0 }
   validates :latitude, numericality: { greater_than_or_equal_to: -90, less_than_or_equal_to: 90 }, allow_nil: true
   validates :longitude, numericality: { greater_than_or_equal_to: -180, less_than_or_equal_to: 180 }, allow_nil: true
+  validates :instagram_handle, format: { with: /\A[\w.]+\z/ }, allow_blank: true, length: { maximum: 30 }
+  validates :facebook_url, format: { with: %r{\Ahttps://(www\.)?facebook\.com/} }, allow_blank: true
+  # Trust metrics validations
+  validates :response_time_hours, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :completion_rate, numericality: { greater_than_or_equal_to: 0.0, less_than_or_equal_to: 1.0 },
+                              allow_nil: true
 
   # Scopes
   scope :verified, -> { where(verification_status: :verified) } # Updated to use enum
@@ -131,37 +148,20 @@ class VendorProfile < ApplicationRecord
     VendorProfiles::UpdateRatingStats.call(vendor_profile: self)
   end
 
+  def calculate_public_stats!
+    VendorProfiles::CalculatePublicStats.call(vendor_profile: self)
+  end
+
   def rating_distribution
-    dist = reviews.published.group(:rating).count
-    {
-      5 => dist[5] || 0,
-      4 => dist[4] || 0,
-      3 => dist[3] || 0,
-      2 => dist[2] || 0,
-      1 => dist[1] || 0
-    }
+    rating_stats[:distribution]
   end
 
   def rating_breakdown
-    stats = reviews.published.pick(
-      'AVG(quality_rating)',
-      'AVG(communication_rating)',
-      'AVG(value_rating)',
-      'AVG(punctuality_rating)'
-    )
-
-    {
-      quality: stats[0].to_f.round(2),
-      communication: stats[1].to_f.round(2),
-      value: stats[2].to_f.round(2),
-      punctuality: stats[3].to_f.round(2)
-    }
+    rating_stats[:breakdown]
   end
 
   def rating_display
-    return 'No ratings yet' if total_reviews.zero?
-
-    "#{average_rating.round(1)} (#{total_reviews} #{'review'.pluralize(total_reviews)})"
+    rating_stats[:display]
   end
 
   def featured_portfolio_items
@@ -192,9 +192,13 @@ class VendorProfile < ApplicationRecord
 
   # Calculates distance from this vendor to given latitude/longitude
   def distance_to(lat, lng, unit: :meters)
-    return nil unless valid_distance_params?(lat, lng, coordinates?)
+    return nil unless coordinates?
 
-    calculate_haversine_distance(latitude.to_f, longitude.to_f, lat.to_f, lng.to_f, unit)
+    location = GeographicLocation.new(latitude, longitude)
+    other_location = GeographicLocation.new(lat, lng)
+    location.distance_to(other_location, unit: unit)
+  rescue ArgumentError
+    nil
   end
 
   # Class methods
@@ -220,6 +224,8 @@ class VendorProfile < ApplicationRecord
       id business_name description location phone website
       service_categories business_license years_experience average_rating
       total_reviews latitude longitude created_at updated_at user_id
+      instagram_handle facebook_url cancellation_policy response_time_hours
+      completion_rate
     ]
   end
 
@@ -227,6 +233,10 @@ class VendorProfile < ApplicationRecord
   before_save :normalize_website
 
   private
+
+  def rating_stats
+    @rating_stats ||= VendorProfiles::CalculateRatingStats.call(vendor_profile: self)
+  end
 
   def normalize_website
     return if website.blank?
@@ -253,52 +263,9 @@ class VendorProfile < ApplicationRecord
     errors.add(:website, 'is not a valid URL') unless valid_scheme && valid_domain
   end
 
-  def valid_distance_params?(lat, lng, has_coords)
-    return false unless has_coords
-    return false unless lat.is_a?(Numeric) && lng.is_a?(Numeric)
-
-    lat.between?(-90, 90) && lng.between?(-180, 180)
-  end
-
-  def calculate_haversine_distance(lat1, lon1, lat2, lon2, unit)
-    return 0.0 if lat1 == lat2 && lon1 == lon2
-
-    rad_per_deg = Math::PI / 180
-    dlat_rad = (lat2 - lat1) * rad_per_deg
-    dlon_rad = (lon2 - lon1) * rad_per_deg
-    lat1_rad = lat1 * rad_per_deg
-    lat2_rad = lat2 * rad_per_deg
-
-    a = haversine_formula(dlat_rad, dlon_rad, lat1_rad, lat2_rad)
-    c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    distance_km = 6371.0 * c
-
-    format_distance(distance_km, unit)
-  end
-
-  def haversine_formula(dlat_rad, dlon_rad, lat1_rad, lat2_rad)
-    sin_dlat = Math.sin(dlat_rad / 2)**2
-    sin_dlon = Math.sin(dlon_rad / 2)**2
-    sin_dlat + (Math.cos(lat1_rad) * Math.cos(lat2_rad) * sin_dlon)
-  end
-
-  def format_distance(distance_km, unit)
-    case unit
-    when :meters
-      (distance_km * 1000).round(2)
-    when :kilometers
-      distance_km.round(4)
-    else
-      distance_km * 1000
-    end
-  end
-
-  # rubocop:disable Lint/IneffectiveAccessModifier
+  # SQL distance predicate for geographic queries
   def self.haversine_distance_sql
-    '6371 * acos(cos(radians(?)) * cos(radians(latitude)) * ' \
-      'cos(radians(longitude) - radians(?)) + sin(radians(?)) * ' \
-      'sin(radians(latitude))) <= ?'
+    GeographicLocation.sql_distance_predicate
   end
-  # rubocop:enable Lint/IneffectiveAccessModifier
 end
 # rubocop:enable Metrics/ClassLength, Rails/UniqueValidationWithoutIndex

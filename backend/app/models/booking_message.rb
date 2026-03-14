@@ -31,6 +31,7 @@ class BookingMessage < ApplicationRecord
   validates :sent_at, presence: true
 
   before_validation :set_sent_at, on: :create
+  after_create :record_vendor_first_response
 
   scope :ordered, -> { order(:sent_at) }
   scope :recent, -> { order(sent_at: :desc) }
@@ -55,5 +56,16 @@ class BookingMessage < ApplicationRecord
 
   def set_sent_at
     self.sent_at ||= Time.current
+  end
+
+  def record_vendor_first_response
+    return unless sender.vendor?
+    return if booking.vendor_first_response_at.present?
+
+    # Update using raw SQL to avoid triggering booking callbacks
+    # This ensures the timestamp is recorded without side effects
+    Booking.where(id: booking.id).update_all(vendor_first_response_at: sent_at)
+  rescue StandardError => e
+    Rails.logger.error("Failed to record vendor first response: #{e.message}")
   end
 end

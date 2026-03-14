@@ -22,20 +22,25 @@ class Mutations::CreateReview < Mutations::BaseMutation
 
     return { review: nil, errors: ['You can only review your own bookings'] } unless booking.customer == user
 
-    review_attributes = review_input.to_h.reject { |key, _| key.to_sym == :booking_id }
-
-    review = Review.new(
-      booking: booking,
+    # Use explicit orchestration service to create review with all side effects
+    result = Reviews::CreateReview.call(
       customer: user,
-      vendor_profile: booking.vendor_profile,
+      booking: booking,
       service: booking.service,
-      **review_attributes
+      vendor_profile: booking.vendor_profile,
+      rating: review_input.rating,
+      quality_rating: review_input.quality_rating,
+      communication_rating: review_input.communication_rating,
+      value_rating: review_input.value_rating,
+      punctuality_rating: review_input.punctuality_rating,
+      comment: review_input.comment,
+      status: review_input.status || 'published'
     )
 
-    if review.save
-      { review: review, errors: [] }
+    if result[:success]
+      { review: result[:review], errors: [] }
     else
-      { review: nil, errors: review.errors.full_messages }
+      { review: nil, errors: [result[:error]] }
     end
   end
 end
