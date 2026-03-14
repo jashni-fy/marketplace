@@ -48,6 +48,17 @@ class Types::QueryType < Types::BaseObject
   field :vendor_dashboard, Types::VendorAnalyticsType, null: true,
                                                        description: 'Vendor analytics dashboard statistics'
 
+  # Notification queries
+  field :notifications, resolver: Resolvers::NotificationsResolver,
+                        description: 'Get user in-app notifications with filtering and pagination'
+
+  field :email_notification_preferences, resolver: Resolvers::EmailNotificationPreferencesResolver,
+                                         description: 'Get user email notification preferences'
+
+  # Favorites queries
+  field :customer_favorites, resolver: Resolvers::CustomerFavoritesResolver,
+                             description: 'Get user favorite vendors with sorting and pagination'
+
   def node(id:)
     context.schema.object_from_id(id, context)
   end

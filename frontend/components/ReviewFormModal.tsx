@@ -68,7 +68,7 @@ export const ReviewFormModal = ({
       setPunctualityRating(0);
       setComment('');
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.message || 'Failed to submit review';
+      const errorMessage = error.extractedMessage || error.response?.data?.error || error.message || 'Failed to submit review';
       toast.error(errorMessage);
     } finally {
       setLoading(false);

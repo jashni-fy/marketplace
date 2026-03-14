@@ -70,6 +70,17 @@ class Types::VendorProfileType < Types::BaseObject
   field :service_categories_list, [String], null: false, description: 'List of categories the vendor belongs to'
   field :verified, Boolean, null: false, method: :verified?, description: 'Convenience alias for the verification state'
 
+  # Social/transparency fields
+  field :cancellation_policy, String, null: true, description: 'Vendor cancellation policy'
+  field :facebook_url, String, null: true, description: 'Facebook page URL for the vendor'
+  field :favorites_count, Integer, null: false, description: 'Number of customers who favorited this vendor'
+  field :instagram_handle, String, null: true, description: 'Instagram handle for the vendor'
+
+  # Trust fields
+  field :member_since, GraphQL::Types::ISO8601DateTime, null: false, method: :created_at,
+                                                        description: 'When vendor joined the platform'
+  field :trust_stats, Types::VendorTrustStatsType, null: false, description: 'Trust and credibility metrics'
+
   delegate :display_name, to: :object
 
   delegate :rating_display, to: :object
@@ -80,6 +91,10 @@ class Types::VendorProfileType < Types::BaseObject
 
   def distance_to(latitude:, longitude:)
     object.distance_to(latitude, longitude)
+  end
+
+  def trust_stats
+    VendorProfiles::CalculatePublicStats.call(vendor_profile: object)
   end
 end
 

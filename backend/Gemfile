@@ -32,6 +32,9 @@ gem 'devise'
 # JWT for token authentication
 gem 'jwt'
 
+# Pundit for authorization policies
+gem 'pundit', '~> 2.3'
+
 # Connection Pool (pinned to avoid Rails 8 incompatibility with 3.0)
 gem 'connection_pool', '~> 2.5'
 

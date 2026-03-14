@@ -20,48 +20,43 @@ class BookingCreationService
   validates :service_id, presence: true
   validates :event_date, presence: true
   validates :total_amount, numericality: { greater_than: 0 }
-  # rubocop: disable Metrics/MethodLength
   def call
     return { success: false, errors: errors.full_messages } unless valid?
 
     ActiveRecord::Base.transaction do
-      create_booking
+      # Build booking attributes (do not create yet)
+      build_booking
+
+      # Validate availability and conflicts before creating
       check_availability
       prevent_double_booking
 
-      if @booking.save
-        # Send notification to vendor about new booking
-        begin
-          if defined?(NotificationJob)
-            NotificationJob.perform_later('booking_created', @vendor_profile.user_id, { 'booking_id' => @booking.id })
-          end
-        rescue Redis::ConnectionError, Errno::ECONNREFUSED => e
-          Rails.logger.warn("Failed to send booking notification: #{e.message}")
-          # Don't fail the booking creation if notification fails
-        end
-        { success: true, booking: @booking }
-      else
-        @booking.errors.full_messages.each do |message|
-          errors.add(:base, message)
-        end
-        { success: false, errors: errors.full_messages }
+      # Use explicit orchestration service to create booking with side effects
+      result = create_booking_with_orchestration
+
+      return result if result[:success]
+
+      # If creation failed, propagate errors
+      result[:error]&.split(',')&.each do |message|
+        errors.add(:base, message.strip)
       end
+
+      { success: false, errors: errors.full_messages }
     end
   rescue StandardError => e
     errors.add(:base, e.message)
     { success: false, errors: errors.full_messages }
   end
-  # rubocop: enable Metrics/MethodLength
-
   attr_reader :booking
 
   private
 
-  def create_booking
+  def build_booking
     @service = Service.find(service_id)
     @vendor_profile = @service.vendor_profiles.first
 
-    @booking = Booking.new(
+    # Build booking attributes for validation, don't create yet
+    @booking_attributes = {
       customer: customer,
       vendor_profile: @vendor_profile,
       service: @service,
@@ -72,8 +67,16 @@ class BookingCreationService
       requirements: requirements,
       special_instructions: special_instructions,
       event_duration: event_duration,
-      status: :pending
-    )
+      status: 'pending'
+    }
+
+    # Create a temporary booking for validation (don't save)
+    @booking = Booking.new(@booking_attributes)
+  end
+
+  def create_booking_with_orchestration
+    # Use explicit orchestration service to create booking with side effects
+    Bookings::CreateBooking.call(**@booking_attributes)
   end
 
   def check_availability

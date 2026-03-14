@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 class NotificationJob < ApplicationJob
-  queue_as :notifications
+  # Standard priority: important but not urgent
+  # Notifications should be processed quickly but after critical jobs
+  queue_as :default
 
   # Don't retry if user doesn't exist
   discard_on ActiveRecord::RecordNotFound

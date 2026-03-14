@@ -5,9 +5,20 @@ class Types::MutationType < Types::BaseObject
 
   field :create_review, mutation: Mutations::CreateReview,
                         description: 'Submit a review for an existing booking'
-  # TODO: remove me
-  field :test_field, String, null: false, description: 'An example field added by the generator'
-  def test_field
-    'Hello World'
-  end
+
+  # Notification mutations
+  field :mark_notification_as_read, mutation: Mutations::MarkNotificationAsRead,
+                                    description: 'Mark an in-app notification as read'
+  field :update_email_notification_preferences, mutation: Mutations::UpdateEmailNotificationPreferences,
+                                                description: 'Update user email notification preferences'
+
+  # Favorites mutations
+  field :toggle_favorite, mutation: Mutations::ToggleFavorite,
+                          description: 'Add or remove a vendor from user favorites'
+
+  # Review mutations
+  field :respond_to_review, mutation: Mutations::RespondToReview,
+                            description: 'Vendor response to a review'
+  field :vote_review_helpful, mutation: Mutations::VoteReviewHelpful,
+                              description: 'Vote a review as helpful'
 end

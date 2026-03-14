@@ -30,21 +30,15 @@ FactoryBot.define do
     base_price { 150.00 }
     pricing_type { :hourly }
     status { :active }
+    vendor_profile
 
-    # Support backward compatibility - accept vendor_profile and service_category parameters
-    # and create the associations automatically
+    # Support transient service_category parameter for creating join records
     transient do
-      vendor_profile { nil }
       service_category { nil }
     end
 
     after(:create) do |service, evaluator|
-      if evaluator.vendor_profile.present?
-        create(:vendor_service, service: service, vendor_profile: evaluator.vendor_profile)
-      end
-
-      # service_category is now a join table, but this support is for backward compat
-      # If a Category model instance is passed, create the join record
+      # service_category is a join table - create the join record if passed
       if evaluator.service_category.present? && evaluator.service_category.is_a?(Category)
         create(:service_category, service: service, category: evaluator.service_category)
       end

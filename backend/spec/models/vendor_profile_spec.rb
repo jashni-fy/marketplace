@@ -8,12 +8,18 @@
 #  average_rating      :decimal(3, 2)    default(0.0)
 #  business_license    :string
 #  business_name       :string           not null
+#  cancellation_policy :text
+#  completion_rate     :decimal(5, 4)
 #  description         :text
+#  facebook_url        :string
+#  favorites_count     :integer          default(0), not null
+#  instagram_handle    :string
 #  latitude            :decimal(10, 6)
 #  location            :string
 #  longitude           :decimal(10, 6)
 #  phone               :string
 #  rejection_reason    :text
+#  response_time_hours :decimal(5, 2)
 #  service_categories  :text
 #  total_reviews       :integer          default(0)
 #  verification_status :integer          default("unverified")
@@ -28,6 +34,7 @@
 #
 #  index_vendor_profiles_on_business_name        (business_name)
 #  index_vendor_profiles_on_coordinates          (latitude,longitude)
+#  index_vendor_profiles_on_favorites_count      (favorites_count)
 #  index_vendor_profiles_on_location             (location)
 #  index_vendor_profiles_on_user_id              (user_id)
 #  index_vendor_profiles_on_verification_status  (verification_status)

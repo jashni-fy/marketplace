@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 class ImageProcessingJob < ApplicationJob
-  queue_as :default
+  # Low priority: image processing can happen in background at non-peak times
+  queue_as :low
 
   retry_on StandardError, wait: :polynomially_longer, attempts: 3
 

@@ -17,6 +17,14 @@ class Types::ReviewType < Types::BaseObject
         description: 'Timestamp when the review was last updated'
   field :value_rating, Integer, null: true, description: 'Value for money score (1-5)'
 
+  # Trust and credibility fields
+  field :helpful_votes, Integer, null: false, description: 'Number of helpful votes for this review'
+  field :is_verified_purchase, Boolean, null: false, method: :verified_purchase?,
+                                        description: 'Whether this review is from a verified purchase'
+  field :photos, [String], null: false, description: 'URLs of review photos'
+  field :vendor_responded_at, GraphQL::Types::ISO8601DateTime, null: true, description: 'When the vendor responded'
+  field :vendor_response, String, null: true, description: 'Vendor response to the review'
+
   # Associations
   field :booking, Types::NodeType, null: false, description: 'Booking that was reviewed'
   field :customer, Types::UserType, null: false, description: 'Customer who submitted the review'
@@ -25,4 +33,8 @@ class Types::ReviewType < Types::BaseObject
         Types::VendorProfileType,
         null: false,
         description: 'Vendor profile associated with the service'
+
+  def photos
+    object.photos.map { |photo| Rails.application.routes.url_helpers.rails_blob_url(photo) }
+  end
 end

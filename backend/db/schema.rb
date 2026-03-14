@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_08_134356) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_14_130001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -93,12 +93,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_08_134356) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "vendor_profile_id", null: false
+    t.datetime "booking_reminder_sent_at"
+    t.datetime "vendor_first_response_at"
+    t.index ["booking_reminder_sent_at"], name: "index_bookings_on_booking_reminder_sent_at"
     t.index ["customer_id", "status"], name: "index_bookings_on_customer_id_and_status"
     t.index ["customer_id"], name: "index_bookings_on_customer_id"
     t.index ["event_date"], name: "index_bookings_on_event_date"
     t.index ["service_id", "status"], name: "index_bookings_on_service_id_and_status"
     t.index ["service_id"], name: "index_bookings_on_service_id"
+    t.index ["vendor_first_response_at"], name: "index_bookings_on_vendor_first_response_at"
+    t.index ["vendor_profile_id", "vendor_first_response_at", "created_at"], name: "index_bookings_vendor_response_time"
     t.index ["vendor_profile_id"], name: "index_bookings_on_vendor_profile_id"
+    t.check_constraint "vendor_first_response_at IS NULL OR vendor_first_response_at >= created_at", name: "check_vendor_response_after_creation"
   end
 
   create_table "categories", force: :cascade do |t|
@@ -111,6 +117,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_08_134356) do
     t.string "icon"
     t.jsonb "metadata", default: {}
     t.index ["slug"], name: "index_categories_on_slug", unique: true
+  end
+
+  create_table "customer_favorites", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "vendor_profile_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "vendor_profile_id"], name: "index_customer_favorites_on_user_id_and_vendor_profile_id", unique: true
+    t.index ["user_id"], name: "index_customer_favorites_on_user_id"
+    t.index ["vendor_profile_id"], name: "index_customer_favorites_on_vendor_profile_id"
   end
 
   create_table "customer_profiles", force: :cascade do |t|
@@ -129,6 +145,39 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_08_134356) do
     t.index ["user_id"], name: "index_customer_profiles_on_user_id"
   end
 
+  create_table "email_notification_preferences", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.boolean "booking_created", default: true, null: false
+    t.boolean "booking_accepted", default: true, null: false
+    t.boolean "booking_rejected", default: true, null: false
+    t.boolean "booking_cancelled", default: true, null: false
+    t.boolean "booking_reminder", default: true, null: false
+    t.boolean "new_message", default: true, null: false
+    t.boolean "review_received", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_email_notification_preferences_on_user_id", unique: true
+  end
+
+  create_table "in_app_notifications", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "title", limit: 255, null: false
+    t.text "message", null: false
+    t.string "notification_type", limit: 50, null: false
+    t.string "related_type", limit: 50
+    t.bigint "related_id"
+    t.boolean "is_read", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["is_read"], name: "index_in_app_notifications_on_is_read"
+    t.index ["notification_type"], name: "index_in_app_notifications_on_notification_type"
+    t.index ["related_type", "related_id"], name: "index_notifications_on_polymorphic"
+    t.index ["user_id", "is_read", "created_at"], name: "idx_notifications_user_read_date"
+    t.index ["user_id", "is_read", "created_at"], name: "idx_on_user_id_is_read_created_at_8313b98c79"
+    t.index ["user_id"], name: "index_in_app_notifications_on_user_id"
+    t.check_constraint "related_type IS NULL OR (related_type::text = ANY (ARRAY['Booking'::character varying, 'Review'::character varying, 'BookingMessage'::character varying]::text[]))", name: "check_notification_related_type_valid"
+  end
+
   create_table "portfolio_items", force: :cascade do |t|
     t.bigint "vendor_profile_id", null: false
     t.string "title", null: false
@@ -145,6 +194,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_08_134356) do
     t.index ["vendor_profile_id"], name: "index_portfolio_items_on_vendor_profile_id"
   end
 
+  create_table "review_votes", force: :cascade do |t|
+    t.bigint "review_id", null: false
+    t.bigint "voter_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["review_id", "voter_id"], name: "index_review_votes_on_review_id_and_voter_id", unique: true
+    t.index ["review_id"], name: "index_review_votes_on_review_id"
+    t.index ["voter_id", "created_at"], name: "index_review_votes_on_voter_id_and_created_at"
+    t.index ["voter_id"], name: "index_review_votes_on_voter_id"
+  end
+
   create_table "reviews", force: :cascade do |t|
     t.bigint "booking_id", null: false
     t.bigint "customer_id", null: false
@@ -159,14 +219,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_08_134356) do
     t.integer "status", default: 0
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "vendor_response"
+    t.datetime "vendor_responded_at"
+    t.integer "helpful_votes", default: 0, null: false
     t.index ["booking_id"], name: "index_reviews_on_booking_id", unique: true
     t.index ["customer_id"], name: "index_reviews_on_customer_id"
     t.index ["rating"], name: "index_reviews_on_rating"
     t.index ["service_id", "status"], name: "index_reviews_on_service_id_and_status"
     t.index ["service_id"], name: "index_reviews_on_service_id"
     t.index ["status"], name: "index_reviews_on_status"
+    t.index ["vendor_profile_id", "helpful_votes"], name: "index_reviews_on_vendor_profile_id_and_helpful_votes", order: { helpful_votes: :desc }
+    t.index ["vendor_profile_id", "status", "helpful_votes"], name: "index_reviews_helpful_by_vendor_and_status", order: { helpful_votes: :desc }
     t.index ["vendor_profile_id", "status"], name: "index_reviews_on_vendor_profile_id_and_status"
+    t.index ["vendor_profile_id", "vendor_responded_at"], name: "index_reviews_on_vendor_profile_id_and_vendor_responded_at"
     t.index ["vendor_profile_id"], name: "index_reviews_on_vendor_profile_id"
+    t.check_constraint "helpful_votes >= 0", name: "check_helpful_votes_non_negative"
   end
 
   create_table "service_categories", force: :cascade do |t|
@@ -203,8 +270,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_08_134356) do
     t.datetime "updated_at", null: false
     t.decimal "average_rating", precision: 3, scale: 2, default: "0.0"
     t.integer "total_reviews", default: 0
+    t.bigint "vendor_profile_id", null: false
     t.index ["average_rating"], name: "index_services_on_average_rating"
     t.index ["status"], name: "index_services_on_status"
+    t.index ["vendor_profile_id", "status"], name: "index_services_on_vendor_profile_id_and_status"
+    t.index ["vendor_profile_id"], name: "index_services_on_vendor_profile_id"
   end
 
   create_table "users", force: :cascade do |t|
@@ -246,11 +316,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_08_134356) do
     t.integer "verification_status", default: 0
     t.datetime "verified_at"
     t.text "rejection_reason"
+    t.integer "favorites_count", default: 0, null: false
+    t.string "instagram_handle"
+    t.string "facebook_url"
+    t.text "cancellation_policy"
+    t.decimal "response_time_hours", precision: 5, scale: 2
+    t.decimal "completion_rate", precision: 5, scale: 4
     t.index ["business_name"], name: "index_vendor_profiles_on_business_name"
+    t.index ["favorites_count"], name: "index_vendor_profiles_on_favorites_count"
     t.index ["latitude", "longitude"], name: "index_vendor_profiles_on_coordinates"
     t.index ["location"], name: "index_vendor_profiles_on_location"
     t.index ["user_id"], name: "index_vendor_profiles_on_user_id"
     t.index ["verification_status"], name: "index_vendor_profiles_on_verification_status"
+    t.check_constraint "completion_rate IS NULL OR completion_rate >= 0::numeric AND completion_rate <= 1.0", name: "check_completion_rate_valid"
+    t.check_constraint "response_time_hours IS NULL OR response_time_hours >= 0::numeric", name: "check_response_time_non_negative"
   end
 
   create_table "vendor_services", force: :cascade do |t|
@@ -271,8 +350,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_08_134356) do
   add_foreign_key "bookings", "services"
   add_foreign_key "bookings", "users", column: "customer_id"
   add_foreign_key "bookings", "vendor_profiles"
+  add_foreign_key "customer_favorites", "users"
+  add_foreign_key "customer_favorites", "vendor_profiles"
   add_foreign_key "customer_profiles", "users"
+  add_foreign_key "email_notification_preferences", "users"
+  add_foreign_key "in_app_notifications", "users"
   add_foreign_key "portfolio_items", "vendor_profiles"
+  add_foreign_key "review_votes", "reviews"
+  add_foreign_key "review_votes", "users", column: "voter_id"
   add_foreign_key "reviews", "bookings"
   add_foreign_key "reviews", "services"
   add_foreign_key "reviews", "users", column: "customer_id"
@@ -280,6 +365,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_08_134356) do
   add_foreign_key "service_categories", "categories"
   add_foreign_key "service_categories", "services"
   add_foreign_key "service_images", "services"
+  add_foreign_key "services", "vendor_profiles"
   add_foreign_key "vendor_profiles", "users"
   add_foreign_key "vendor_services", "services"
   add_foreign_key "vendor_services", "vendor_profiles"
