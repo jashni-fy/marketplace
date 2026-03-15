@@ -68,19 +68,23 @@ class Types::ServiceType < Types::BaseObject
   end
 
   def vendor_location
-    object.vendor_profile&.location
+    dataloader.with(Sources::AssociationLoader, :vendor_profile).load(object).then(&:location)
   end
 
   def vendor_business_name
-    object.vendor_profile&.business_name
+    dataloader.with(Sources::AssociationLoader, :vendor_profile).load(object).then(&:business_name)
   end
 
   def vendor_average_rating
-    object.vendor_profile&.average_rating || 0.0
+    dataloader.with(Sources::AssociationLoader, :vendor_profile).load(object).then { |vp| vp&.average_rating || 0.0 }
   end
 
   def vendor_total_reviews
-    object.vendor_profile&.total_reviews || 0
+    dataloader.with(Sources::AssociationLoader, :vendor_profile).load(object).then { |vp| vp&.total_reviews || 0 }
+  end
+
+  def service_category
+    dataloader.with(Sources::AssociationLoader, :categories).load(object).then(&:first)
   end
 end
 

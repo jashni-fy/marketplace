@@ -120,7 +120,7 @@ class Service < ApplicationRecord
   end
 
   def can_be_booked?
-    active? && vendor_profiles.any?
+    active? && vendor_profile.present?
   end
 
   delegate :count, to: :bookings, prefix: true

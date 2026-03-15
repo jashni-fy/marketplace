@@ -123,14 +123,9 @@ class VendorProfile < ApplicationRecord
 
   alias has_description? description?
 
+  # Derived from services -> categories association
   def service_categories_list
-    return [] if service_categories.blank?
-
-    service_categories.split(',').map(&:strip)
-  end
-
-  def service_categories_list=(categories)
-    self.service_categories = categories.is_a?(Array) ? categories.join(', ') : categories
+    services.joins(:categories).distinct.pluck('categories.name')
   end
 
   def profile_complete?
@@ -222,11 +217,16 @@ class VendorProfile < ApplicationRecord
   def self.ransackable_attributes(_auth_object = nil)
     %w[
       id business_name description location phone website
-      service_categories business_license years_experience average_rating
+      business_license years_experience average_rating
       total_reviews latitude longitude created_at updated_at user_id
       instagram_handle facebook_url cancellation_policy response_time_hours
       completion_rate
     ]
+  end
+
+  # SQL distance predicate for geographic queries
+  def self.haversine_distance_sql
+    GeographicLocation.sql_distance_predicate
   end
 
   # Callbacks
@@ -261,11 +261,6 @@ class VendorProfile < ApplicationRecord
     valid_scheme = uri.is_a?(URI::HTTP) || uri.is_a?(URI::HTTPS)
     valid_domain = website.match?(%r{\A(https?://)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*/?\z}i)
     errors.add(:website, 'is not a valid URL') unless valid_scheme && valid_domain
-  end
-
-  # SQL distance predicate for geographic queries
-  def self.haversine_distance_sql
-    GeographicLocation.sql_distance_predicate
   end
 end
 # rubocop:enable Metrics/ClassLength, Rails/UniqueValidationWithoutIndex

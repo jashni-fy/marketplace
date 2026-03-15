@@ -72,7 +72,9 @@ class Types::QueryType < Types::BaseObject
   end
 
   def services(limit:)
-    Service.active.includes(vendor_services: :vendor_profile).includes(:categories).limit(limit)
+    Service.active
+           .includes(:vendor_profile, :categories, :service_images)
+           .limit(limit)
   end
 
   def service_categories
@@ -80,7 +82,7 @@ class Types::QueryType < Types::BaseObject
   end
 
   def vendor_profile(id:)
-    VendorProfile.find_by(id: id)
+    VendorProfile.includes(:user, :portfolio_items, :reviews, :services).find_by(id: id)
   end
 
   def review(id:)
@@ -88,7 +90,10 @@ class Types::QueryType < Types::BaseObject
   end
 
   def reviews(limit:)
-    Review.published.recent.limit(limit)
+    Review.published.recent
+          .includes(:customer, :booking, :service, :vendor_profile,
+                    photos_attachments: :blob)
+          .limit(limit)
   end
 
   def vendor_dashboard

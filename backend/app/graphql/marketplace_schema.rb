@@ -7,6 +7,9 @@ class MarketplaceSchema < GraphQL::Schema
   # For batch-loading (see https://graphql-ruby.org/dataloader/overview.html)
   use GraphQL::Dataloader
 
+  # Standardize error responses
+  use GraphQL::Execution::Errors, error_handler: Middleware::ErrorHandler.method(:call)
+
   # Query complexity analysis to prevent expensive queries
   max_complexity(1000)
 

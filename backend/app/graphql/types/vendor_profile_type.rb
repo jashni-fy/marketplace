@@ -19,7 +19,6 @@ class Types::VendorProfileType < Types::BaseObject
         Types::RatingDistributionType,
         null: false,
         description: 'Distribution of ratings across review scores'
-  field :service_categories, String, null: true, description: 'Stringified list of categories this vendor operates in'
   field :total_reviews, Integer, null: false, description: 'Total number of reviews for the vendor'
   field :updated_at, GraphQL::Types::ISO8601DateTime, null: false, description: 'When the profile was last updated'
   field :verification_status, String, null: false, description: 'Current verification status'
@@ -81,13 +80,29 @@ class Types::VendorProfileType < Types::BaseObject
                                                         description: 'When vendor joined the platform'
   field :trust_stats, Types::VendorTrustStatsType, null: false, description: 'Trust and credibility metrics'
 
-  delegate :display_name, to: :object
-
   delegate :rating_display, to: :object
 
   delegate :service_categories_list, to: :object
 
   delegate :coordinates, to: :object
+
+  def portfolio_items
+    dataloader.with(Sources::AssociationLoader, :portfolio_items).load(object)
+  end
+
+  def reviews
+    dataloader.with(Sources::AssociationLoader, :reviews).load(object)
+  end
+
+  def services
+    dataloader.with(Sources::AssociationLoader, :services).load(object)
+  end
+
+  def display_name
+    dataloader.with(Sources::AssociationLoader, :user).load(object).then do |user|
+      object.business_name.presence || user&.full_name || 'Unknown Vendor'
+    end
+  end
 
   def distance_to(latitude:, longitude:)
     object.distance_to(latitude, longitude)

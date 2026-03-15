@@ -31,6 +31,9 @@ end
 #
 # Dir[Rails.root.join('spec', 'support', '**', '*.rb')].sort.each { |f| require f }
 
+# Manually require support files
+Rails.root.glob('spec/support/**/*.rb').each { |f| require f }
+
 # Checks for pending migrations and applies them before tests are run.
 # If you are not using ActiveRecord, you can remove these lines.
 begin
@@ -94,6 +97,7 @@ RSpec.configure do |config|
   end
 
   config.include JWTAuthenticationHelper, type: :controller
+  config.include QueryCounter
 end
 
 Shoulda::Matchers.configure do |config|
