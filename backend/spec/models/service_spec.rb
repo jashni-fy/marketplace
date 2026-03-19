@@ -4,21 +4,28 @@
 #
 # Table name: services
 #
-#  id             :bigint           not null, primary key
-#  average_rating :decimal(3, 2)    default(0.0)
-#  base_price     :decimal(10, 2)
-#  description    :text
-#  name           :string
-#  pricing_type   :integer          default("hourly")
-#  status         :integer          default("draft")
-#  total_reviews  :integer          default(0)
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
+#  id                :bigint           not null, primary key
+#  average_rating    :decimal(3, 2)    default(0.0)
+#  base_price        :decimal(10, 2)
+#  description       :text
+#  name              :string
+#  pricing_type      :integer          default("hourly")
+#  status            :integer          default("draft")
+#  total_reviews     :integer          default(0)
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  vendor_profile_id :bigint           not null
 #
 # Indexes
 #
-#  index_services_on_average_rating  (average_rating)
-#  index_services_on_status          (status)
+#  index_services_on_average_rating                (average_rating)
+#  index_services_on_status                        (status)
+#  index_services_on_vendor_profile_id             (vendor_profile_id)
+#  index_services_on_vendor_profile_id_and_status  (vendor_profile_id,status)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (vendor_profile_id => vendor_profiles.id)
 #
 require 'rails_helper'
 

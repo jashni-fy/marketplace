@@ -24,18 +24,34 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Handle unauthorized globally
+// Handle unauthorized/forbidden globally
 api.interceptors.response.use(
     (response) => response,
     (error) => {
       const isAuthRequest = error.config?.url?.includes('/auth/');
       
+      // Handle 401 Unauthorized
       if (error.response?.status === 401 && !isAuthRequest) {
         tokenService.clearAuthData();
         if (typeof window !== 'undefined') {
           window.location.href = '/login';
         }
       }
+      
+      // Enhance error object with better message extraction from backend
+      if (error.response?.data) {
+        const data = error.response.data;
+        // The backend uses multiple formats: { error: "msg" }, { message: "msg" }, or { errors: { message: "msg" } }
+        const backendMessage = 
+          data.error || 
+          data.message || 
+          (data.errors && (typeof data.errors === 'string' ? data.errors : data.errors.message || (Array.isArray(data.errors) && data.errors[0]?.message)));
+        
+        if (backendMessage) {
+          error.extractedMessage = backendMessage;
+        }
+      }
+      
       return Promise.reject(error);
     }
 );
@@ -167,18 +183,23 @@ export const apiService = {
     messages: (id) => api.get(`/bookings/${id}/messages`),
     sendMessage: (id, message) =>
         api.post(`/bookings/${id}/send_message`, message),
+    checkAvailability: (data) => api.post('/bookings/check_availability', data),
+    suggestAlternatives: (data) => api.post('/bookings/suggest_alternatives', data),
   },
 
   // Availability Slots
   availabilitySlots: {
     getAll: (params) => api.get('/availability_slots', { params }),
     create: (data) => api.post('/availability_slots', data),
-    update: (id, data) => api.put(`/availability_slots/${id}`, data),
-    delete: (id) => api.delete(`/availability_slots/${id}`),
+    update: (id, data) => api.put('/availability_slots', id, data),
+    delete: (id) => api.delete('/availability_slots', id),
     bulkCreate: (data) => api.post('/availability_slots/bulk_create', data),
     checkConflicts: (params) =>
         api.get('/availability_slots/check_conflicts', { params }),
   },
+
+  // GraphQL
+  graphql: (query, variables = {}) => api.post('/graphql', { query, variables }),
 };
 
 export default api;

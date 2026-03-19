@@ -1,5 +1,23 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: categories
+#
+#  id          :bigint           not null, primary key
+#  active      :boolean          default(TRUE)
+#  description :text
+#  icon        :string
+#  metadata    :jsonb
+#  name        :string
+#  slug        :string
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#
+# Indexes
+#
+#  index_categories_on_slug  (slug) UNIQUE
+#
 FactoryBot.define do
   factory :category do
     sequence(:name) { |n| "Category #{n}" }

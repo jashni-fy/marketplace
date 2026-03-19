@@ -61,13 +61,8 @@ const ServiceManagement = ({ services: initialServices, onServiceUpdate }: any) 
 
   const loadCategories = async () => {
     try {
-      setCategories([
-        { id: 1, name: 'Photography' },
-        { id: 2, name: 'Videography' },
-        { id: 3, name: 'Event Management' },
-        { id: 4, name: 'Catering' },
-        { id: 5, name: 'Music & Entertainment' }
-      ]);
+      const res = await apiService.profiles.serviceCategories();
+      setCategories(res.data.service_categories || []);
     } catch (err) {
       console.error('Error loading categories:', err);
     }
@@ -104,7 +99,7 @@ const ServiceManagement = ({ services: initialServices, onServiceUpdate }: any) 
       resetForm();
       onServiceUpdate && onServiceUpdate();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to save service');
+      setError(err.extractedMessage || 'Failed to save service');
     } finally {
       setLoading(false);
     }

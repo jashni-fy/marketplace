@@ -19,7 +19,6 @@ class Types::VendorProfileType < Types::BaseObject
         Types::RatingDistributionType,
         null: false,
         description: 'Distribution of ratings across review scores'
-  field :service_categories, String, null: true, description: 'Stringified list of categories this vendor operates in'
   field :total_reviews, Integer, null: false, description: 'Total number of reviews for the vendor'
   field :updated_at, GraphQL::Types::ISO8601DateTime, null: false, description: 'When the profile was last updated'
   field :verification_status, String, null: false, description: 'Current verification status'
@@ -70,7 +69,16 @@ class Types::VendorProfileType < Types::BaseObject
   field :service_categories_list, [String], null: false, description: 'List of categories the vendor belongs to'
   field :verified, Boolean, null: false, method: :verified?, description: 'Convenience alias for the verification state'
 
-  delegate :display_name, to: :object
+  # Social/transparency fields
+  field :cancellation_policy, String, null: true, description: 'Vendor cancellation policy'
+  field :facebook_url, String, null: true, description: 'Facebook page URL for the vendor'
+  field :favorites_count, Integer, null: false, description: 'Number of customers who favorited this vendor'
+  field :instagram_handle, String, null: true, description: 'Instagram handle for the vendor'
+
+  # Trust fields
+  field :member_since, GraphQL::Types::ISO8601DateTime, null: false, method: :created_at,
+                                                        description: 'When vendor joined the platform'
+  field :trust_stats, Types::VendorTrustStatsType, null: false, description: 'Trust and credibility metrics'
 
   delegate :rating_display, to: :object
 
@@ -78,8 +86,30 @@ class Types::VendorProfileType < Types::BaseObject
 
   delegate :coordinates, to: :object
 
+  def portfolio_items
+    dataloader.with(Sources::AssociationLoader, :portfolio_items).load(object)
+  end
+
+  def reviews
+    dataloader.with(Sources::AssociationLoader, :reviews).load(object)
+  end
+
+  def services
+    dataloader.with(Sources::AssociationLoader, :services).load(object)
+  end
+
+  def display_name
+    dataloader.with(Sources::AssociationLoader, :user).load(object).then do |user|
+      object.business_name.presence || user&.full_name || 'Unknown Vendor'
+    end
+  end
+
   def distance_to(latitude:, longitude:)
     object.distance_to(latitude, longitude)
+  end
+
+  def trust_stats
+    VendorProfiles::CalculatePublicStats.call(vendor_profile: object)
   end
 end
 

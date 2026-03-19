@@ -4,29 +4,34 @@
 #
 # Table name: bookings
 #
-#  id                   :bigint           not null, primary key
-#  event_date           :datetime         not null
-#  event_duration       :string
-#  event_end_date       :datetime
-#  event_location       :string           not null
-#  requirements         :text
-#  special_instructions :text
-#  status               :integer          default("pending"), not null
-#  total_amount         :decimal(10, 2)   not null
-#  created_at           :datetime         not null
-#  updated_at           :datetime         not null
-#  customer_id          :bigint           not null
-#  service_id           :bigint           not null
-#  vendor_profile_id    :bigint           not null
+#  id                       :bigint           not null, primary key
+#  booking_reminder_sent_at :datetime
+#  event_date               :datetime         not null
+#  event_duration           :string
+#  event_end_date           :datetime
+#  event_location           :string           not null
+#  requirements             :text
+#  special_instructions     :text
+#  status                   :integer          default("pending"), not null
+#  total_amount             :decimal(10, 2)   not null
+#  vendor_first_response_at :datetime
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#  customer_id              :bigint           not null
+#  service_id               :bigint           not null
+#  vendor_profile_id        :bigint           not null
 #
 # Indexes
 #
-#  index_bookings_on_customer_id             (customer_id)
-#  index_bookings_on_customer_id_and_status  (customer_id,status)
-#  index_bookings_on_event_date              (event_date)
-#  index_bookings_on_service_id              (service_id)
-#  index_bookings_on_service_id_and_status   (service_id,status)
-#  index_bookings_on_vendor_profile_id       (vendor_profile_id)
+#  index_bookings_on_booking_reminder_sent_at  (booking_reminder_sent_at)
+#  index_bookings_on_customer_id               (customer_id)
+#  index_bookings_on_customer_id_and_status    (customer_id,status)
+#  index_bookings_on_event_date                (event_date)
+#  index_bookings_on_service_id                (service_id)
+#  index_bookings_on_service_id_and_status     (service_id,status)
+#  index_bookings_on_vendor_first_response_at  (vendor_first_response_at)
+#  index_bookings_on_vendor_profile_id         (vendor_profile_id)
+#  index_bookings_vendor_response_time         (vendor_profile_id,vendor_first_response_at,created_at)
 #
 # Foreign Keys
 #
@@ -75,6 +80,9 @@ class Booking < ApplicationRecord
     where('(event_date < ? AND event_end_date > ?) OR (event_date < ? AND event_end_date > ?)',
           end_date, start_date, start_date, end_date)
   }
+
+  # NOTE: Callbacks for side effects have been moved to Bookings::CreateBooking and
+  # Bookings::UpdateBookingStatus services. This allows for explicit orchestration and better testability.
 
   def duration_hours
     return nil unless event_end_date && event_date

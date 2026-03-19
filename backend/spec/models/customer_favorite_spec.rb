@@ -1,0 +1,103 @@
+# frozen_string_literal: true
+
+# == Schema Information
+#
+# Table name: customer_favorites
+#
+#  id                :bigint           not null, primary key
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  user_id           :bigint           not null
+#  vendor_profile_id :bigint           not null
+#
+# Indexes
+#
+#  index_customer_favorites_on_user_id                        (user_id)
+#  index_customer_favorites_on_user_id_and_vendor_profile_id  (user_id,vendor_profile_id) UNIQUE
+#  index_customer_favorites_on_vendor_profile_id              (vendor_profile_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (user_id => users.id)
+#  fk_rails_...  (vendor_profile_id => vendor_profiles.id)
+#
+require 'rails_helper'
+
+RSpec.describe CustomerFavorite do
+  describe 'associations' do
+    it { is_expected.to belong_to(:user) }
+    it { is_expected.to belong_to(:vendor_profile) }
+  end
+
+  describe 'validations' do
+    it { is_expected.to validate_presence_of(:user_id) }
+    it { is_expected.to validate_presence_of(:vendor_profile_id) }
+
+    describe 'uniqueness' do
+      let(:user) { create(:user) }
+      let(:vendor) { create(:vendor_profile) }
+
+      before { create(:customer_favorite, user: user, vendor_profile: vendor) }
+
+      it 'prevents the same user from favoriting the same vendor twice' do
+        duplicate = described_class.new(user: user, vendor_profile: vendor)
+        expect(duplicate).not_to be_valid
+        expect(duplicate.errors[:user_id]).to be_present
+      end
+    end
+  end
+
+  describe 'scopes' do
+    let(:user1) { create(:user) }
+    let(:user2) { create(:user) }
+    let(:vendor1) { create(:vendor_profile) }
+    let(:vendor2) { create(:vendor_profile) }
+
+    before do
+      create(:customer_favorite, user: user1, vendor_profile: vendor1)
+      create(:customer_favorite, user: user1, vendor_profile: vendor2)
+      create(:customer_favorite, user: user2, vendor_profile: vendor1)
+    end
+
+    describe '.for_user' do
+      it 'returns only favorites for the specified user' do
+        expect(described_class.for_user(user1.id).count).to eq(2)
+        expect(described_class.for_user(user2.id).count).to eq(1)
+      end
+    end
+
+    describe '.by_vendor' do
+      it 'returns only favorites for the specified vendor' do
+        expect(described_class.by_vendor(vendor1.id).count).to eq(2)
+        expect(described_class.by_vendor(vendor2.id).count).to eq(1)
+      end
+    end
+
+    describe '.recent_first' do
+      it 'returns favorites ordered by created_at descending' do
+        favorites = described_class.recent_first
+        expect(favorites.first.created_at).to be >= favorites.last.created_at
+      end
+    end
+  end
+
+  describe 'counter_cache' do
+    let(:vendor) { create(:vendor_profile) }
+
+    it 'updates vendor favorites_count on create' do
+      expect(vendor.favorites_count).to eq(0)
+      create(:customer_favorite, vendor_profile: vendor)
+      vendor.reload
+      expect(vendor.favorites_count).to eq(1)
+    end
+
+    it 'updates vendor favorites_count on destroy' do
+      favorite = create(:customer_favorite, vendor_profile: vendor)
+      vendor.reload
+      expect(vendor.favorites_count).to eq(1)
+      favorite.destroy
+      vendor.reload
+      expect(vendor.favorites_count).to eq(0)
+    end
+  end
+end

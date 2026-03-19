@@ -13,11 +13,12 @@ export default function PhotographerCard({ photographer }: PhotographerCardProps
   const name = photographer.name || photographer.business_name || 'Anonymous';
   const image = photographer.image || photographer.profile_image_url || 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?q=80&w=1000&auto=format&fit=crop';
   const rating = photographer.rating || photographer.average_rating || 0;
+  const totalReviews = photographer.total_reviews || 0;
   const location = photographer.location || 'Unknown';
   const priceRange = photographer.base_price ? `₹${photographer.base_price}` : 'Price on request';
 
   return (
-    <Link href={`/photographer/${id}`}>
+    <Link href={`/vendors/${id}`}>
       <div className="group relative aspect-[3/4] overflow-hidden rounded-lg border border-white/5 bg-secondary/20 transition-all duration-500">
         {/* Imagery as Hero */}
         <Image
@@ -35,6 +36,9 @@ export default function PhotographerCard({ photographer }: PhotographerCardProps
         <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-md bg-background/40 backdrop-blur-md border border-white/5">
           <Star className="size-3 fill-primary text-primary" />
           <span className="text-[10px] font-bold text-white tracking-tighter">{Number(rating).toFixed(1)}</span>
+          {totalReviews > 0 && (
+            <span className="text-[9px] font-medium text-slate-300 tracking-tighter">({totalReviews})</span>
+          )}
         </div>
 
         {/* Bottom Permanent Info */}
@@ -70,6 +74,25 @@ export default function PhotographerCard({ photographer }: PhotographerCardProps
         </div>
       </div>
     </Link>
+  );
+}
+
+function ChevronRight(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m9 18 6-6-9-6" />
+    </svg>
   );
 }
 
